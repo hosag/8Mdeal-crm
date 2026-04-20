@@ -94,12 +94,23 @@
           <view class="field-pill">{{item.contactText}}</view>
         </view>
 
+        <view wx:if="{{item.searchExplain}}" class="project-search-locator">
+          <view class="project-search-label">搜索到：{{item.searchExplain.label}}{{item.searchExplain.detailText}}</view>
+          <view class="project-search-snippet">
+            <text
+              wx:for="{{item.searchExplain.snippetSegments}}"
+              wx:key="index"
+              class="{{item.isHighlight ? 'project-search-segment is-highlight' : 'project-search-segment'}}"
+            >{{item.text}}</text>
+          </view>
+        </view>
+
         <view class="project-summary-compact">
           <view class="project-summary-row">
             <view class="project-summary-label">{{item.hasOpenTask ? '当前动作' : '当前重点'}}</view>
             <view class="project-summary-text">{{item.hasOpenTask ? item.nextTaskTitle : item.focusText}}</view>
           </view>
-          <view class="project-summary-row">
+          <view class="project-summary-row" wx:if="{{!item.searchExplain}}">
             <view class="project-summary-label">{{item.hasOpenTask ? '动作节奏' : '最新摘要'}}</view>
             <view class="project-summary-text">{{item.hasOpenTask ? item.taskSummaryText : item.latestSummary}}</view>
           </view>

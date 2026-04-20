@@ -188,6 +188,205 @@ function containsKeyword(value, keyword) {
   return String(value || '').toLowerCase().includes(String(keyword || '').toLowerCase())
 }
 
+function buildHighlightSegments(text, keyword, options = {}) {
+  const sourceText = String(text || '').trim()
+  const searchKeyword = String(keyword || '').trim()
+  const maxLength = Number(options.maxLength || 34)
+
+  if (!sourceText) {
+    return []
+  }
+
+  if (!searchKeyword) {
+    return [
+      {
+        text: sourceText,
+        isHighlight: false
+      }
+    ]
+  }
+
+  const lowerText = sourceText.toLowerCase()
+  const lowerKeyword = searchKeyword.toLowerCase()
+  const matchIndex = lowerText.indexOf(lowerKeyword)
+
+  if (matchIndex < 0) {
+    return [
+      {
+        text: sourceText,
+        isHighlight: false
+      }
+    ]
+  }
+
+  const safeLength = Math.max(maxLength, searchKeyword.length + 6)
+  let start = Math.max(0, matchIndex - Math.floor((safeLength - searchKeyword.length) / 2))
+  let end = Math.min(sourceText.length, start + safeLength)
+
+  if (end - start < safeLength) {
+    start = Math.max(0, end - safeLength)
+  }
+
+  const prefix = sourceText.slice(start, matchIndex)
+  const matchText = sourceText.slice(matchIndex, matchIndex + searchKeyword.length)
+  const suffix = sourceText.slice(matchIndex + searchKeyword.length, end)
+  const segments = []
+
+  if (start > 0) {
+    segments.push({
+      text: '...',
+      isHighlight: false
+    })
+  }
+
+  if (prefix) {
+    segments.push({
+      text: prefix,
+      isHighlight: false
+    })
+  }
+
+  segments.push({
+    text: matchText,
+    isHighlight: true
+  })
+
+  if (suffix) {
+    segments.push({
+      text: suffix,
+      isHighlight: false
+    })
+  }
+
+  if (end < sourceText.length) {
+    segments.push({
+      text: '...',
+      isHighlight: false
+    })
+  }
+
+  return segments
+}
+
+function buildSearchTargets(project) {
+  const targets = []
+  const contactNames = Array.isArray(project.contactNames) ? project.contactNames : []
+
+  targets.push({
+    label: '项目名称',
+    value: project.name,
+    detail: '',
+    priority: 1
+  })
+  targets.push({
+    label: '客户名称',
+    value: project.client,
+    detail: '',
+    priority: 2
+  })
+
+  contactNames.forEach((contactName) => {
+    targets.push({
+      label: '联系人',
+      value: contactName,
+      detail: contactName,
+      priority: 3
+    })
+  })
+
+  if (project.nextTaskTitle) {
+    targets.push({
+      label: '待办任务',
+      value: project.nextTaskTitle,
+      detail: project.nextTaskTitle,
+      priority: 4
+    })
+  }
+
+  if (project.latestSummary) {
+    targets.push({
+      label: '跟进摘要',
+      value: project.latestSummary,
+      detail: '',
+      priority: 5
+    })
+  }
+
+  if (project.description) {
+    targets.push({
+      label: '项目描述',
+      value: project.description,
+      detail: '',
+      priority: 6
+    })
+  }
+
+  if (project.tagsText) {
+    targets.push({
+      label: '标签',
+      value: project.tagsText,
+      detail: '',
+      priority: 7
+    })
+  }
+
+  if (project.ownerLabel) {
+    targets.push({
+      label: '项目归属',
+      value: project.ownerLabel,
+      detail: project.ownerLabel,
+      priority: 8
+    })
+  }
+
+  if (project.focusText) {
+    targets.push({
+      label: '当前重点',
+      value: project.focusText,
+      detail: '',
+      priority: 9
+    })
+  }
+
+  if (project.stage) {
+    targets.push({
+      label: '项目阶段',
+      value: project.stage,
+      detail: '',
+      priority: 10
+    })
+  }
+
+  return targets
+}
+
+function buildSearchExplain(project, keyword) {
+  const searchKeyword = String(keyword || '').trim()
+  if (!searchKeyword) {
+    return null
+  }
+
+  const targets = buildSearchTargets(project)
+  for (let index = 0; index < targets.length; index += 1) {
+    const target = targets[index]
+    const value = String(target.value || '').trim()
+    if (!value || !containsKeyword(value, searchKeyword)) {
+      continue
+    }
+
+    return {
+      label: target.label,
+      detail: String(target.detail || '').trim(),
+      detailText: String(target.detail || '').trim() ? ` · ${String(target.detail || '').trim()}` : '',
+      snippetSegments: buildHighlightSegments(value, searchKeyword),
+      priority: Number(target.priority || 99),
+      matchIndex: value.toLowerCase().indexOf(searchKeyword.toLowerCase())
+    }
+  }
+
+  return null
+}
+
 function buildResultSummaryText({ count, total, stageFilter, quickFilter, sortMode, keyword }) {
   const parts = [`共 ${count} 个结果 / ${total} 个项目`]
   const activeQuickFilter = QUICK_FILTERS.find((item) => item.key === quickFilter)
@@ -658,7 +857,8 @@ Page({
   },
 
   applyFilters() {
-    const keyword = String(this.data.searchKeyword || '').trim().toLowerCase()
+    const rawKeyword = String(this.data.searchKeyword || '').trim()
+    const keyword = rawKeyword.toLowerCase()
     const stageFilter = this.data.stageFilter
     const quickFilter = this.data.quickFilter
     const sortMode = this.data.sortMode
@@ -666,7 +866,6 @@ Page({
     const allProjects = this.data.projectCards.slice()
     const filteredProjects = allProjects
       .filter((project) => (stageFilter === '全部阶段' ? true : project.stage === stageFilter))
-      .filter((project) => (keyword ? project.searchText.includes(keyword) : true))
       .filter((project) => {
         if (quickFilter === 'today') {
           return project.hasTodayTask || project.isTodayFollowUp
@@ -702,7 +901,29 @@ Page({
 
         return true
       })
+      .map((project) => {
+        const searchExplain = keyword ? buildSearchExplain(project, rawKeyword) : null
+        return {
+          ...project,
+          searchExplain
+        }
+      })
+      .filter((project) => (keyword ? !!project.searchExplain : true))
       .sort((left, right) => {
+        if (keyword) {
+          const leftPriority = left.searchExplain ? left.searchExplain.priority : Number.MAX_SAFE_INTEGER
+          const rightPriority = right.searchExplain ? right.searchExplain.priority : Number.MAX_SAFE_INTEGER
+          if (leftPriority !== rightPriority) {
+            return leftPriority - rightPriority
+          }
+
+          const leftMatchIndex = left.searchExplain ? left.searchExplain.matchIndex : Number.MAX_SAFE_INTEGER
+          const rightMatchIndex = right.searchExplain ? right.searchExplain.matchIndex : Number.MAX_SAFE_INTEGER
+          if (leftMatchIndex !== rightMatchIndex) {
+            return leftMatchIndex - rightMatchIndex
+          }
+        }
+
         if (sortMode === 'amount') {
           return right.amountValue - left.amountValue
         }
@@ -754,7 +975,7 @@ Page({
         stageFilter,
         quickFilter,
         sortMode,
-        keyword: String(this.data.searchKeyword || '').trim()
+        keyword: rawKeyword
       }),
       emptyTitle,
       emptyDesc,

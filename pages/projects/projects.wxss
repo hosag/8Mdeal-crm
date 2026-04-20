@@ -95,6 +95,37 @@
   gap: 10rpx;
 }
 
+.projects-page .project-search-locator {
+  margin-top: 14rpx;
+  padding: 16rpx 18rpx;
+  border-radius: 22rpx;
+  background: rgba(245, 240, 230, 0.72);
+  box-shadow: inset 0 0 0 2rpx rgba(177, 139, 86, 0.08);
+}
+
+.projects-page .project-search-label {
+  font-size: 22rpx;
+  font-weight: 700;
+  line-height: 1.5;
+  color: #805f32;
+}
+
+.projects-page .project-search-snippet {
+  margin-top: 8rpx;
+  font-size: 23rpx;
+  line-height: 1.7;
+  color: #445562;
+}
+
+.projects-page .project-search-segment {
+  color: inherit;
+}
+
+.projects-page .project-search-segment.is-highlight {
+  color: #8a6230;
+  font-weight: 700;
+}
+
 .projects-page .status-badge.is-soft {
   background: rgba(177, 139, 86, 0.14);
   color: #8d6631;
