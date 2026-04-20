@@ -1,0 +1,98 @@
+<view class="page-shell share-timeline-page">
+  <view wx:if="{{isLoading}}" class="rise-in">
+    <loading-panel rows="3" />
+  </view>
+
+  <block wx:else>
+    <view class="hero rise-in">
+      <view class="eyebrow-row">
+        <view class="eyebrow">完整时间线</view>
+        <view class="source-badge">{{dataSource}}</view>
+      </view>
+      <view class="hero-title">{{preview.project.name || '项目时间线'}}</view>
+      <view class="hero-subtitle">{{timelineSummaryText}}</view>
+    </view>
+
+    <view class="form-card section rise-in stagger-1 timeline-overview-card">
+      <view class="line-between">
+        <view>
+          <view class="form-card-title">{{historyScopeLabel}}</view>
+          <view class="form-card-desc">包含跟进记录、任务完成和阶段变更。</view>
+        </view>
+        <view class="status-badge">{{activeMode === 'outbound' ? '转交项目' : '发送资料'}}</view>
+      </view>
+    </view>
+
+    <view class="glass-card section rise-in stagger-2">
+      <view wx:if="{{!followTimeline.length}}" class="card-subtitle">当前暂无历史记录。</view>
+      <view class="timeline-group" wx:for="{{followTimeline}}" wx:key="date">
+        <view class="timeline-group-title">{{item.date}}</view>
+        <view class="timeline-item" wx:for="{{item.items}}" wx:key="timelineKey">
+          <view class="timeline-axis">
+            <view class="timeline-dot"></view>
+            <view class="timeline-line"></view>
+          </view>
+          <view class="timeline-body">
+            <view class="timeline-meta-top">
+              <view class="timeline-time">{{item.time}}</view>
+              <view class="status-badge timeline-type-badge {{item.typeBadgeClass}}">{{item.typeLabel}}</view>
+            </view>
+            <view class="timeline-title">{{item.title}}</view>
+            <view class="timeline-meta-line">
+              <view class="helper-text">记录人：{{item.actorName || '当前用户'}}</view>
+              <view class="helper-text" wx:if="{{item.methodLabel && item.typeKey !== 'task_done'}}">方式：{{item.methodLabel}}</view>
+            </view>
+            <view class="helper-text" wx:if="{{item.collaborationLabel}}">{{item.collaborationLabel}}</view>
+            <view class="timeline-card">
+              <view class="timeline-pill-row" wx:if="{{item.stageChange || item.nextFollowUpText}}">
+                <view wx:if="{{item.stageChange}}" class="soft-badge">阶段 {{item.stageChange}}</view>
+                <view wx:if="{{item.nextFollowUpText}}" class="field-pill">下次 {{item.nextFollowUpText}}</view>
+              </view>
+              <view class="timeline-section" wx:if="{{item.summary}}">
+                <view class="timeline-section-label">{{item.summaryLabel || 'AI 摘要'}}</view>
+                <view class="timeline-section-text">{{item.summary}}</view>
+              </view>
+              <view class="timeline-section" wx:if="{{item.highlights && item.highlights.length}}">
+                <view class="timeline-section-label">{{item.highlightsLabel || '关键进展'}}</view>
+                <view class="timeline-list">
+                  <view class="timeline-list-item" wx:for="{{item.highlights}}" wx:key="*this">{{item}}</view>
+                </view>
+              </view>
+              <view class="timeline-section" wx:if="{{item.stageChange}}">
+                <view class="timeline-section-label">实际阶段变更</view>
+                <view class="timeline-section-text">{{item.stageChange}}</view>
+              </view>
+              <view class="timeline-section" wx:if="{{item.nextFollowUpText}}">
+                <view class="timeline-section-label">下次跟进</view>
+                <view class="timeline-section-text">{{item.nextFollowUpText}}</view>
+              </view>
+              <view class="timeline-section" wx:if="{{item.risks && item.risks.length}}">
+                <view class="timeline-section-label">风险提示</view>
+                <view class="timeline-list">
+                  <view class="timeline-list-item is-risk" wx:for="{{item.risks}}" wx:key="*this">{{item}}</view>
+                </view>
+              </view>
+              <view class="timeline-section" wx:if="{{item.recommendedStage}}">
+                <view class="timeline-section-label">建议阶段</view>
+                <view class="timeline-section-text">{{item.recommendedStage}}</view>
+                <view class="helper-text" wx:if="{{item.stageChangeReason}}">{{item.stageChangeReason}}</view>
+              </view>
+              <view class="timeline-section" wx:if="{{item.missingInfo && item.missingInfo.length}}">
+                <view class="timeline-section-label">仍缺少的信息</view>
+                <view class="timeline-list">
+                  <view class="timeline-list-item" wx:for="{{item.missingInfo}}" wx:key="*this">{{item}}</view>
+                </view>
+              </view>
+              <view class="timeline-section" wx:if="{{item.desc}}">
+                <view class="timeline-section-label">{{item.rawLabel || '原始记录'}}</view>
+                <view class="timeline-section-text">{{item.desc}}</view>
+              </view>
+            </view>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <view class="bottom-space"></view>
+  </block>
+</view>

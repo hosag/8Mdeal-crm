@@ -1,0 +1,19 @@
+<view class="loading-panel">
+  <view class="loading-shell">
+    <view class="loading-hero shimmer"></view>
+    <view class="loading-summary">
+      <view class="loading-badge">正在同步</view>
+      <view class="loading-title">{{title}}</view>
+      <view class="loading-desc">{{desc}}</view>
+    </view>
+  </view>
+  <view class="loading-card shimmer" wx:for="{{placeholderRows}}" wx:key="*this">
+    <view class="loading-line is-long"></view>
+    <view class="loading-line"></view>
+    <view class="loading-grid">
+      <view class="loading-pill"></view>
+      <view class="loading-pill"></view>
+      <view class="loading-pill"></view>
+    </view>
+  </view>
+</view>

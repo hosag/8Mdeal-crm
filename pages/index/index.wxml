@@ -1,0 +1,325 @@
+<view class="page-shell home-page">
+  <view wx:if="{{isLoading}}" class="rise-in">
+    <loading-panel rows="2" />
+  </view>
+
+  <block wx:else>
+    <view class="hero rise-in">
+      <view class="eyebrow-row">
+        <view class="eyebrow">销售工作台</view>
+        <view class="hero-top-actions">
+          <view class="notify-entry" bindtap="openNotificationsPage">
+            <view class="notify-entry-text">消息中心</view>
+            <view wx:if="{{notificationUnreadCount}}" class="notify-entry-count">{{notificationUnreadCount > 99 ? '99+' : notificationUnreadCount}}</view>
+          </view>
+          <view class="source-badge">{{dataSource}}</view>
+        </view>
+      </view>
+      <view class="hero-title">今天先处理 {{dashboard.taskBoard.summary.openCount || 0}} 条推进动作</view>
+      <view class="hero-subtitle">首页先把具体动作顶上来，再往下看项目待办和动态时间线，判断会更快，也更像真正的推进台。</view>
+      <view class="hero-message-strip {{notificationHeadlineToneClass}}" bindtap="openHeadlineNotification">
+        <view class="hero-message-copy">
+          <view class="hero-message-topline">
+            <view class="hero-message-badge">{{notificationHeadlineBadgeText}}</view>
+          </view>
+          <view class="hero-message-title">{{notificationHeadlineTitle}}</view>
+          <view class="hero-message-desc">{{notificationHeadlineDesc}}</view>
+        </view>
+        <view class="hero-message-action">{{notificationHeadlineActionText}}</view>
+      </view>
+      <view class="hero-actions">
+        <view class="btn-secondary" data-url="/pages/project-form/project-form" bindtap="openPage">新建项目</view>
+        <view class="btn-ghost" data-url="/pages/projects/projects" bindtap="openPage">我的项目</view>
+      </view>
+      <view class="pill-row">
+        <view class="field-pill" data-quick-filter="todo" data-sort-mode="next" data-source="home-todo" bindtap="openProjectsWithFilter">查看待跟进</view>
+        <view class="field-pill" data-quick-filter="overdue" data-sort-mode="next" data-source="home-overdue" bindtap="openProjectsWithFilter">查看已逾期</view>
+        <view class="field-pill" data-quick-filter="shared" data-sort-mode="updated" data-source="home-shared" bindtap="openProjectsWithFilter">查看我接手的</view>
+      </view>
+      <view class="hero-metrics section">
+        <view class="metric-card" wx:for="{{dashboard.metrics}}" wx:key="label">
+          <view class="metric-label">{{item.label}}</view>
+          <view class="metric-value">{{item.value}}</view>
+          <view class="metric-note">{{item.note}}</view>
+        </view>
+      </view>
+    </view>
+
+    <view wx:if="{{isLoadFailed}}" class="form-card section state-card rise-in stagger-1">
+      <view class="form-card-title">暂时无法连接云端</view>
+      <view class="form-card-desc">{{loadError}}</view>
+      <view class="hero-actions state-actions">
+        <view class="btn-primary state-btn" bindtap="retryFetch">重新连接</view>
+        <view class="btn-ghost state-btn" bindtap="openProjectsPage">查看我的项目</view>
+      </view>
+    </view>
+
+    <view class="section rise-in stagger-1">
+      <view class="section-header">
+        <view class="section-title">推进动作优先</view>
+        <view class="section-link" data-quick-filter="todo" data-sort-mode="next" data-source="home-task" bindtap="openProjectsWithFilter">查看全部项目</view>
+      </view>
+      <view class="form-card task-summary-strip">
+        <view class="task-summary-item">
+          <view class="task-summary-value">{{dashboard.taskBoard.summary.openCount || 0}}</view>
+          <view class="task-summary-label">未完成动作</view>
+        </view>
+        <view class="task-summary-item">
+          <view class="task-summary-value is-danger">{{dashboard.taskBoard.summary.overdueCount || 0}}</view>
+          <view class="task-summary-label">已逾期</view>
+        </view>
+        <view class="task-summary-item">
+          <view class="task-summary-value is-brand">{{dashboard.taskBoard.summary.todayCount || 0}}</view>
+          <view class="task-summary-label">今天处理</view>
+        </view>
+      </view>
+
+      <view wx:if="{{taskFeedback.title}}" class="task-feedback-banner">
+        <view class="task-feedback-main">
+          <view class="task-feedback-title">{{taskFeedback.title}}</view>
+          <view class="task-feedback-detail">{{taskFeedback.detail}}</view>
+        </view>
+        <view class="task-feedback-dismiss" bindtap="dismissTaskFeedback">收起</view>
+      </view>
+
+      <view class="task-priority-card" wx:for="{{dashboard.taskBoard.cards}}" wx:key="id">
+        <view class="project-top">
+          <view class="project-main">
+            <view class="project-name">{{item.title}}</view>
+            <view class="project-client">{{item.projectName}} · {{item.clientName}}</view>
+          </view>
+          <view class="status-badge todo-owner-badge {{item.ownerBadgeClass}}">{{item.ownerLabel}}</view>
+        </view>
+
+        <view class="pill-row project-pill-row">
+          <view class="status-badge {{item.urgencyBadgeClass}}">{{item.urgencyText}}</view>
+          <view class="soft-badge">{{item.taskTypeLabel}}</view>
+          <view class="soft-badge">{{item.priorityLabel}}</view>
+          <view class="field-pill">{{item.stage}}</view>
+        </view>
+
+        <view class="project-summary-compact todo-summary-card">
+          <view class="project-summary-row">
+            <view class="project-summary-label">当前动作</view>
+            <view class="project-summary-text">{{item.focusText}}</view>
+          </view>
+          <view class="project-summary-row">
+            <view class="project-summary-label">补充说明</view>
+            <view class="project-summary-text">{{item.summaryText}}</view>
+          </view>
+        </view>
+
+        <view class="compact-inline-metrics todo-inline-metrics">
+          <view class="compact-inline-item">截止 {{item.dueText}}</view>
+          <view class="compact-inline-item">预计金额 {{item.amount}}</view>
+          <view class="compact-inline-item">下次跟进 {{item.nextFollowUpText}}</view>
+        </view>
+
+        <view class="inline-actions compact-inline-actions home-inline-actions">
+          <view class="btn-ghost" data-project-id="{{item.projectId}}" bindtap="openTaskProjectDetail">查看项目</view>
+          <view class="btn-primary" data-task-id="{{item.id}}" bindtap="openTaskCompleteSheet">完成动作</view>
+        </view>
+      </view>
+
+      <empty-state
+        wx:if="{{!dashboard.taskBoard.cards.length}}"
+        title="当前没有推进动作"
+        desc="在跟进时把下一步动作补成任务，这里会自动按轻重缓急排到最前面。"
+        image="/assets/illustrations/empty-projects.svg"
+        actionText="查看我的项目"
+        bind:action="openProjectsPage"
+      />
+    </view>
+
+    <view class="section rise-in stagger-1">
+      <view class="section-header">
+        <view class="section-title">项目待办</view>
+        <view class="section-link" data-quick-filter="todo" data-sort-mode="next" data-source="home-todo" bindtap="openProjectsWithFilter">查看待跟进</view>
+      </view>
+      <view class="todo-card practical-todo-card" wx:for="{{dashboard.todos}}" wx:key="id">
+        <view class="project-top">
+          <view class="project-main">
+            <view class="project-name">{{item.title}}</view>
+            <view class="project-client">{{item.client}} · {{item.time}}</view>
+          </view>
+          <view class="status-badge todo-owner-badge {{item.ownerBadgeClass}}">{{item.ownerLabel}}</view>
+        </view>
+
+        <view class="pill-row project-pill-row">
+          <view class="soft-badge">{{item.stage}}</view>
+          <view class="status-badge {{item.badgeClass}}">{{item.badge}}</view>
+          <view class="soft-badge">{{item.estimatedAmount}}</view>
+          <view class="field-pill">{{item.contactText}}</view>
+        </view>
+
+        <view class="project-summary-compact todo-summary-card">
+          <view class="project-summary-row">
+            <view class="project-summary-label">当前重点</view>
+            <view class="project-summary-text">{{item.focusText}}</view>
+          </view>
+          <view class="project-summary-row">
+            <view class="project-summary-label">最新摘要</view>
+            <view class="project-summary-text">{{item.latestSummary}}</view>
+          </view>
+        </view>
+
+        <view class="compact-inline-metrics todo-inline-metrics">
+          <view class="compact-inline-item">预计金额 {{item.estimatedAmount}}</view>
+          <view class="compact-inline-item">跟进时间 {{item.time}}</view>
+          <view class="compact-inline-item">联系人 {{item.contactText}}</view>
+          <view wx:if="{{item.openTaskCount}}" class="compact-inline-item">待处理动作 {{item.openTaskCount}} 条</view>
+        </view>
+
+        <view class="project-footer compact-project-footer">
+          <view wx:if="{{item.topTaskTitle}}" class="helper-text">当前动作：{{item.topTaskTitle}}<text wx:if="{{item.topTaskDueText}}"> · 截止 {{item.topTaskDueText}}</text></view>
+          <view wx:if="{{item.overdueTaskCount}}" class="helper-text">优先处理：{{item.overdueTaskCount}} 条动作</view>
+          <view class="helper-text">优先动作：{{item.priorityText}}</view>
+          <view class="helper-text">下一步动作：{{item.stepSummary}}</view>
+        </view>
+
+        <view class="inline-actions compact-inline-actions home-inline-actions">
+          <view class="btn-ghost" data-project-id="{{item.projectId}}" bindtap="openProjectDetail">查看详情</view>
+          <view class="btn-primary" data-project-id="{{item.projectId}}" bindtap="openFollowUp">新增跟进</view>
+        </view>
+      </view>
+      <empty-state
+        wx:if="{{!dashboard.todos.length}}"
+        title="当前没有项目待办"
+        desc="这里会自动汇总今天和后续待办。"
+        image="/assets/illustrations/empty-projects.svg"
+        actionText="查看我的项目"
+        bind:action="openProjectsPage"
+      />
+    </view>
+
+    <view class="section rise-in stagger-2">
+      <view class="section-header">
+        <view class="section-title">动态时间线</view>
+        <view class="section-link" data-url="/pages/shared-out/shared-out" bindtap="openPage">外发项目</view>
+      </view>
+      <view class="glass-card">
+        <view class="timeline-group" wx:for="{{dashboard.timeline}}" wx:key="date">
+          <view class="timeline-group-title">{{item.date}}</view>
+          <view class="timeline-item" wx:for="{{item.items}}" wx:key="title" data-project-id="{{item.projectId}}" bindtap="openTimelineProject">
+            <view class="timeline-axis">
+              <view class="timeline-dot"></view>
+              <view class="timeline-line"></view>
+            </view>
+            <view class="timeline-body">
+              <view class="timeline-time">{{item.time}}</view>
+              <view class="timeline-title">{{item.title}}</view>
+              <view class="timeline-desc">{{item.desc}}</view>
+              <view class="helper-text" wx:if="{{item.projectId}}">点击可查看该项目完整上下文</view>
+            </view>
+          </view>
+        </view>
+      </view>
+      <empty-state
+        wx:if="{{!dashboard.timeline.length}}"
+        title="当前还没有最新动态"
+        desc="新建项目或新增跟进后，这里会自动汇总最近动作。"
+        image="/assets/illustrations/empty-projects.svg"
+        actionText="新建项目"
+        bind:action="openProjectForm"
+      />
+    </view>
+  </block>
+</view>
+
+<view wx:if="{{showTaskCompleteSheet}}">
+  <view class="sheet-mask task-complete-mask" bindtap="closeTaskCompleteSheet"></view>
+  <view class="sheet-panel task-complete-sheet {{isTaskCompletionEditing ? 'is-editing' : ''}}" style="{{taskCompleteSheetStyle}}">
+    <view class="sheet-handle"></view>
+    <view class="sheet-header">
+      <view class="sheet-title">完成：{{taskCompletionTaskTitle}}</view>
+      <view class="sheet-close" bindtap="closeTaskCompleteSheet">关闭</view>
+    </view>
+    <view class="task-complete-body" style="{{taskCompleteBodyStyle}}">
+      <view class="field-group task-complete-field">
+        <view class="field-label">完成情况 · 提交后自动写入时间线</view>
+        <textarea
+          class="textarea-sim textarea-native task-complete-textarea"
+          value="{{taskCompletionText}}"
+          bindinput="onTaskCompletionInput"
+          bindfocus="onTaskCompletionFieldFocus"
+          cursor-spacing="{{taskCompletionCursorSpacing}}"
+          placeholder="例如：报价已发送，客户确认本周三内部评审，若通过则进入合同沟通。"
+          placeholder-class="input-placeholder"
+          maxlength="-1"
+        ></textarea>
+      </view>
+      <view class="task-complete-inline-entry">
+        <view wx:if="{{!taskCompletionCreateNextTask}}" class="btn-ghost task-complete-inline-btn" bindtap="toggleTaskCompletionCreateNextTask">补下一步动作</view>
+      </view>
+      <view wx:if="{{taskCompletionCreateNextTask}}" class="task-complete-next-card">
+        <view class="line-between task-complete-next-head">
+          <view>
+            <view class="task-complete-toggle-title">下一步任务</view>
+            <view class="helper-text">仍在当前完成面板里补充，不会跳到新页面。</view>
+          </view>
+          <view class="section-link" bindtap="toggleTaskCompletionCreateNextTask">收起</view>
+        </view>
+        <view class="field-group task-complete-field is-inline-first">
+          <view class="field-label">下一步任务标题</view>
+          <input
+            class="input-sim input-native"
+            value="{{taskCompletionNextTaskTitle}}"
+            data-field="taskCompletionNextTaskTitle"
+            bindinput="onTaskCompletionNextTaskInput"
+            bindfocus="onTaskCompletionFieldFocus"
+            cursor-spacing="{{taskCompletionCursorSpacing}}"
+            placeholder="例如：3天后回访报价反馈"
+            placeholder-class="input-placeholder"
+          />
+        </view>
+        <view class="field-group task-complete-field">
+          <view class="field-label">任务类型</view>
+          <view class="chips task-complete-type-wall">
+            <view
+              class="chip {{taskCompletionNextTaskType === item.type ? 'is-active' : ''}}"
+              wx:for="{{nextTaskTemplates}}"
+              wx:key="type"
+              data-type="{{item.type}}"
+              bindtap="setTaskCompletionNextTaskType"
+            >{{item.label}}</view>
+          </view>
+        </view>
+        <view class="field-group task-complete-field">
+          <view class="field-label">下一步时间</view>
+          <view class="split-row task-complete-time-row">
+            <picker class="picker-block" mode="date" value="{{taskCompletionNextTaskDate}}" data-field="taskCompletionNextTaskDate" bindchange="onTaskCompletionNextTaskPicker">
+              <view class="picker-sim">
+                <view class="picker-value {{!taskCompletionNextTaskDate ? 'is-placeholder' : ''}}">{{taskCompletionNextTaskDate || '选择日期'}}</view>
+              </view>
+            </picker>
+            <picker class="picker-block" mode="time" value="{{taskCompletionNextTaskTime}}" data-field="taskCompletionNextTaskTime" bindchange="onTaskCompletionNextTaskPicker">
+              <view class="picker-sim">
+                <view class="picker-value {{!taskCompletionNextTaskTime ? 'is-placeholder' : ''}}">{{taskCompletionNextTaskTime || '选择时间'}}</view>
+              </view>
+            </picker>
+          </view>
+        </view>
+        <view class="field-group task-complete-field">
+          <view class="field-label">动作说明</view>
+          <textarea
+            class="textarea-sim textarea-native task-complete-next-textarea"
+            value="{{taskCompletionNextTaskDescription}}"
+            data-field="taskCompletionNextTaskDescription"
+            bindinput="onTaskCompletionNextTaskInput"
+            bindfocus="onTaskCompletionFieldFocus"
+            cursor-spacing="{{taskCompletionCursorSpacing}}"
+            placeholder="可选：补一句下一步要重点确认什么。"
+            placeholder-class="input-placeholder"
+            maxlength="-1"
+          ></textarea>
+        </view>
+      </view>
+    </view>
+    <view class="inline-actions task-complete-actions is-fixed {{isTaskCompletionEditing ? 'is-editing' : ''}}" style="{{taskCompleteActionsStyle}}">
+      <view class="btn-ghost" bindtap="closeTaskCompleteSheet">取消</view>
+      <view class="btn-primary" bindtap="submitTaskCompletion">{{taskActionId === taskCompletionTaskId ? '提交中...' : '确认完成'}}</view>
+    </view>
+  </view>
+</view>
+
+<bottom-nav current="home" />

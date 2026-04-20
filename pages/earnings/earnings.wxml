@@ -1,0 +1,68 @@
+<view class="page-shell">
+  <view wx:if="{{isLoading}}" class="rise-in">
+    <loading-panel rows="2" />
+  </view>
+
+  <block wx:else>
+  <view class="hero rise-in">
+    <view class="eyebrow-row">
+      <view class="eyebrow">收益统计</view>
+      <view class="source-badge">{{dataSource}}</view>
+    </view>
+    <view class="hero-title">收益一眼看清</view>
+    <view class="hero-subtitle">用清晰的金额层级代替复杂图表，先满足业务人员按月查看和快速复盘。</view>
+    <view class="hero-metrics section">
+      <view class="metric-card" wx:for="{{earnings.summary}}" wx:key="label">
+        <view class="metric-label">{{item.label}}</view>
+        <view class="metric-value">{{item.value}}</view>
+      </view>
+    </view>
+  </view>
+
+  <view class="grid-three section rise-in stagger-1">
+    <view class="stats-card" wx:for="{{earnings.summary}}" wx:key="label">
+      <view class="stats-big">{{item.value}}</view>
+      <view class="stats-label">{{item.label}}</view>
+    </view>
+  </view>
+
+  <view class="section rise-in stagger-2">
+    <view class="section-header">
+      <view class="section-title">成交明细</view>
+      <view class="section-link">当前月份</view>
+    </view>
+    <view class="deal-card" wx:for="{{earnings.deals}}" wx:key="id" data-project-id="{{item.projectId}}" bindtap="openDealProject">
+      <view class="project-top">
+        <view>
+          <view class="project-name">{{item.name}}</view>
+          <view class="project-meta">{{item.date}}</view>
+        </view>
+        <view class="status-badge {{item.status === '全部回款' ? 'is-success' : item.status === '未回款' ? 'is-danger' : ''}}">{{item.status}}</view>
+      </view>
+      <view class="project-stats">
+        <view class="project-stat">
+          <view class="project-stat-label">成交金额</view>
+          <view class="project-stat-value">{{item.amount}}</view>
+        </view>
+        <view class="project-stat">
+          <view class="project-stat-label">预期提成</view>
+          <view class="project-stat-value">{{item.commission}}</view>
+        </view>
+        <view class="project-stat">
+          <view class="project-stat-label">回款状态</view>
+          <view class="project-stat-value">{{item.status}}</view>
+        </view>
+      </view>
+    </view>
+    <empty-state
+      wx:if="{{!earnings.deals.length}}"
+      title="当前还没有成交记录"
+      desc="完成登记成交后，这里会自动汇总成交金额、提成和回款状态。"
+      image="/assets/illustrations/empty-projects.svg"
+      actionText="查看我的项目"
+      bind:action="openPage"
+      data-url="/pages/projects/projects"
+    />
+  </view>
+  </block>
+</view>

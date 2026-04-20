@@ -1,0 +1,118 @@
+<view class="page-shell">
+  <view wx:if="{{isLoading}}" class="rise-in">
+    <loading-panel rows="2" />
+  </view>
+
+  <block wx:else>
+  <view class="hero rise-in">
+    <view class="eyebrow-row">
+      <view class="eyebrow">我的</view>
+      <view class="source-badge">{{dataSource}}</view>
+    </view>
+    <view class="hero-title">我的设置与统计</view>
+    <view class="hero-subtitle">这里集中放收益、标签、联调工具和账户偏好，便于统一管理个人 CRM 的关键配置。</view>
+    <view class="hero-metrics section">
+      <view class="metric-card" wx:for="{{earnings.summary}}" wx:key="label">
+        <view class="metric-label">{{item.label}}</view>
+        <view class="metric-value">{{item.value}}</view>
+      </view>
+    </view>
+  </view>
+
+  <view class="nav-card section" data-url="/pages/earnings/earnings" bindtap="openPage">
+    <view class="card-title">收益统计</view>
+    <view class="card-subtitle">按月查看成交金额、预期提成和已回款状态。</view>
+  </view>
+
+  <view class="nav-card" data-url="/pages/privacy-tags/privacy-tags" bindtap="openPage">
+    <view class="card-title">隐私标签</view>
+    <view class="card-subtitle">管理基础浏览、完整外发、全量查看等默认分享标签。</view>
+  </view>
+
+  <view wx:if="{{showDevActions}}" class="surface-card section">
+    <view class="section-title">联调工具</view>
+    <view class="card-subtitle">一键生成“别人外发给我，由我继续跟进”的测试项目，便于验证接手后的“我的项目”、详情页和时间线。</view>
+    <view class="hero-actions">
+      <view class="btn-primary" bindtap="seedInboundProject">{{isSeeding ? '生成中...' : '生成外发给我测试项目'}}</view>
+    </view>
+  </view>
+
+  <view class="surface-card section">
+    <view class="section-title">账户与偏好</view>
+    <view class="menu-list">
+      <view class="menu-row">
+        <view>
+          云开发环境
+          <view class="menu-caption">连接真实环境后可替换 demo 数据</view>
+        </view>
+        <view class="section-link">待配置</view>
+      </view>
+      <view class="menu-row reminder-menu-row">
+        <view class="menu-main">
+          <view class="menu-title-row">
+            <view>跟进站内提醒</view>
+            <view wx:if="{{preferenceSavingKey === 'followUpEnabled' || preferenceSavingKey === 'followUpAdvance'}}" class="menu-saving-text">保存中</view>
+          </view>
+          <view class="menu-caption">控制项目下次跟进的站内提醒。</view>
+        </view>
+        <switch
+          color="#355d76"
+          checked="{{reminderSettings.followUpEnabled}}"
+          data-field="followUpEnabled"
+          bindchange="onReminderToggleChange"
+        />
+      </view>
+      <view class="reminder-option-row">
+        <view class="menu-caption">提醒时间</view>
+        <view class="pill-row reminder-pill-row">
+          <view
+            wx:for="{{reminderAdvanceOptions}}"
+            wx:key="key"
+            class="chip {{reminderSettings.followUpAdvance === item.key ? 'is-active' : ''}} {{!reminderSettings.followUpEnabled ? 'is-disabled' : ''}}"
+            data-field="followUpAdvance"
+            data-value="{{item.key}}"
+            bindtap="onReminderAdvanceTap"
+          >{{item.label}}</view>
+        </view>
+      </view>
+      <view class="menu-row reminder-menu-row">
+        <view class="menu-main">
+          <view class="menu-title-row">
+            <view>任务站内提醒</view>
+            <view wx:if="{{preferenceSavingKey === 'taskEnabled' || preferenceSavingKey === 'taskAdvance'}}" class="menu-saving-text">保存中</view>
+          </view>
+          <view class="menu-caption">控制推进任务的到期与逾期提醒。</view>
+        </view>
+        <switch
+          color="#355d76"
+          checked="{{reminderSettings.taskEnabled}}"
+          data-field="taskEnabled"
+          bindchange="onReminderToggleChange"
+        />
+      </view>
+      <view class="reminder-option-row">
+        <view class="menu-caption">提醒时间</view>
+        <view class="pill-row reminder-pill-row">
+          <view
+            wx:for="{{reminderAdvanceOptions}}"
+            wx:key="key"
+            class="chip {{reminderSettings.taskAdvance === item.key ? 'is-active' : ''}} {{!reminderSettings.taskEnabled ? 'is-disabled' : ''}}"
+            data-field="taskAdvance"
+            data-value="{{item.key}}"
+            bindtap="onReminderAdvanceTap"
+          >{{item.label}}</view>
+        </view>
+      </view>
+      <view class="menu-row">
+        <view>
+          视觉主题
+          <view class="menu-caption">当前使用轻商务暖白主题</view>
+        </view>
+        <view class="section-link">默认</view>
+      </view>
+    </view>
+  </view>
+  </block>
+</view>
+
+<bottom-nav current="mine" />

@@ -1,0 +1,337 @@
+.home-page .state-card {
+  padding: 24rpx 26rpx;
+}
+
+.home-page .state-actions {
+  margin-top: 18rpx;
+}
+
+.home-page .state-btn {
+  min-width: 220rpx;
+}
+
+.home-page .hero-top-actions {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+}
+
+.home-page .notify-entry {
+  display: inline-flex;
+  align-items: center;
+  gap: 8rpx;
+  padding: 8rpx 16rpx;
+  border-radius: 999rpx;
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 248, 240, 0.92);
+}
+
+.home-page .notify-entry-text {
+  font-size: 21rpx;
+}
+
+.home-page .notify-entry-count {
+  min-width: 34rpx;
+  height: 34rpx;
+  padding: 0 10rpx;
+  border-radius: 999rpx;
+  background: #f8d67a;
+  color: #21384a;
+  font-size: 20rpx;
+  font-weight: 700;
+  line-height: 34rpx;
+  text-align: center;
+}
+
+.home-page .hero-message-strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18rpx;
+  margin-top: 22rpx;
+  padding: 20rpx 22rpx;
+  border-radius: 24rpx;
+  background: rgba(255, 255, 255, 0.09);
+  backdrop-filter: blur(10rpx);
+}
+
+.home-page .hero-message-strip.is-danger {
+  background: linear-gradient(180deg, rgba(128, 46, 46, 0.28) 0%, rgba(160, 64, 64, 0.18) 100%);
+  box-shadow: inset 0 0 0 1rpx rgba(255, 214, 204, 0.18);
+}
+
+.home-page .hero-message-strip.is-brand {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.12) 0%, rgba(201, 230, 255, 0.12) 100%);
+  box-shadow: inset 0 0 0 1rpx rgba(221, 237, 247, 0.16);
+}
+
+.home-page .hero-message-strip.is-soft {
+  background: linear-gradient(180deg, rgba(241, 224, 193, 0.18) 0%, rgba(255, 255, 255, 0.1) 100%);
+  box-shadow: inset 0 0 0 1rpx rgba(255, 237, 205, 0.14);
+}
+
+.home-page .hero-message-strip.is-system {
+  background: linear-gradient(180deg, rgba(120, 95, 54, 0.22) 0%, rgba(255, 255, 255, 0.10) 100%);
+  box-shadow: inset 0 0 0 1rpx rgba(255, 230, 188, 0.12);
+}
+
+.home-page .hero-message-strip.is-neutral,
+.home-page .hero-message-strip.is-success {
+  box-shadow: inset 0 0 0 1rpx rgba(255, 255, 255, 0.08);
+}
+
+.home-page .hero-message-strip.is-success {
+  background: linear-gradient(180deg, rgba(88, 132, 108, 0.18) 0%, rgba(255, 255, 255, 0.1) 100%);
+}
+
+.home-page .hero-message-copy {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.home-page .hero-message-topline {
+  display: flex;
+  align-items: center;
+  gap: 10rpx;
+}
+
+.home-page .hero-message-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 36rpx;
+  padding: 0 14rpx;
+  border-radius: 999rpx;
+  background: rgba(255, 255, 255, 0.14);
+  color: rgba(255, 248, 240, 0.9);
+  font-size: 20rpx;
+  letter-spacing: 1rpx;
+}
+
+.home-page .hero-message-strip.is-danger .hero-message-badge {
+  background: rgba(255, 228, 220, 0.18);
+  color: #fff0ea;
+}
+
+.home-page .hero-message-strip.is-brand .hero-message-badge {
+  background: rgba(228, 241, 251, 0.16);
+  color: #f2f8fc;
+}
+
+.home-page .hero-message-strip.is-system .hero-message-badge {
+  background: rgba(255, 240, 214, 0.14);
+  color: #fff4de;
+}
+
+.home-page .hero-message-strip.is-soft .hero-message-badge,
+.home-page .hero-message-strip.is-success .hero-message-badge,
+.home-page .hero-message-strip.is-neutral .hero-message-badge {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.home-page .hero-message-title {
+  margin-top: 8rpx;
+  font-size: 24rpx;
+  font-weight: 700;
+  color: #fff4e8;
+}
+
+.home-page .hero-message-desc {
+  margin-top: 6rpx;
+  color: rgba(245, 238, 228, 0.78);
+  font-size: 22rpx;
+  line-height: 1.5;
+}
+
+.home-page .hero-message-action {
+  flex: 0 0 auto;
+  color: #ffe8b2;
+  font-size: 23rpx;
+}
+
+.home-page .practical-todo-card {
+  padding: 24rpx;
+  border-radius: 30rpx;
+  background: linear-gradient(180deg, rgba(255, 254, 251, 0.98) 0%, rgba(248, 244, 237, 0.96) 100%);
+  box-shadow: 0 20rpx 42rpx rgba(25, 40, 52, 0.08);
+}
+
+.home-page .task-summary-strip {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12rpx;
+  padding: 22rpx 24rpx;
+}
+
+.home-page .task-summary-item {
+  padding: 16rpx 14rpx;
+  border-radius: 22rpx;
+  background: rgba(244, 239, 231, 0.72);
+  text-align: center;
+}
+
+.home-page .task-summary-value {
+  font-size: 34rpx;
+  font-weight: 700;
+  color: #1b3344;
+}
+
+.home-page .task-summary-value.is-danger {
+  color: #b0554a;
+}
+
+.home-page .task-summary-value.is-brand {
+  color: #365d76;
+}
+
+.home-page .task-summary-label {
+  margin-top: 6rpx;
+  font-size: 21rpx;
+  color: #6e776f;
+}
+
+.home-page .task-priority-card {
+  margin-top: 18rpx;
+  padding: 24rpx;
+  border-radius: 30rpx;
+  background: linear-gradient(180deg, rgba(255, 253, 249, 1) 0%, rgba(247, 243, 235, 0.98) 100%);
+  box-shadow: 0 22rpx 44rpx rgba(25, 40, 52, 0.08);
+  border: 1rpx solid rgba(210, 196, 172, 0.28);
+}
+
+.home-page .project-main {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.home-page .todo-owner-badge {
+  flex: 0 0 auto;
+  max-width: 240rpx;
+  padding: 10rpx 16rpx;
+  font-size: 21rpx;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.home-page .todo-summary-card {
+  margin-top: 14rpx;
+}
+
+.home-page .todo-inline-metrics {
+  margin-top: 14rpx;
+}
+
+.home-page .home-inline-actions {
+  margin-top: 16rpx;
+  gap: 10rpx;
+}
+
+.home-page .home-inline-actions .btn-primary,
+.home-page .home-inline-actions .btn-ghost {
+  height: 76rpx;
+  padding: 0 18rpx;
+  border-radius: 20rpx;
+  font-size: 24rpx;
+}
+
+.task-complete-mask {
+  z-index: 21;
+  background: rgba(14, 24, 31, 0.5);
+  backdrop-filter: blur(10rpx);
+}
+
+.task-complete-sheet {
+  z-index: 22;
+  top: 46vh;
+  bottom: 0;
+  height: auto;
+  max-height: none;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding-bottom: calc(34rpx + env(safe-area-inset-bottom));
+  background: rgba(249, 246, 240, 0.995);
+}
+
+.task-complete-sheet.is-editing {
+  top: 18vh;
+}
+
+.task-complete-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 4rpx;
+  padding-bottom: 164rpx;
+}
+
+.task-complete-field {
+  margin-top: 6rpx;
+}
+
+.task-complete-textarea {
+  min-height: 48rpx;
+  line-height: 1.65;
+}
+
+.task-complete-inline-entry {
+  margin-top: 12rpx;
+}
+
+.task-complete-inline-btn {
+  margin-top: 0;
+  min-width: 220rpx;
+}
+
+.task-complete-next-card {
+  margin-top: 18rpx;
+  padding: 20rpx 20rpx 22rpx;
+  border-radius: 24rpx;
+  background: rgba(247, 243, 236, 0.92);
+  box-shadow: inset 0 0 0 2rpx rgba(24, 39, 51, 0.04);
+}
+
+.task-complete-next-head {
+  align-items: center;
+  gap: 18rpx;
+}
+
+.task-complete-toggle-title {
+  font-size: 27rpx;
+  font-weight: 700;
+  color: #182730;
+}
+
+.task-complete-type-wall {
+  gap: 10rpx;
+  margin-top: 10rpx;
+}
+
+.task-complete-time-row {
+  gap: 12rpx;
+}
+
+.task-complete-time-row .picker-block {
+  flex: 1 1 0;
+}
+
+.task-complete-next-textarea {
+  min-height: 150rpx;
+  line-height: 1.65;
+}
+
+.task-complete-actions.is-fixed {
+  flex: 0 0 auto;
+  margin-top: 16rpx;
+  padding-top: 16rpx;
+  padding-bottom: 4rpx;
+  border-top: 2rpx solid rgba(24, 39, 51, 0.08);
+  background: rgba(249, 246, 240, 0.98);
+}
+
+.task-complete-actions.is-fixed.is-editing {
+  margin-top: 12rpx;
+}

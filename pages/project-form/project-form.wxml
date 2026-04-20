@@ -1,0 +1,111 @@
+<view class="page-shell">
+  <view wx:if="{{isLoading}}" class="rise-in">
+    <loading-panel rows="3" />
+  </view>
+
+  <block wx:else>
+  <view class="hero rise-in">
+    <view class="eyebrow-row">
+      <view class="eyebrow">{{isEdit ? '编辑项目' : '新建项目'}}</view>
+      <view class="source-badge">{{dataSource}}</view>
+    </view>
+    <view class="hero-title">{{isEdit ? '编辑项目，让关键信息保持最新' : '创建项目时，把后续动作一起铺好'}}</view>
+    <view class="hero-subtitle">先把项目主信息录完整，后面再继续跟进、成交和分享。保存后会直接进入项目详情。</view>
+  </view>
+
+  <view class="form-card section rise-in stagger-1">
+    <view class="form-card-title">步骤指引</view>
+    <view class="step-row">
+      <view class="step-pill is-current">1. 基本信息</view>
+      <view class="step-pill">2. 联系人</view>
+      <view class="step-pill">3. 保存后看详情</view>
+    </view>
+  </view>
+
+  <view class="form-card section rise-in stagger-2">
+    <view class="field-group">
+      <view class="field-label">项目名称</view>
+      <input class="input-sim input-native" value="{{form.projectName}}" data-field="projectName" bindinput="onFieldInput" placeholder="请输入项目名称" placeholder-class="input-placeholder" />
+    </view>
+    <view class="field-group">
+      <view class="field-label">客户名称</view>
+      <input class="input-sim input-native" value="{{form.clientName}}" data-field="clientName" bindinput="onFieldInput" placeholder="请输入客户名称" placeholder-class="input-placeholder" />
+    </view>
+    <view class="field-group">
+      <view class="field-label">当前阶段</view>
+      <picker mode="selector" range="{{stages}}" value="{{stageIndex}}" bindchange="onStageChange">
+        <view class="picker-sim">
+          <view class="picker-value">{{form.stage}}</view>
+        </view>
+      </picker>
+    </view>
+    <view class="split-row">
+      <view class="field-group">
+        <view class="field-label">预计金额</view>
+        <input class="input-sim input-native" type="digit" value="{{form.estimatedAmount}}" data-field="estimatedAmount" bindinput="onFieldInput" placeholder="例如 1200000" placeholder-class="input-placeholder" />
+      </view>
+      <view class="field-group">
+        <view class="field-label">预期提成</view>
+        <input class="input-sim input-native" type="digit" value="{{form.expectedCommission}}" data-field="expectedCommission" bindinput="onFieldInput" placeholder="例如 84000" placeholder-class="input-placeholder" />
+      </view>
+    </view>
+    <view class="field-group">
+      <view class="field-label">标签</view>
+      <input class="input-sim input-native" value="{{form.tagsText}}" data-field="tagsText" bindinput="onFieldInput" placeholder="多个标签可用 / 或 , 分隔" placeholder-class="input-placeholder" />
+    </view>
+    <view class="field-group">
+      <view class="field-label">项目描述</view>
+      <textarea class="textarea-sim textarea-native" value="{{form.description}}" data-field="description" bindinput="onFieldInput" placeholder="补充项目背景、当前重点和下一步判断" placeholder-class="input-placeholder" maxlength="-1"></textarea>
+    </view>
+  </view>
+
+  <view class="form-card section rise-in stagger-3">
+    <view class="section-header">
+      <view class="section-title">联系人</view>
+      <view class="section-link" bindtap="addContact">新增联系人</view>
+    </view>
+    <view class="contact-editor" wx:for="{{form.contacts}}" wx:key="index">
+      <view class="section-header">
+        <view class="contact-name">联系人 {{index + 1}}</view>
+        <view class="section-link link-danger" bindtap="removeContact" data-index="{{index}}">删除</view>
+      </view>
+      <view class="split-row">
+        <view class="field-group">
+          <view class="field-label">姓名</view>
+          <input class="input-sim input-native" value="{{item.name}}" data-index="{{index}}" data-field="name" bindinput="onContactInput" placeholder="请输入姓名" placeholder-class="input-placeholder" />
+        </view>
+        <view class="field-group">
+          <view class="field-label">角色</view>
+          <input class="input-sim input-native" value="{{item.role}}" data-index="{{index}}" data-field="role" bindinput="onContactInput" placeholder="决策人 / 技术对接" placeholder-class="input-placeholder" />
+        </view>
+      </view>
+      <view class="split-row">
+        <view class="field-group">
+          <view class="field-label">电话</view>
+          <input class="input-sim input-native" value="{{item.phone}}" data-index="{{index}}" data-field="phone" bindinput="onContactInput" placeholder="请输入电话" placeholder-class="input-placeholder" />
+        </view>
+        <view class="field-group">
+          <view class="field-label">微信</view>
+          <input class="input-sim input-native" value="{{item.wechat}}" data-index="{{index}}" data-field="wechat" bindinput="onContactInput" placeholder="请输入微信" placeholder-class="input-placeholder" />
+        </view>
+      </view>
+      <view class="field-group">
+        <view class="field-label">所属公司</view>
+        <input class="input-sim input-native" value="{{item.company}}" data-index="{{index}}" data-field="company" bindinput="onContactInput" placeholder="请输入所属公司" placeholder-class="input-placeholder" />
+      </view>
+    </view>
+  </view>
+
+  <view class="form-card section">
+    <view class="form-card-title">保存后的结果</view>
+    <view class="form-card-desc">保存成功后会直接跳转到真实项目详情页；返回“我的项目”时，也会立即看到新纪录。</view>
+  </view>
+
+  <view class="bottom-space"></view>
+  </block>
+</view>
+
+<view wx:if="{{!isLoading}}" class="footer-bar">
+  <view class="btn-ghost" bindtap="goBack">取消</view>
+  <view class="btn-primary" bindtap="handleSave">{{isSaving ? '保存中...' : '保存项目'}}</view>
+</view>

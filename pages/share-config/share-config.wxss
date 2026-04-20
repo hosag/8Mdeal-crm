@@ -1,0 +1,33 @@
+.share-config-page .share-purpose-note {
+  margin-top: 12rpx;
+}
+
+.share-config-page .preview-card {
+  padding: 30rpx;
+}
+
+.share-config-page .preview-block + .preview-block,
+.share-config-page .preview-contacts {
+  margin-top: 18rpx;
+}
+
+.share-config-page .preview-block-title {
+  font-size: 24rpx;
+  font-weight: 700;
+  color: #51616f;
+}
+
+.share-config-page .preview-block-text {
+  margin-top: 8rpx;
+  font-size: 25rpx;
+  line-height: 1.72;
+  color: #182730;
+}
+
+.share-config-page .summary-grid {
+  margin-top: 0;
+}
+
+.share-config-page .footer-bar {
+  grid-template-columns: 1fr;
+}

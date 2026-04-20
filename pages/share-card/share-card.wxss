@@ -1,0 +1,392 @@
+@keyframes shareBriefSpin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.share-card-page .hero {
+  padding: 32rpx;
+}
+
+.share-card-page .hero-title {
+  font-size: 42rpx;
+}
+
+.share-card-page .hero-subtitle {
+  max-width: 92%;
+}
+
+.share-card-page .state-card {
+  padding: 26rpx;
+}
+
+.share-card-page .state-card .inline-actions {
+  margin-top: 18rpx;
+}
+
+.share-card-page .share-preview-card {
+  padding: 26rpx;
+  background: linear-gradient(180deg, rgba(255, 254, 252, 0.98) 0%, rgba(248, 245, 239, 0.96) 100%);
+  box-shadow: 0 20rpx 42rpx rgba(25, 40, 52, 0.08);
+}
+
+.share-card-page .share-config-shell {
+  padding: 24rpx 26rpx;
+}
+
+.share-card-page .share-config-head {
+  align-items: flex-start;
+  gap: 16rpx;
+}
+
+.share-card-page .share-config-head-main {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.share-card-page .share-config-project-name {
+  font-size: 34rpx;
+  font-weight: 700;
+  line-height: 1.32;
+  color: #1b3140;
+}
+
+.share-card-page .share-config-project-meta {
+  margin-top: 10rpx;
+  font-size: 22rpx;
+  line-height: 1.6;
+  color: #6b7986;
+}
+
+.share-card-page .share-config-grid {
+  margin-top: 18rpx;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14rpx;
+}
+
+.share-card-page .share-config-fields {
+  margin-top: 16rpx;
+  padding: 18rpx 20rpx 20rpx;
+  border-radius: 24rpx;
+  background: rgba(248, 245, 239, 0.88);
+}
+
+.share-card-page .share-config-fields-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12rpx;
+}
+
+.share-card-page .share-config-fields-title {
+  font-size: 22rpx;
+  color: #7a8692;
+}
+
+.share-card-page .share-config-fields-count {
+  flex: 0 0 auto;
+  font-size: 21rpx;
+  color: #6a7a86;
+}
+
+.share-card-page .share-config-fields-wall {
+  margin-top: 12rpx;
+}
+
+.share-card-page .shared-detail-value-strong {
+  font-size: 28rpx;
+  font-weight: 700;
+  color: #1e3240;
+}
+
+.share-card-page .share-preview-head {
+  align-items: flex-start;
+}
+
+.share-card-page .share-preview-head-main {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.share-card-page .share-preview-mode {
+  flex: 0 0 auto;
+  margin-top: 2rpx;
+}
+
+.share-card-page .share-preview-pills {
+  margin-top: 14rpx;
+  gap: 10rpx;
+}
+
+.share-card-page .share-preview-section {
+  margin-top: 16rpx;
+  padding: 18rpx 20rpx 20rpx;
+  border-radius: 22rpx;
+  background: rgba(248, 245, 239, 0.92);
+  box-shadow: inset 0 0 0 2rpx rgba(24, 39, 51, 0.04);
+}
+
+.share-card-page .share-preview-section .card-subtitle {
+  margin-top: 8rpx;
+  color: #425261;
+  line-height: 1.72;
+}
+
+.share-card-page .share-preview-summary {
+  margin-top: 18rpx;
+  padding: 20rpx 22rpx 22rpx;
+}
+
+.share-card-page .visible-fields-card {
+  padding: 24rpx 26rpx;
+}
+
+.share-card-page .history-scope-card {
+  padding: 24rpx 26rpx;
+}
+
+.share-card-page .share-brief-card {
+  padding: 24rpx 26rpx;
+}
+
+.share-card-page .share-brief-head {
+  align-items: center;
+  gap: 16rpx;
+}
+
+.share-card-page .share-brief-meta {
+  margin-top: 18rpx;
+}
+
+.share-card-page .share-brief-source {
+  font-size: 22rpx;
+  line-height: 1.6;
+  color: #6c7a86;
+}
+
+.share-card-page .share-brief-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10rpx;
+  min-width: 196rpx;
+  height: 72rpx;
+  padding: 0 18rpx;
+  border-radius: 20rpx;
+  background: linear-gradient(145deg, #b89159 0%, #d1ac71 100%);
+  box-shadow: 0 12rpx 24rpx rgba(177, 139, 86, 0.18);
+}
+
+.share-card-page .share-brief-btn-spinner {
+  flex: 0 0 auto;
+  width: 28rpx;
+  height: 28rpx;
+  border-radius: 999rpx;
+  border: 3rpx solid rgba(255, 248, 238, 0.34);
+  border-top-color: #fff8ee;
+  box-sizing: border-box;
+  animation: shareBriefSpin 760ms linear infinite;
+}
+
+.share-card-page .share-brief-btn-text {
+  flex: 0 0 auto;
+  font-size: 22rpx;
+  font-weight: 700;
+  color: #fff8ee;
+  text-align: center;
+}
+
+.share-card-page .share-brief-btn-spinner-ghost {
+  opacity: 0;
+}
+
+.share-card-page .share-brief-result {
+  margin-top: 14rpx;
+  padding: 20rpx 22rpx 22rpx;
+}
+
+.share-card-page .share-brief-text {
+  font-size: 24rpx;
+  line-height: 1.72;
+  color: #233847;
+}
+
+.share-card-page .share-summary-config {
+  margin-top: 18rpx;
+}
+
+.share-card-page .summary-mode-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10rpx;
+  margin-top: 14rpx;
+}
+
+.share-card-page .summary-mode-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 10rpx;
+  min-height: 62rpx;
+  padding: 0 18rpx;
+  border-radius: 999rpx;
+  background: rgba(243, 240, 234, 0.92);
+  box-shadow: inset 0 0 0 2rpx rgba(24, 39, 51, 0.04);
+}
+
+.share-card-page .summary-mode-chip.is-active {
+  background: linear-gradient(180deg, rgba(255, 254, 251, 0.98) 0%, rgba(247, 243, 236, 0.96) 100%);
+  box-shadow:
+    inset 0 0 0 2rpx rgba(36, 75, 97, 0.1),
+    0 10rpx 20rpx rgba(24, 39, 51, 0.05);
+}
+
+.share-card-page .summary-mode-chip.is-disabled {
+  opacity: 0.45;
+}
+
+.share-card-page .summary-mode-dot {
+  width: 16rpx;
+  height: 16rpx;
+  border-radius: 50%;
+  background: rgba(98, 116, 128, 0.25);
+}
+
+.share-card-page .summary-mode-chip.is-active .summary-mode-dot {
+  background: #31536b;
+}
+
+.share-card-page .summary-mode-label {
+  font-size: 23rpx;
+  font-weight: 600;
+  color: #2b3f4d;
+}
+
+.share-card-page .share-final-summary-title {
+  margin-top: 16rpx;
+}
+
+.share-card-page .share-summary-textarea {
+  margin-top: 12rpx;
+  min-height: 170rpx;
+  line-height: 1.68;
+}
+
+.share-card-page .share-preview-sheet {
+  padding-bottom: calc(24rpx + env(safe-area-inset-bottom));
+}
+
+.share-card-page .share-preview-scroll {
+  max-height: 74vh;
+}
+
+.share-card-page .share-preview-sheet-banner {
+  margin-top: 0;
+}
+
+.share-card-page .share-preview-sheet-card {
+  margin-top: 18rpx;
+}
+
+.share-card-page .preview-bottom-space {
+  height: 18rpx;
+}
+
+.share-card-page .history-scope-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10rpx;
+  margin-top: 14rpx;
+}
+
+.share-card-page .history-scope-radio {
+  display: inline-flex;
+  align-items: center;
+  gap: 10rpx;
+  min-height: 58rpx;
+  padding: 0 18rpx;
+  border-radius: 999rpx;
+  background: rgba(243, 240, 234, 0.92);
+  box-shadow: inset 0 0 0 2rpx rgba(24, 39, 51, 0.04);
+}
+
+.share-card-page .history-scope-radio.is-active {
+  background: linear-gradient(180deg, rgba(255, 254, 251, 0.98) 0%, rgba(247, 243, 236, 0.96) 100%);
+  box-shadow:
+    inset 0 0 0 2rpx rgba(36, 75, 97, 0.1),
+    0 10rpx 20rpx rgba(24, 39, 51, 0.05);
+}
+
+.share-card-page .history-scope-radio-dot {
+  width: 16rpx;
+  height: 16rpx;
+  border-radius: 50%;
+  background: rgba(98, 116, 128, 0.25);
+}
+
+.share-card-page .history-scope-radio.is-active .history-scope-radio-dot {
+  background: #31536b;
+}
+
+.share-card-page .history-scope-radio-label {
+  font-size: 23rpx;
+  font-weight: 600;
+  color: #2b3f4d;
+}
+
+.share-card-page .share-timeline-entry {
+  padding: 24rpx 26rpx;
+}
+
+.share-card-page .share-timeline-pills {
+  margin-top: 14rpx;
+  gap: 10rpx;
+}
+
+.share-card-page .share-timeline-entry .field-pill {
+  background: #f3f0ea;
+  color: #506472;
+}
+
+.share-card-page .share-history-note {
+  padding: 24rpx 26rpx;
+}
+
+.share-card-page .visible-fields-wall {
+  gap: 10rpx;
+}
+
+.share-card-page .visible-fields-card .field-pill {
+  background: #f3f0ea;
+  color: #4d6170;
+}
+
+.share-card-page .share-footer {
+  grid-template-columns: 1fr 1fr;
+  background: rgba(247, 243, 236, 0.96);
+  box-shadow: 0 -14rpx 28rpx rgba(20, 34, 45, 0.08);
+}
+
+.share-card-page .share-preview-trigger,
+.share-card-page .share-action {
+  width: 100%;
+  margin: 0;
+}
+
+.share-card-page .share-preview-trigger {
+  border-radius: 24rpx;
+}
+
+.share-card-page .share-action {
+  border: 0;
+  line-height: 88rpx;
+  border-radius: 24rpx;
+  box-shadow: 0 14rpx 26rpx rgba(24, 56, 76, 0.16);
+}
+
+.share-card-page .share-action::after {
+  border: 0;
+}

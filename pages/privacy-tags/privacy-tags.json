@@ -1,0 +1,7 @@
+{
+  "navigationBarTitleText": "隐私标签",
+  "usingComponents": {
+    "loading-panel": "/components/loading-panel/index",
+    "empty-state": "/components/empty-state/index"
+  }
+}

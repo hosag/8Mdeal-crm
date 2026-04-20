@@ -1,0 +1,403 @@
+<view class="page-shell project-detail-page">
+  <view wx:if="{{isLoading}}" class="rise-in">
+    <loading-panel rows="3" />
+  </view>
+
+  <block wx:else>
+  <view class="hero rise-in">
+    <view class="eyebrow-row">
+      <view class="eyebrow">项目详情</view>
+      <view class="source-badge">{{dataSource}}</view>
+    </view>
+    <view class="hero-title">{{projectDetail.name}}</view>
+    <view class="hero-subtitle">{{projectDetail.client}} · 下次跟进 {{projectDetail.nextFollowUp}}</view>
+    <view class="pill-row">
+      <view wx:for="{{projectBadges}}" wx:key="text" class="{{item.className}}">{{item.text}}</view>
+    </view>
+    <view class="detail-grid hero-summary-grid">
+      <view class="detail-box" wx:for="{{heroMetrics}}" wx:key="label">
+        <view class="detail-box-label">{{item.label}}</view>
+        <view class="detail-box-value">{{item.value}}</view>
+        <view class="detail-box-note">{{item.note}}</view>
+      </view>
+    </view>
+    <view wx:if="{{entryContextText}}" class="source-banner section">{{entryContextText}}</view>
+    <view wx:if="{{isReadOnlySharedOut}}" class="source-banner section">该项目已外发给 {{projectDetail.handoverToName || '接收方'}}，分享方侧改为只读追踪视图。后续推进请在“外发项目”中查看。</view>
+  </view>
+
+  <view class="section surface-card rise-in stagger-1 detail-section-card">
+    <view class="section-header">
+      <view class="section-title">项目摘要</view>
+      <view wx:if="{{!isReadOnlySharedOut}}" class="section-link {{!projectId ? 'is-muted' : ''}}" bindtap="goEditProject">编辑项目</view>
+      <view wx:if="{{isReadOnlySharedOut}}" class="section-link is-muted">已外发只读</view>
+    </view>
+    <view class="card-subtitle">{{projectDetail.description}}</view>
+    <view class="project-summary-compact detail-overview-card">
+      <view class="project-summary-row">
+        <view class="project-summary-label">当前重点</view>
+        <view class="project-summary-text">{{projectOverview.focusText}}</view>
+      </view>
+      <view class="project-summary-row">
+        <view class="project-summary-label">最新摘要</view>
+        <view class="project-summary-text">{{projectOverview.latestSummary}}</view>
+      </view>
+    </view>
+    <view class="compact-inline-metrics">
+      <view class="compact-inline-item">下次跟进 {{projectOverview.nextFollowUpText}}</view>
+      <view class="compact-inline-item">主要联系人 {{projectOverview.primaryContactText}}</view>
+      <view class="compact-inline-item">跟进记录 {{projectOverview.recordCountText}}</view>
+    </view>
+    <view class="project-footer compact-project-footer detail-overview-footer">
+      <view class="helper-text">推进归属：{{projectOverview.ownerLabel}}</view>
+      <view class="helper-text">最近回填：{{projectOverview.latestFollowText}}</view>
+      <view class="helper-text">分享状态：{{projectOverview.shareStatusText}}</view>
+    </view>
+    <view class="detail-grid detail-grid-compact section">
+      <view class="detail-box" wx:for="{{summaryHighlights}}" wx:key="label">
+        <view class="detail-box-label">{{item.label}}</view>
+        <view class="detail-box-value">{{item.value}}</view>
+        <view class="detail-box-note">{{item.note}}</view>
+      </view>
+    </view>
+    <view class="pill-row" wx:if="{{projectDetail.tags && projectDetail.tags.length}}">
+      <view class="field-pill" wx:for="{{projectDetail.tags}}" wx:key="*this">{{item}}</view>
+    </view>
+  </view>
+
+  <view class="section surface-card rise-in stagger-2 detail-section-card">
+    <view class="section-header">
+      <view class="section-title">联系人</view>
+      <view class="section-link" bindtap="toggleContacts">查看完整信息</view>
+    </view>
+    <view class="form-card-desc">{{contactSummaryText}}</view>
+    <view class="contact-summary contact-card" wx:for="{{contacts}}" wx:key="id" bindtap="toggleContacts">
+      <view class="line-between">
+        <view>
+          <view class="contact-name">{{item.name}}</view>
+          <view class="contact-role">{{item.role}} · {{item.company}}</view>
+        </view>
+        <view class="chip">查看信息</view>
+      </view>
+    </view>
+  </view>
+
+  <view class="section surface-card rise-in stagger-3 detail-section-card">
+    <view class="section-header">
+      <view class="section-title">推进任务</view>
+      <view wx:if="{{!isReadOnlySharedOut}}" class="section-link" bindtap="openFollowUp">新增任务</view>
+      <view wx:if="{{isReadOnlySharedOut}}" class="section-link is-muted">外发后只读</view>
+    </view>
+    <view class="form-card-desc task-header-note">{{taskSummaryText}}</view>
+    <view wx:if="{{taskFeedback.title}}" class="task-feedback-banner">
+      <view class="task-feedback-main">
+        <view class="task-feedback-title">{{taskFeedback.title}}</view>
+        <view class="task-feedback-detail">{{taskFeedback.detail}}</view>
+      </view>
+      <view class="task-feedback-dismiss" bindtap="dismissTaskFeedback">收起</view>
+    </view>
+    <view class="compact-inline-metrics" wx:if="{{taskSummary.total}}">
+      <view class="compact-inline-item">未完成 {{taskSummary.openCount || 0}} 条</view>
+      <view class="compact-inline-item">已逾期 {{taskSummary.overdueCount || 0}} 条</view>
+      <view class="compact-inline-item">已完成 {{taskSummary.completedCount || 0}} 条</view>
+    </view>
+    <view wx:if="{{taskSummary.latestDoneText}}" class="helper-text task-latest-done">最近完成：{{taskSummary.latestDoneText}}</view>
+    <view wx:if="{{!tasks.length}}" class="card-subtitle">当前还没有推进任务。下次录入跟进时，把下一步动作一起补成任务会更稳。</view>
+    <view class="task-card" wx:for="{{tasks}}" wx:key="id">
+      <view class="line-between task-card-head">
+        <view class="task-card-main">
+          <view class="task-card-title">{{item.title}}</view>
+          <view class="helper-text">{{item.typeLabel}} · {{item.priorityLabel}}</view>
+        </view>
+        <view class="status-badge {{item.statusBadgeClass}}">{{item.statusText}}</view>
+      </view>
+      <view class="compact-inline-metrics task-card-metrics">
+        <view class="compact-inline-item">截止 {{item.dueText}}</view>
+        <view class="compact-inline-item">归属 {{item.ownerName}}</view>
+      </view>
+      <view wx:if="{{item.description}}" class="task-card-desc">{{item.description}}</view>
+      <view wx:if="{{item.resultSummary}}" class="helper-text">完成结果：{{item.resultSummary}}</view>
+      <view wx:if="{{!isReadOnlySharedOut && item.hasActions}}" class="inline-actions compact-inline-actions task-card-actions">
+        <view wx:if="{{item.canStart}}" class="btn-ghost" data-task-id="{{item.id}}" data-status="in_progress" bindtap="updateTaskStatus">{{taskActionId === item.id ? '处理中...' : '开始处理'}}</view>
+        <view wx:if="{{item.canComplete}}" class="btn-primary" data-task-id="{{item.id}}" bindtap="openTaskCompleteSheet">{{taskActionId === item.id ? '处理中...' : '标记完成'}}</view>
+        <view wx:if="{{item.canCancel}}" class="btn-ghost" data-task-id="{{item.id}}" data-status="canceled" bindtap="updateTaskStatus">{{taskActionId === item.id ? '处理中...' : '取消任务'}}</view>
+      </view>
+    </view>
+  </view>
+
+  <view class="section glass-card rise-in stagger-4 detail-section-card">
+    <view class="section-header">
+      <view class="section-title">跟进时间线</view>
+      <view wx:if="{{!isReadOnlySharedOut}}" class="section-link" bindtap="openFollowUp">新增跟进</view>
+      <view wx:if="{{isReadOnlySharedOut}}" class="section-link is-muted">接手方继续跟进</view>
+    </view>
+    <view class="form-card-desc timeline-header-note">{{timelineSummaryText}}</view>
+    <view wx:if="{{!followTimeline.length}}" class="card-subtitle">当前还没有跟进记录。新增一条后，这里会按时间自动沉淀。</view>
+    <view class="timeline-group" wx:for="{{followTimeline}}" wx:key="date">
+      <view class="timeline-group-title">{{item.date}}</view>
+      <view class="timeline-item" wx:for="{{item.items}}" wx:key="timelineKey">
+        <view class="timeline-axis">
+          <view class="timeline-dot"></view>
+          <view class="timeline-line"></view>
+        </view>
+        <view class="timeline-body">
+          <view class="timeline-meta-top">
+            <view class="timeline-time">{{item.time}}</view>
+            <view class="status-badge timeline-type-badge {{item.typeBadgeClass}}">{{item.typeLabel}}</view>
+          </view>
+          <view class="timeline-title">{{item.title}}</view>
+          <view class="timeline-meta-line">
+            <view class="helper-text">记录人：{{item.actorName || '当前用户'}}</view>
+            <view class="helper-text" wx:if="{{item.methodLabel && item.typeKey !== 'task_done'}}">方式：{{item.methodLabel}}</view>
+          </view>
+          <view class="helper-text" wx:if="{{item.collaborationLabel}}">{{item.collaborationLabel}}</view>
+          <view class="timeline-card">
+            <view class="timeline-pill-row" wx:if="{{item.stageChange || item.nextFollowUpText}}">
+              <view wx:if="{{item.stageChange}}" class="soft-badge">阶段 {{item.stageChange}}</view>
+              <view wx:if="{{item.nextFollowUpText}}" class="field-pill">下次 {{item.nextFollowUpText}}</view>
+            </view>
+            <view class="timeline-section" wx:if="{{item.summary}}">
+              <view class="timeline-section-label">{{item.summaryLabel || 'AI 摘要'}}</view>
+              <view class="timeline-section-text">{{item.summary}}</view>
+            </view>
+            <view class="timeline-section" wx:if="{{item.highlights && item.highlights.length}}">
+              <view class="timeline-section-label">{{item.highlightsLabel || '关键进展'}}</view>
+              <view class="timeline-list">
+                <view class="timeline-list-item" wx:for="{{item.highlights}}" wx:key="*this">{{item}}</view>
+              </view>
+            </view>
+            <view class="timeline-section" wx:if="{{item.stageChange}}">
+              <view class="timeline-section-label">实际阶段变更</view>
+              <view class="timeline-section-text">{{item.stageChange}}</view>
+            </view>
+            <view class="timeline-section" wx:if="{{item.nextFollowUpText}}">
+              <view class="timeline-section-label">下次跟进</view>
+              <view class="timeline-section-text">{{item.nextFollowUpText}}</view>
+            </view>
+            <view class="timeline-section" wx:if="{{item.risks && item.risks.length}}">
+              <view class="timeline-section-label">风险提示</view>
+              <view class="timeline-list">
+                <view class="timeline-list-item is-risk" wx:for="{{item.risks}}" wx:key="*this">{{item}}</view>
+              </view>
+            </view>
+            <view class="timeline-section" wx:if="{{item.recommendedStage}}">
+              <view class="timeline-section-label">建议阶段</view>
+              <view class="timeline-section-text">{{item.recommendedStage}}</view>
+              <view class="helper-text" wx:if="{{item.stageChangeReason}}">{{item.stageChangeReason}}</view>
+            </view>
+            <view class="timeline-section" wx:if="{{item.missingInfo && item.missingInfo.length}}">
+              <view class="timeline-section-label">仍缺少的信息</view>
+              <view class="timeline-list">
+                <view class="timeline-list-item" wx:for="{{item.missingInfo}}" wx:key="*this">{{item}}</view>
+              </view>
+            </view>
+            <view class="timeline-section" wx:if="{{item.desc}}">
+              <view class="timeline-section-label">{{item.rawLabel || '原始记录'}}</view>
+              <view class="timeline-section-text">{{item.desc}}</view>
+            </view>
+          </view>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <view class="section surface-card rise-in stagger-5 detail-section-card">
+    <view class="section-header">
+      <view class="section-title">分享历史</view>
+      <view class="section-link" bindtap="openSharedOutPage">查看外发项目</view>
+    </view>
+    <view wx:if="{{shareHistorySummaryText}}" class="form-card-desc share-header-note">{{shareHistorySummaryText}}</view>
+    <view wx:if="{{!shareHistory.length}}" class="card-subtitle">暂无分享历史，发起后会记录在这里。</view>
+    <view wx:for="{{shareHistory}}" wx:key="id" class="tag-card share-history-card">
+      <view class="line-between">
+        <view>
+          <view class="tag-title">{{item.mode}}</view>
+          <view class="tag-desc">对象标签：{{item.tagName}} · 创建时间：{{item.createdAt}}</view>
+        </view>
+        <view class="status-badge {{item.statusBadgeClass}}">{{item.status}}</view>
+      </view>
+      <view class="pill-row">
+        <view class="chip">{{item.receiverName || item.receiverOpenidMasked || '暂未识别'}}</view>
+        <view class="soft-badge">查看 {{item.viewed}} 次</view>
+        <view class="field-pill">{{item.progressText}}</view>
+      </view>
+      <view class="project-summary-compact">
+        <view class="project-summary-row">
+          <view class="project-summary-label">当前状态</view>
+          <view class="project-summary-text">{{item.statusSummary}}</view>
+        </view>
+        <view class="project-summary-row">
+          <view class="project-summary-label">状态说明</view>
+          <view class="project-summary-text">{{item.collaborationSummary}}</view>
+        </view>
+      </view>
+      <view class="compact-inline-metrics">
+        <view class="compact-inline-item">首次打开 {{item.firstOpenedAt || '尚未打开'}}</view>
+        <view class="compact-inline-item">最近查看 {{item.lastViewedAt || '暂无更新'}}</view>
+        <view class="compact-inline-item">导入时间 {{item.mode === '项目外发' ? (item.importedAt || '尚未导入') : '不适用'}}</view>
+        <view class="compact-inline-item">推进记录 {{item.collaborationCountText}}</view>
+      </view>
+      <view class="helper-text" wx:if="{{item.mode === '项目外发' && !item.importedProjectId}}">状态说明：接收方打开后会自动进入对方“我的项目”。</view>
+      <view class="helper-text" wx:if="{{item.mode !== '项目外发'}}">状态说明：这是信息分享历史记录，不显示在“外发项目”中。</view>
+    </view>
+  </view>
+
+  <view class="bottom-space"></view>
+  </block>
+</view>
+
+<view wx:if="{{!isLoading && !isReadOnlySharedOut}}" class="footer-bar is-three">
+  <view class="btn-primary" bindtap="openFollowUp">新增跟进</view>
+  <view class="btn-secondary" bindtap="openShareSheet">分享</view>
+  <view wx:if="{{canMarkDeal}}" class="btn-ghost" bindtap="openDealPage">登记成交</view>
+  <view wx:else class="btn-ghost">已成交</view>
+</view>
+
+<view wx:if="{{showContacts}}">
+  <view class="sheet-mask" bindtap="toggleContacts"></view>
+  <view class="sheet-panel">
+    <view class="sheet-handle"></view>
+    <view class="sheet-header">
+      <view class="sheet-title">联系人完整信息</view>
+      <view class="sheet-close" bindtap="toggleContacts">关闭</view>
+    </view>
+    <view class="sheet-list">
+      <view class="sheet-card" wx:for="{{contacts}}" wx:key="id">
+        <view class="contact-name">{{item.name}}</view>
+        <view class="sheet-meta">{{item.role}} · {{item.company}}</view>
+        <view class="sheet-meta">电话 {{item.phone}}</view>
+        <view class="sheet-meta">微信 {{item.wechat}}</view>
+      </view>
+    </view>
+  </view>
+</view>
+
+<view wx:if="{{showShareSheet}}">
+  <view class="sheet-mask" bindtap="closeShareSheet"></view>
+  <view class="sheet-panel share-entry-sheet">
+    <view class="sheet-handle"></view>
+    <view class="sheet-header">
+      <view class="sheet-title">分享项目</view>
+      <view class="sheet-close" bindtap="closeShareSheet">关闭</view>
+    </view>
+
+    <view class="share-entry-header">
+      <view class="share-entry-header-title">选择分享方式</view>
+      <view class="share-entry-header-desc">选择后直接预览卡片。</view>
+    </view>
+
+    <view class="share-entry-list">
+      <view
+        class="mode-card share-entry-card"
+        wx:for="{{shareActionOptions}}"
+        wx:key="key"
+        data-mode="{{item.key}}"
+        bindtap="openShareFlow"
+      >
+        <view class="line-between share-entry-head">
+          <view>
+            <view class="mode-title">{{item.title}}</view>
+            <view class="mode-desc">{{item.desc}}</view>
+          </view>
+          <view class="status-badge is-brand">{{item.badge}}</view>
+        </view>
+      </view>
+    </view>
+  </view>
+</view>
+
+<view wx:if="{{showTaskCompleteSheet}}">
+  <view class="sheet-mask task-complete-mask" bindtap="closeTaskCompleteSheet"></view>
+  <view class="sheet-panel task-complete-sheet {{isTaskCompletionEditing ? 'is-editing' : ''}}" style="{{taskCompleteSheetStyle}}">
+    <view class="sheet-handle"></view>
+    <view class="sheet-header">
+      <view class="sheet-title">完成：{{taskCompletionTaskTitle}}</view>
+      <view class="sheet-close" bindtap="closeTaskCompleteSheet">关闭</view>
+    </view>
+    <view class="task-complete-body" style="{{taskCompleteBodyStyle}}">
+      <view class="field-group task-complete-field">
+        <view class="field-label">完成情况 · 提交后自动写入时间线</view>
+        <textarea
+          class="textarea-sim textarea-native task-complete-textarea"
+          value="{{taskCompletionText}}"
+          bindinput="onTaskCompletionInput"
+          bindfocus="onTaskCompletionFieldFocus"
+          cursor-spacing="{{taskCompletionCursorSpacing}}"
+          placeholder="例如：报价已发送，客户确认本周三内部评审，若通过则进入合同沟通。"
+          placeholder-class="input-placeholder"
+          maxlength="-1"
+        ></textarea>
+      </view>
+      <view class="task-complete-inline-entry">
+        <view wx:if="{{!taskCompletionCreateNextTask}}" class="btn-ghost task-complete-inline-btn" bindtap="toggleTaskCompletionCreateNextTask">补下一步动作</view>
+      </view>
+      <view wx:if="{{taskCompletionCreateNextTask}}" class="task-complete-next-card">
+        <view class="line-between task-complete-next-head">
+          <view>
+            <view class="task-complete-toggle-title">下一步任务</view>
+            <view class="helper-text">仍在当前完成面板里补充，不会跳到新页面。</view>
+          </view>
+          <view class="section-link" bindtap="toggleTaskCompletionCreateNextTask">收起</view>
+        </view>
+        <view class="field-group task-complete-field is-inline-first">
+          <view class="field-label">下一步任务标题</view>
+          <input
+            class="input-sim input-native"
+            value="{{taskCompletionNextTaskTitle}}"
+            data-field="taskCompletionNextTaskTitle"
+            bindinput="onTaskCompletionNextTaskInput"
+            bindfocus="onTaskCompletionFieldFocus"
+            cursor-spacing="{{taskCompletionCursorSpacing}}"
+            placeholder="例如：3天后回访报价反馈"
+            placeholder-class="input-placeholder"
+          />
+        </view>
+        <view class="field-group task-complete-field">
+          <view class="field-label">任务类型</view>
+          <view class="chips task-complete-type-wall">
+            <view
+              class="chip {{taskCompletionNextTaskType === item.type ? 'is-active' : ''}}"
+              wx:for="{{nextTaskTemplates}}"
+              wx:key="type"
+              data-type="{{item.type}}"
+              bindtap="setTaskCompletionNextTaskType"
+            >{{item.label}}</view>
+          </view>
+        </view>
+        <view class="field-group task-complete-field">
+          <view class="field-label">下一步时间</view>
+          <view class="split-row task-complete-time-row">
+            <picker class="picker-block" mode="date" value="{{taskCompletionNextTaskDate}}" data-field="taskCompletionNextTaskDate" bindchange="onTaskCompletionNextTaskPicker">
+              <view class="picker-sim">
+                <view class="picker-value {{!taskCompletionNextTaskDate ? 'is-placeholder' : ''}}">{{taskCompletionNextTaskDate || '选择日期'}}</view>
+              </view>
+            </picker>
+            <picker class="picker-block" mode="time" value="{{taskCompletionNextTaskTime}}" data-field="taskCompletionNextTaskTime" bindchange="onTaskCompletionNextTaskPicker">
+              <view class="picker-sim">
+                <view class="picker-value {{!taskCompletionNextTaskTime ? 'is-placeholder' : ''}}">{{taskCompletionNextTaskTime || '选择时间'}}</view>
+              </view>
+            </picker>
+          </view>
+        </view>
+        <view class="field-group task-complete-field">
+          <view class="field-label">动作说明</view>
+          <textarea
+            class="textarea-sim textarea-native task-complete-next-textarea"
+            value="{{taskCompletionNextTaskDescription}}"
+            data-field="taskCompletionNextTaskDescription"
+            bindinput="onTaskCompletionNextTaskInput"
+            bindfocus="onTaskCompletionFieldFocus"
+            cursor-spacing="{{taskCompletionCursorSpacing}}"
+            placeholder="可选：补一句下一步要重点确认什么。"
+            placeholder-class="input-placeholder"
+            maxlength="-1"
+          ></textarea>
+        </view>
+        <view class="helper-text task-complete-next-note">补下一步动作后，会自动同步为项目的下次跟进时间。</view>
+      </view>
+    </view>
+    <view class="inline-actions task-complete-actions is-fixed {{isTaskCompletionEditing ? 'is-editing' : ''}}" style="{{taskCompleteActionsStyle}}">
+      <view class="btn-ghost" bindtap="closeTaskCompleteSheet">取消</view>
+      <view class="btn-primary" bindtap="submitTaskCompletion">{{taskActionId === taskCompletionTaskId ? '提交中...' : '确认完成'}}</view>
+    </view>
+  </view>
+</view>

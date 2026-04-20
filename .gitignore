@@ -1,0 +1,20 @@
+.DS_Store
+
+# WeChat DevTools local config
+project.private.config.json
+
+# Node / cloud function dependencies
+node_modules/
+miniprogram_npm/
+cloudfunctions/*/node_modules/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Local env files
+.env
+.env.*

@@ -1,0 +1,29 @@
+{
+  "pages": [
+    "pages/index/index",
+    "pages/projects/projects",
+    "pages/project-detail/project-detail",
+    "pages/follow-up/follow-up",
+    "pages/project-form/project-form",
+    "pages/share-config/share-config",
+    "pages/share-card/share-card",
+    "pages/share-timeline/share-timeline",
+    "pages/shared-out/shared-out",
+    "pages/notifications/notifications",
+    "pages/mine/mine",
+    "pages/mark-deal/mark-deal",
+    "pages/earnings/earnings",
+    "pages/privacy-tags/privacy-tags",
+    "pages/edit-tag/edit-tag"
+  ],
+  "window": {
+    "navigationBarTitleText": "成交CRM",
+    "navigationBarBackgroundColor": "#F5F3EE",
+    "navigationBarTextStyle": "black",
+    "backgroundColor": "#F5F3EE",
+    "backgroundTextStyle": "light"
+  },
+  "style": "v2",
+  "lazyCodeLoading": "requiredComponents",
+  "sitemapLocation": "sitemap.json"
+}

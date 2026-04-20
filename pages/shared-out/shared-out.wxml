@@ -1,0 +1,119 @@
+<view class="page-shell shared-page">
+  <view wx:if="{{isLoading}}" class="rise-in">
+    <loading-panel rows="2" />
+  </view>
+
+  <block wx:else>
+    <view class="hero rise-in">
+      <view class="eyebrow-row">
+        <view class="eyebrow">外发项目</view>
+        <view class="source-badge">{{dataSource}}</view>
+      </view>
+      <view class="hero-title">外发项目只做追踪，不做干扰</view>
+      <view class="hero-subtitle">这里集中看对方有没有打开、有没有接手、有没有继续跟进，让你判断哪些外发项目值得持续追踪。</view>
+    </view>
+
+    <view wx:if="{{isLoadFailed}}" class="form-card section state-card rise-in stagger-1">
+      <view class="form-card-title">暂时无法连接云端</view>
+      <view class="form-card-desc">{{loadError}}</view>
+      <view class="hero-actions state-actions">
+        <view class="btn-primary state-btn" bindtap="retryFetch">重新连接</view>
+      </view>
+    </view>
+
+    <view class="section rise-in stagger-1">
+      <view class="form-card projects-filter-card">
+        <view class="search-panel compact-search-panel">
+          <input class="input-sim input-native projects-search-input" value="{{searchKeyword}}" bindinput="onSearchInput" placeholder="搜索项目名 / 接收方 / 标签" placeholder-class="input-placeholder" confirm-type="search" />
+          <view wx:if="{{searchKeyword}}" class="search-clear" bindtap="clearSearch">清空</view>
+        </view>
+        <view class="toolbar compact-toolbar projects-quick-filter-row">
+          <view class="chip {{statusFilter === item.key ? 'is-active' : ''}}" wx:for="{{statusFilters}}" wx:key="key" data-filter="{{item.key}}" bindtap="setStatusFilter">{{item.label}}</view>
+        </view>
+        <view class="split-row projects-picker-row">
+          <view class="field-group projects-picker-group">
+            <view class="field-label">排序</view>
+            <picker class="picker-block" mode="selector" range="{{sortOptionLabels}}" value="{{sortPickerIndex}}" bindchange="onSortPickerChange">
+              <view class="picker-sim projects-picker-sim">
+                <view class="picker-value">{{sortLabelText}}</view>
+              </view>
+            </picker>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <view class="summary-grid rise-in stagger-2">
+      <view class="summary-card" wx:for="{{summaryCards}}" wx:key="label">
+        <view class="summary-card-label">{{item.label}}</view>
+        <view class="summary-card-value">{{item.value}}</view>
+        <view class="summary-card-note">{{item.note}}</view>
+      </view>
+    </view>
+
+    <view class="form-card section result-bar rise-in stagger-2">
+      <view class="form-card-title">筛选结果</view>
+      <view class="form-card-desc">{{resultSummaryText}}</view>
+    </view>
+
+    <view class="section rise-in stagger-3">
+      <view class="project-card practical-project-card" wx:for="{{filteredRecords}}" wx:key="id" data-url="/pages/project-detail/project-detail" data-project-id="{{item.projectId}}" bindtap="openPage">
+        <view class="project-top">
+          <view class="project-main">
+            <view class="project-name">{{item.name}}</view>
+            <view class="project-client">对象标签：{{item.partner}} · 当前阶段：{{item.stage}}</view>
+            <view class="project-meta">{{item.receiverSummary}}</view>
+          </view>
+          <view class="status-badge shared-status-badge {{item.progressBadgeClass}}">{{item.statusText}}</view>
+        </view>
+
+        <view class="pill-row project-pill-row">
+          <view class="chip">{{item.mode}}</view>
+          <view class="status-badge {{item.statusBadgeClass}}">{{item.status}}</view>
+          <view class="soft-badge">{{item.viewed}}</view>
+          <view class="field-pill">推进记录 {{item.collaboratorFollowCount}} 条</view>
+        </view>
+
+        <view class="project-summary-compact shared-summary-card">
+          <view class="project-summary-row">
+            <view class="project-summary-label">当前状态</view>
+            <view class="project-summary-text">{{item.statusSummary}}</view>
+          </view>
+          <view class="project-summary-row">
+            <view class="project-summary-label">下一步判断</view>
+            <view class="project-summary-text">{{item.nextActionText}}</view>
+          </view>
+        </view>
+
+        <view class="compact-inline-metrics">
+          <view class="compact-inline-item">创建时间 {{item.createdAt}}</view>
+          <view class="compact-inline-item">首次打开 {{item.firstOpenedAt || '尚未打开'}}</view>
+          <view class="compact-inline-item">导入时间 {{item.importedAt || '尚未导入'}}</view>
+          <view class="compact-inline-item">最近推进 {{item.collaboratorLatestFollowAt || item.lastViewedAt || '暂无更新'}}</view>
+        </view>
+
+        <view class="project-footer compact-project-footer">
+          <view class="helper-text">接收方：{{item.receiverName}}</view>
+          <view class="helper-text">推进说明：{{item.syncSummary}}</view>
+        </view>
+
+        <view class="inline-actions compact-inline-actions">
+          <view class="btn-primary" data-project-id="{{item.projectId}}" catchtap="openRecordDetail">{{item.actionLabel}}</view>
+        </view>
+
+        <view class="helper-text shared-note">外发项目页只做追踪；进入详情后，可以查看接收方后续新增的推进记录和最新状态。</view>
+      </view>
+
+      <empty-state
+        wx:if="{{!filteredRecords.length}}"
+        title="{{emptyTitle}}"
+        desc="{{emptyDesc}}"
+        image="/assets/illustrations/empty-share.svg"
+        actionText="{{emptyActionText}}"
+        bind:action="handleEmptyAction"
+      />
+    </view>
+  </block>
+</view>
+
+<bottom-nav current="shared" />

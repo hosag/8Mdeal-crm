@@ -1,0 +1,65 @@
+<view class="page-shell">
+  <view wx:if="{{isLoading}}" class="rise-in">
+    <loading-panel rows="2" />
+  </view>
+
+  <block wx:else>
+  <view class="hero">
+    <view class="eyebrow-row">
+      <view class="eyebrow">成交记录</view>
+      <view class="source-badge">{{dataSource}}</view>
+    </view>
+    <view class="hero-title">成交记录聚焦金额、提成与回款</view>
+    <view class="hero-subtitle">页面围绕“快速登记、便于复盘”设计，不要求复杂财务字段，优先满足个人收益追踪。</view>
+    <view class="pill-row">
+      <view class="soft-badge">{{form.projectName}}</view>
+      <view class="chip">{{form.paymentStatus}}</view>
+    </view>
+  </view>
+
+  <view class="form-card section">
+    <view class="field-group">
+      <view class="field-label">实际成交金额</view>
+      <input class="input-sim input-native" type="digit" value="{{form.actualAmount}}" data-field="actualAmount" bindinput="onFieldInput" placeholder="例如 980000" placeholder-class="input-placeholder" />
+    </view>
+    <view class="split-row">
+      <view class="field-group">
+        <view class="field-label">合同签订日期</view>
+        <picker class="picker-block" mode="date" value="{{form.contractDate}}" bindchange="onContractDateChange">
+          <view class="picker-sim">
+            <view class="picker-value">{{form.contractDate}}</view>
+          </view>
+        </picker>
+      </view>
+      <view class="field-group">
+        <view class="field-label">回款状态</view>
+        <picker class="picker-block" mode="selector" range="{{paymentStatuses}}" value="{{paymentStatusIndex}}" bindchange="onPaymentStatusChange">
+          <view class="picker-sim">
+            <view class="picker-value">{{form.paymentStatus}}</view>
+          </view>
+        </picker>
+      </view>
+    </view>
+    <view class="field-group">
+      <view class="field-label">预期提成</view>
+      <input class="input-sim input-native" type="digit" value="{{form.expectedCommission}}" data-field="expectedCommission" bindinput="onFieldInput" placeholder="例如 84000" placeholder-class="input-placeholder" />
+    </view>
+    <view class="field-group">
+      <view class="field-label">补充说明</view>
+      <textarea class="textarea-sim textarea-native" value="{{form.note}}" data-field="note" bindinput="onFieldInput" placeholder="补充签约背景、回款说明或需要复盘的关键节点" placeholder-class="input-placeholder" maxlength="-1"></textarea>
+    </view>
+  </view>
+
+  <view class="form-card section">
+    <view class="form-card-title">页面引导</view>
+    <view class="form-card-desc">成交保存后，会自动进入收益统计，并在首页时间线中形成一条“成交记录”事件。</view>
+  </view>
+
+  <view class="bottom-space"></view>
+  </block>
+</view>
+
+<view wx:if="{{!isLoading}}" class="footer-bar">
+  <view class="btn-ghost" bindtap="goBack">返回详情</view>
+  <view class="btn-primary" bindtap="handleSave">{{isSaving ? '提交中...' : '提交成交'}}</view>
+</view>

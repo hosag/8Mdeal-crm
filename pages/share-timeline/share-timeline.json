@@ -1,0 +1,6 @@
+{
+  "navigationBarTitleText": "完整时间线",
+  "usingComponents": {
+    "loading-panel": "/components/loading-panel/index"
+  }
+}

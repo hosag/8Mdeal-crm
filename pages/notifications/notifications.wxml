@@ -1,0 +1,118 @@
+<view class="page-shell notifications-page">
+  <view wx:if="{{isLoading}}" class="rise-in">
+    <loading-panel rows="2" />
+  </view>
+
+  <block wx:else>
+    <view class="hero rise-in">
+      <view class="eyebrow-row">
+        <view class="eyebrow">消息中心</view>
+        <view class="source-badge">{{dataSource}}</view>
+      </view>
+      <view class="hero-title">提醒只保留真正需要你动作的事</view>
+      <view class="hero-subtitle">这里沉淀今日待办、逾期动作和后续业务消息。完成动作后会自动收口，不再堆积成噪音。</view>
+      <view class="hero-metrics section notifications-hero-metrics">
+        <view class="metric-card">
+          <view class="metric-label">待查看</view>
+          <view class="metric-value">{{stats.unreadCount || 0}}</view>
+          <view class="metric-note">还没确认的消息</view>
+        </view>
+        <view class="metric-card">
+          <view class="metric-label">待收口</view>
+          <view class="metric-value">{{stats.pendingCount || 0}}</view>
+          <view class="metric-note">还没完成动作闭环</view>
+        </view>
+        <view class="metric-card">
+          <view class="metric-label">已收口</view>
+          <view class="metric-value">{{stats.resolvedCount || 0}}</view>
+          <view class="metric-note">已经完成动作闭环</view>
+        </view>
+      </view>
+    </view>
+
+    <view wx:if="{{isLoadFailed}}" class="form-card section state-card rise-in stagger-1">
+      <view class="form-card-title">暂时无法连接云端</view>
+      <view class="form-card-desc">{{loadError}}</view>
+      <view class="hero-actions state-actions">
+        <view class="btn-primary state-btn" bindtap="fetchNotifications">重新连接</view>
+      </view>
+    </view>
+
+    <view class="section rise-in stagger-1">
+      <view class="form-card notifications-toolbar">
+        <view class="toolbar compact-toolbar notifications-filter-row">
+          <view class="chip {{statusFilter === item.key ? 'is-active' : ''}}" wx:for="{{statusFilters}}" wx:key="key" data-filter="{{item.key}}" bindtap="setStatusFilter">{{item.label}}</view>
+        </view>
+        <view class="toolbar compact-toolbar notifications-type-row">
+          <view class="chip {{typeFilter === item.key ? 'is-active' : ''}}" wx:for="{{typeFilters}}" wx:key="key" data-filter="{{item.key}}" bindtap="setTypeFilter">{{item.label}}</view>
+        </view>
+        <view class="notifications-quick-row">
+          <view
+            wx:for="{{quickFilters}}"
+            wx:key="key"
+            class="notifications-quick-chip {{quickFilter === item.key ? 'is-active' : ''}}"
+            data-filter="{{item.key}}"
+            bindtap="setQuickFilter"
+          >
+            <view class="notifications-quick-label">{{item.label}}</view>
+            <view class="notifications-quick-count">{{item.count || 0}}</view>
+          </view>
+        </view>
+        <view class="form-card-desc notifications-result-text">{{resultSummaryText}}</view>
+        <view class="inline-actions notifications-toolbar-actions">
+          <view class="btn-ghost compact-action-btn" bindtap="markAllRead">全部标为已查看</view>
+        </view>
+      </view>
+    </view>
+
+    <view class="section rise-in stagger-2">
+      <view class="notification-card {{item.cardClassName}}" wx:for="{{notifications}}" wx:key="id" data-id="{{item.id}}" data-type="{{item.type}}" data-url="{{item.actionUrl}}" data-auto-resolve="{{item.autoResolveOnOpen ? 1 : ''}}" bindtap="openNotification">
+        <view class="notification-top">
+          <view class="notification-main">
+            <view class="notification-title-row">
+              <view wx:if="{{item.toneText}}" class="notification-tone-pill {{item.toneClassName}}">{{item.toneText}}</view>
+              <view class="notification-title">{{item.title}}</view>
+              <view class="status-badge {{item.levelClassName}}">{{item.levelText}}</view>
+            </view>
+            <view class="notification-project">{{item.projectName}} · {{item.createdAtText}}</view>
+          </view>
+          <view class="notification-side">
+            <view class="field-pill {{item.statusClassName}}">{{item.statusText}}</view>
+            <view wx:if="{{item.cardActionText}}" class="notification-card-action-text">{{item.cardActionText}}</view>
+          </view>
+        </view>
+
+        <view class="pill-row notification-pill-row">
+          <view class="soft-badge notification-category-badge">{{item.categoryLabel}}</view>
+          <view wx:if="{{item.sourceName}}" class="field-pill notification-source-pill">来自 {{item.sourceName}}</view>
+        </view>
+
+        <view class="notification-summary">{{item.summary}}</view>
+        <view class="helper-text notification-hint">{{item.hintText}}</view>
+
+        <view wx:if="{{item.hasSecondaryActions}}" class="inline-actions compact-inline-actions notification-actions">
+          <view
+            wx:for="{{item.secondaryActions}}"
+            wx:key="key"
+            class="{{action.kind === 'primary' ? 'btn-primary' : 'btn-ghost'}} compact-action-btn {{item.secondaryActions.length === 1 ? 'is-single' : ''}}"
+            data-id="{{item.id}}"
+            data-type="{{item.type}}"
+            data-mode="{{action.key}}"
+            data-url="{{action.url}}"
+            data-auto-resolve="{{action.autoResolve ? 1 : ''}}"
+            catchtap="handleNotificationAction"
+          >{{action.label}}</view>
+        </view>
+      </view>
+
+      <empty-state
+        wx:if="{{!notifications.length}}"
+        title="当前筛选下没有消息"
+        desc="待办动作、跟进提醒或业务动态出现后，这里会自动沉淀提醒。"
+        image="/assets/illustrations/empty-projects.svg"
+        actionText="重新刷新"
+        bind:action="fetchNotifications"
+      />
+    </view>
+  </block>
+</view>

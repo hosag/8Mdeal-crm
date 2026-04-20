@@ -1,0 +1,6 @@
+{
+  "navigationBarTitleText": "项目表单",
+  "usingComponents": {
+    "loading-panel": "/components/loading-panel/index"
+  }
+}

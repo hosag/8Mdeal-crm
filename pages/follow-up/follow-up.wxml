@@ -1,0 +1,340 @@
+<view class="page-shell follow-page">
+  <view class="hero">
+    <view class="eyebrow-row">
+      <view class="eyebrow">新增跟进</view>
+      <view class="source-badge">{{dataSource}}</view>
+    </view>
+    <view class="hero-title">把跟进压缩成 3 分钟动作</view>
+    <view class="hero-subtitle">AI 会先整理原始跟进内容，再返回可确认的结构化建议，确认后再提交保存。</view>
+    <view class="pill-row">
+      <view class="soft-badge">{{projectTitle}}</view>
+      <view class="chip">当前阶段 {{projectStage}}</view>
+    </view>
+    <view wx:if="{{entryHintText}}" class="helper-text">{{entryHintText}}</view>
+  </view>
+
+  <view class="form-card section intro-card">
+    <view class="card-help-row">
+      <view class="form-card-title">记录说明</view>
+      <view class="help-trigger" data-key="record_intro" bindtap="openHelp">≡</view>
+    </view>
+    <view wx:if="{{draftUpdatedAt}}" class="helper-text">已暂存草稿：{{draftUpdatedAt}}</view>
+    <view class="step-row">
+      <view class="step-pill is-current">1. 原始内容</view>
+      <view class="step-pill">2. AI整理</view>
+      <view class="step-pill">3. 手动确认后保存</view>
+    </view>
+  </view>
+
+  <view class="form-card section follow-editor">
+    <view class="editor-section editor-section-meta editor-section-meta-compact">
+      <view class="editor-head">
+        <view class="card-help-row">
+          <view class="editor-title">基础信息</view>
+          <view class="help-trigger" data-key="basic_meta" bindtap="openHelp">≡</view>
+        </view>
+        <view class="editor-badge">必填起点</view>
+      </view>
+      <view class="field-group editor-field-group editor-field-group-compact time-field-group">
+        <view class="card-help-row card-help-row-inline">
+          <view class="field-label">跟进时间</view>
+          <view class="help-trigger help-trigger-small" data-key="follow_up_time" bindtap="openHelp">≡</view>
+        </view>
+        <view class="split-row compact-split-row">
+          <picker class="picker-block compact-picker-block" mode="date" value="{{followUpDate}}" bindchange="onFollowUpDateInput">
+            <view class="picker-sim compact-picker-sim">
+              <view class="picker-value {{!followUpDate ? 'is-placeholder' : ''}}">{{followUpDate || '选择日期'}}</view>
+            </view>
+          </picker>
+          <picker class="picker-block compact-picker-block" mode="time" value="{{followUpClock}}" bindchange="onFollowUpClockInput">
+            <view class="picker-sim compact-picker-sim">
+              <view class="picker-value {{!followUpClock ? 'is-placeholder' : ''}}">{{followUpClock || '选择时间'}}</view>
+            </view>
+          </picker>
+        </view>
+      </view>
+      <view class="field-group editor-field-group editor-field-group-compact">
+        <view class="card-help-row card-help-row-inline">
+          <view class="field-label">跟进方式</view>
+          <view class="help-trigger help-trigger-small" data-key="follow_up_method" bindtap="openHelp">≡</view>
+        </view>
+        <view class="chips editor-chip-wall method-chip-wall method-chip-grid">
+          <view class="chip {{currentMethod === item ? 'is-active' : ''}}" wx:for="{{methods}}" wx:key="*this" data-method="{{item}}" bindtap="setMethod">{{item}}</view>
+        </view>
+      </view>
+      <view id="follow-up-content-field" class="field-group editor-field-group editor-field-group-compact content-inline-group">
+        <view class="card-help-row card-help-row-inline">
+          <view class="field-label">原始跟进内容</view>
+          <view class="help-trigger help-trigger-small" data-key="raw_content" bindtap="openHelp">≡</view>
+        </view>
+        <textarea class="textarea-sim textarea-native editor-textarea editor-textarea-compact" value="{{content}}" bindinput="onContentInput" placeholder="先把现场原始记录写下来，越接近真实说法越好，交给 AI 再做结构化整理。" placeholder-class="input-placeholder" maxlength="-1"></textarea>
+        <view wx:if="{{isVoiceSupported}}" class="voice-entry-row">
+          <view class="voice-entry-btn {{isVoiceRecording ? 'is-recording' : ''}} {{isVoiceRecognizing ? 'is-busy' : ''}}" bindtap="handleVoiceInput">
+            {{isVoiceRecording ? '结束录音' : (isVoiceRecognizing ? '识别中...' : '语音录入')}}
+          </view>
+          <view class="voice-entry-status {{isVoiceRecording ? 'is-recording' : ''}}">{{voiceStatusText}}</view>
+        </view>
+        <view wx:else class="helper-text voice-disabled-tip">{{voiceStatusText}}</view>
+        <view wx:if="{{voicePreviewText}}" class="voice-preview-card">
+          <view class="voice-preview-label">本次识别</view>
+          <view class="voice-preview-text">{{voicePreviewText}}</view>
+        </view>
+        <view class="content-action-row">
+          <view class="btn-secondary content-action" bindtap="handleAiSummary">{{isAiLoading ? 'AI整理中...' : 'AI整理'}}</view>
+        </view>
+      </view>
+    </view>
+
+    <view class="editor-section">
+      <view class="editor-head">
+        <view class="card-help-row">
+          <view class="editor-title">推进设置</view>
+          <view class="help-trigger" data-key="advance_settings" bindtap="openHelp">≡</view>
+        </view>
+      </view>
+      <view class="field-group editor-field-group">
+        <view class="chips editor-chip-wall">
+          <view class="chip {{stageIndex === index ? 'is-active' : ''}}" wx:for="{{stages}}" wx:key="*this" data-index="{{index}}" bindtap="setStage">{{item}}</view>
+        </view>
+      </view>
+      <view class="field-group editor-field-group editor-field-group-compact time-field-group">
+        <view class="card-help-row card-help-row-inline">
+          <view class="field-label">下次跟进时间</view>
+          <view class="help-trigger help-trigger-small" data-key="next_follow" bindtap="openHelp">≡</view>
+        </view>
+        <view class="split-row compact-split-row">
+          <picker class="picker-block compact-picker-block" mode="date" value="{{nextFollowUpDate}}" bindchange="onNextFollowUpDateInput">
+            <view class="picker-sim compact-picker-sim">
+              <view class="picker-value {{!nextFollowUpDate ? 'is-placeholder' : ''}}">{{nextFollowUpDate || '选择日期'}}</view>
+            </view>
+          </picker>
+          <picker class="picker-block compact-picker-block" mode="time" value="{{nextFollowUpClock}}" bindchange="onNextFollowUpClockInput">
+            <view class="picker-sim compact-picker-sim">
+              <view class="picker-value {{!nextFollowUpClock ? 'is-placeholder' : ''}}">{{nextFollowUpClock || '选择时间'}}</view>
+            </view>
+          </picker>
+        </view>
+      </view>
+
+      <view class="field-group editor-field-group editor-field-group-compact task-board-group">
+        <view class="card-help-row card-help-row-inline">
+          <view class="field-label">本次推进动作</view>
+          <view class="help-trigger help-trigger-small" data-key="task_board" bindtap="openHelp">≡</view>
+        </view>
+        <view class="chips editor-chip-wall task-template-row">
+          <view class="chip" wx:for="{{taskTemplates}}" wx:key="type" data-type="{{item.type}}" data-label="{{item.label}}" bindtap="addTaskTemplate">{{item.label}}</view>
+        </view>
+        <view wx:if="{{taskDrafts.length}}" class="task-draft-list">
+          <view class="task-draft-card" wx:for="{{taskDrafts}}" wx:key="localId">
+            <view class="line-between task-draft-head">
+              <view class="soft-badge">{{item.typeLabel}}</view>
+              <view class="sheet-close task-remove-btn" data-index="{{index}}" bindtap="removeTaskDraft">删除</view>
+            </view>
+            <input class="input-sim input-native task-title-input" value="{{item.title}}" data-index="{{index}}" data-field="title" bindinput="updateTaskDraftField" placeholder="例如：周五前发正式报价单" placeholder-class="input-placeholder" />
+            <view class="split-row compact-split-row task-time-row">
+              <picker class="picker-block compact-picker-block" mode="date" value="{{item.dueDate}}" data-index="{{index}}" data-field="dueDate" bindchange="updateTaskDraftPicker">
+                <view class="picker-sim compact-picker-sim">
+                  <view class="picker-value {{!item.dueDate ? 'is-placeholder' : ''}}">{{item.dueDate || '截止日期'}}</view>
+                </view>
+              </picker>
+              <picker class="picker-block compact-picker-block" mode="time" value="{{item.dueTime}}" data-index="{{index}}" data-field="dueTime" bindchange="updateTaskDraftPicker">
+                <view class="picker-sim compact-picker-sim">
+                  <view class="picker-value {{!item.dueTime ? 'is-placeholder' : ''}}">{{item.dueTime || '截止时间'}}</view>
+                </view>
+              </picker>
+            </view>
+            <textarea class="textarea-sim textarea-native task-desc-input" value="{{item.description}}" data-index="{{index}}" data-field="description" bindinput="updateTaskDraftField" placeholder="可选：补一句动作说明，方便自己后续执行。" placeholder-class="input-placeholder" maxlength="-1"></textarea>
+          </view>
+        </view>
+        <view class="task-add-row">
+          <view class="btn-ghost task-add-btn" bindtap="addCustomTask">新增自定义动作</view>
+          <view class="helper-text">最多 3 条动作，默认会跟本次跟进一起保存到项目里。</view>
+        </view>
+      </view>
+    </view>
+
+    <view class="editor-section">
+      <view class="editor-head">
+        <view class="card-help-row">
+          <view class="editor-title">附件材料</view>
+          <view class="help-trigger" data-key="attachments" bindtap="openHelp">≡</view>
+        </view>
+      </view>
+      <view class="field-group editor-field-group editor-field-group-tight">
+        <view wx:if="{{attachments.length}}" class="attachment-grid">
+          <view class="attachment attachment-image" wx:for="{{attachments}}" wx:key="fileId">
+            <image class="attachment-thumb" src="{{item.previewPath || item.tempFilePath || item.fileId}}" mode="aspectFill"></image>
+            <view class="attachment-remove" data-index="{{index}}" bindtap="removeAttachment">删除</view>
+            <view class="attachment-caption">{{item.name}}</view>
+          </view>
+        </view>
+        <view class="attachment is-add attachment-trigger" bindtap="chooseImages">上传图片</view>
+        <view class="helper-text">最多 9 张，选择后会直接上传到云存储，再随跟进记录一起保存。</view>
+      </view>
+    </view>
+
+  </view>
+
+  <view wx:if="{{aiError}}" class="form-card section">
+    <view class="form-card-title">AI 调用失败</view>
+    <view class="form-card-desc">{{aiError}}</view>
+  </view>
+
+  <view class="bottom-space"></view>
+</view>
+
+<view class="footer-bar">
+  <view class="btn-ghost" bindtap="saveDraft">暂存草稿</view>
+  <view class="btn-primary" bindtap="handleSave">{{isSaving ? '提交中...' : '提交跟进'}}</view>
+</view>
+
+<view wx:if="{{showHelpDialog}}">
+  <view class="sheet-mask" bindtap="closeHelp"></view>
+  <view class="help-dialog">
+    <view class="help-dialog-head">
+      <view class="sheet-title">{{helpTitle}}</view>
+      <view class="sheet-close" bindtap="closeHelp">关闭</view>
+    </view>
+    <view class="help-dialog-body">{{helpContent}}</view>
+  </view>
+</view>
+
+<view wx:if="{{showAiDialog && aiResult}}">
+  <view class="sheet-mask ai-sheet-mask" bindtap="closeAiDialog"></view>
+  <view class="sheet-panel ai-sheet-panel">
+    <view class="sheet-handle"></view>
+    <view class="follow-result-card">
+      <view class="sheet-header result-sheet-header">
+        <view class="result-sheet-header-main">
+          <view class="card-help-row">
+            <view class="sheet-title">AI 整理结果</view>
+            <view class="result-status-badge">建议草稿</view>
+          </view>
+          <view class="ai-sheet-note">结果按摘要、关键进展、风险和下一步建议分段展示，确认后再回填。</view>
+          <view class="ai-origin-row">
+            <view class="ai-origin-badge">{{aiResult.sourceLabel}}</view>
+            <view class="ai-origin-text">{{aiResult.sourceCaption}}</view>
+          </view>
+        </view>
+        <view class="sheet-close" bindtap="closeAiDialog">关闭</view>
+      </view>
+
+      <view class="result-panel result-panel-summary">
+        <view class="result-label">摘要</view>
+        <view class="result-text">{{aiResult.summary}}</view>
+      </view>
+
+      <view class="result-panel" wx:if="{{aiResult.highlights.length}}">
+        <view class="result-label">关键进展</view>
+        <view class="checklist result-checklist">
+          <view class="check-item" wx:for="{{aiResult.highlights}}" wx:key="*this">{{item}}</view>
+        </view>
+      </view>
+
+      <view class="result-panel result-panel-risk" wx:if="{{aiResult.risks.length}}">
+        <view class="result-label">风险提示</view>
+        <view class="checklist result-checklist">
+          <view class="check-item" wx:for="{{aiResult.risks}}" wx:key="*this">{{item}}</view>
+        </view>
+      </view>
+
+      <view class="result-panel" wx:if="{{aiResult.recommendedStage}}">
+        <view class="result-label">建议阶段</view>
+        <view class="result-text">{{aiResult.recommendedStage}}</view>
+        <view class="helper-text result-helper-text">{{aiResult.stageChangeReason}}</view>
+      </view>
+
+      <view class="result-panel" wx:if="{{aiResult.missingInfo.length}}">
+        <view class="result-label">仍缺少的信息</view>
+        <view class="checklist result-checklist">
+          <view class="check-item" wx:for="{{aiResult.missingInfo}}" wx:key="*this">{{item}}</view>
+        </view>
+      </view>
+
+      <view class="inline-actions follow-result-actions">
+        <view class="btn-primary result-action-btn" bindtap="applyAiSummary">回填整理结果</view>
+        <view class="btn-ghost result-action-btn" bindtap="handleAiNextSuggestion">
+          {{isAiNextLoading ? '生成中...' : (aiNextSuggestion ? aiNextSuggestion.regenerateLabel : 'AI建议下一步')}}
+        </view>
+      </view>
+
+      <view class="result-panel result-panel-next">
+        <view class="line-between result-panel-head">
+          <view class="card-help-row">
+            <view class="result-label">AI 下一步建议</view>
+            <view class="help-trigger help-trigger-small" data-key="ai_next" bindtap="openHelp">≡</view>
+          </view>
+        </view>
+
+        <view wx:if="{{aiNextError}}" class="helper-text result-helper-text is-danger">{{aiNextError}}</view>
+        <view wx:if="{{isAiNextLoading}}" class="helper-text result-helper-text">AI 正在结合当前摘要、最近跟进和开放任务生成下一步建议。</view>
+
+        <block wx:if="{{aiNextSuggestion}}">
+          <view class="ai-origin-row ai-origin-row-inline">
+            <view class="ai-origin-badge">{{aiNextSuggestion.sourceLabel}}</view>
+            <view class="ai-origin-text">{{aiNextSuggestion.sourceCaption}}</view>
+          </view>
+
+          <view class="result-subpanel">
+            <view class="result-sublabel">最优先动作</view>
+            <view class="result-text">{{aiNextSuggestion.nextAction}}</view>
+          </view>
+
+          <view class="detail-grid result-detail-grid">
+            <view class="detail-box">
+              <view class="detail-box-label">建议对象</view>
+              <view class="detail-box-value shared-detail-value">{{aiNextSuggestion.recommendedTarget || '待确认'}}</view>
+            </view>
+            <view class="detail-box">
+              <view class="detail-box-label">建议方式</view>
+              <view class="detail-box-value shared-detail-value">{{aiNextSuggestion.recommendedMethod || '待确认'}}</view>
+            </view>
+            <view class="detail-box">
+              <view class="detail-box-label">建议时间</view>
+              <view class="detail-box-value shared-detail-value">{{aiNextSuggestion.recommendedTimeWindow || '尽快'}}</view>
+            </view>
+            <view class="detail-box">
+              <view class="detail-box-label">回填时间</view>
+              <view class="detail-box-value shared-detail-value">{{aiNextSuggestion.recommendedDate}} {{aiNextSuggestion.recommendedTime}}</view>
+            </view>
+          </view>
+
+          <view class="result-subpanel" wx:if="{{aiNextSuggestion.talkTrack}}">
+            <view class="result-sublabel">建议话术</view>
+            <view class="result-text">{{aiNextSuggestion.talkTrack}}</view>
+          </view>
+
+          <view class="result-subpanel" wx:if="{{aiNextSuggestion.reason}}">
+            <view class="result-sublabel">建议理由</view>
+            <view class="result-text">{{aiNextSuggestion.reason}}</view>
+          </view>
+
+          <view class="result-subpanel" wx:if="{{aiNextSuggestion.taskDrafts && aiNextSuggestion.taskDrafts.length}}">
+            <view class="result-sublabel">建议动作草稿</view>
+            <view class="task-draft-list result-task-list">
+              <view class="task-draft-card result-task-card" wx:for="{{aiNextSuggestion.taskDrafts}}" wx:key="title">
+                <view class="line-between task-draft-head">
+                  <view class="soft-badge">{{item.typeLabel}}</view>
+                  <view class="helper-text">{{item.dueDate}} {{item.dueTime}}</view>
+                </view>
+                <view class="task-draft-title">{{item.title}}</view>
+                <view wx:if="{{item.description}}" class="helper-text result-task-desc">{{item.description}}</view>
+              </view>
+            </view>
+          </view>
+
+          <view class="result-subpanel" wx:if="{{aiNextSuggestion.missingInfo && aiNextSuggestion.missingInfo.length}}">
+            <view class="result-sublabel">仍缺少的信息</view>
+            <view class="checklist result-checklist">
+              <view class="check-item" wx:for="{{aiNextSuggestion.missingInfo}}" wx:key="*this">{{item}}</view>
+            </view>
+          </view>
+
+          <view class="inline-actions follow-result-actions is-follow-up">
+            <view class="btn-primary result-action-btn" bindtap="applyAiNextSuggestion">采用下一步建议</view>
+          </view>
+        </block>
+      </view>
+    </view>
+  </view>
+</view>

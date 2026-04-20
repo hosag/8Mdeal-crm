@@ -1,0 +1,6 @@
+{
+  "navigationBarTitleText": "收益统计",
+  "usingComponents": {
+    "loading-panel": "/components/loading-panel/index"
+  }
+}

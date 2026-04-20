@@ -1,0 +1,8 @@
+{
+  "name": "summarizeFollowUp",
+  "version": "1.0.0",
+  "dependencies": {
+    "@cloudbase/node-sdk": "latest",
+    "wx-server-sdk": "latest"
+  }
+}

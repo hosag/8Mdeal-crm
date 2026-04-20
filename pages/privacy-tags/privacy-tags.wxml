@@ -1,0 +1,45 @@
+<view class="page-shell">
+  <view wx:if="{{isLoading}}" class="rise-in">
+    <loading-panel rows="2" />
+  </view>
+
+  <block wx:else>
+  <view class="hero rise-in">
+    <view class="eyebrow-row">
+      <view class="eyebrow">隐私标签</view>
+      <view class="source-badge">{{dataSource}}</view>
+    </view>
+    <view class="hero-title">把权限规则做成可理解的标签</view>
+    <view class="hero-subtitle">默认标签既能满足大多数分享场景，也给了用户增删改的空间，避免复杂权限表单。</view>
+    <view class="hero-actions">
+      <view class="btn-secondary" data-tag-id="" bindtap="openPage">新建标签</view>
+    </view>
+  </view>
+
+  <view class="section rise-in stagger-1">
+    <view class="tag-card" wx:for="{{privacyTags}}" wx:key="id" data-tag-id="{{item.id}}" bindtap="openPage">
+      <view class="line-between">
+        <view>
+          <view class="tag-title">{{item.name}}</view>
+          <view class="tag-desc">{{item.desc}}</view>
+        </view>
+        <view class="chip">编辑</view>
+      </view>
+      <view class="pill-row">
+        <view class="field-pill" wx:for="{{item.fields}}" wx:key="*this">{{item}}</view>
+      </view>
+    </view>
+    <empty-state
+      wx:if="{{!privacyTags.length}}"
+      title="当前还没有可用标签"
+      desc="可创建“基础浏览”和“完整外发”等标签，把分享规则沉淀成可复用模板。"
+      image="/assets/illustrations/empty-tags.svg"
+      actionText="新建标签"
+      bind:action="openPage"
+      data-tag-id=""
+    />
+  </view>
+
+  <view class="center-note section">标签页重点强调“可见字段”而不是技术权限术语，降低理解门槛。</view>
+  </block>
+</view>

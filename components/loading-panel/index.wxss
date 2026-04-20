@@ -1,0 +1,84 @@
+.loading-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 18rpx;
+}
+
+.loading-shell,
+.loading-card {
+  border-radius: 30rpx;
+  background: rgba(255, 252, 247, 0.86);
+  box-shadow: 0 18rpx 36rpx rgba(24, 39, 51, 0.06);
+}
+
+.loading-shell {
+  overflow: hidden;
+}
+
+.loading-hero {
+  height: 220rpx;
+  border-radius: 30rpx 30rpx 0 0;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.loading-summary {
+  padding: 22rpx 24rpx 24rpx;
+}
+
+.loading-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8rpx 16rpx;
+  border-radius: 999rpx;
+  background: rgba(38, 74, 96, 0.08);
+  color: #456275;
+  font-size: 21rpx;
+  font-weight: 700;
+}
+
+.loading-title {
+  margin-top: 12rpx;
+  font-size: 30rpx;
+  font-weight: 700;
+  color: #1d2f3b;
+}
+
+.loading-desc {
+  margin-top: 8rpx;
+  font-size: 23rpx;
+  line-height: 1.7;
+  color: #71808c;
+}
+
+.loading-card {
+  padding: 28rpx;
+}
+
+.loading-line {
+  height: 22rpx;
+  margin-top: 16rpx;
+  border-radius: 999rpx;
+  background: rgba(31, 56, 72, 0.08);
+}
+
+.loading-line.is-long {
+  width: 68%;
+}
+
+.loading-line:not(.is-long) {
+  width: 44%;
+}
+
+.loading-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12rpx;
+  margin-top: 22rpx;
+}
+
+.loading-pill {
+  height: 68rpx;
+  border-radius: 22rpx;
+  background: rgba(31, 56, 72, 0.08);
+}
