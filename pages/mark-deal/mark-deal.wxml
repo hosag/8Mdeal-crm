@@ -1,6 +1,6 @@
-<view class="page-shell">
+<view class="page-shell mark-deal-page {{appearancePageClass}}">
   <view wx:if="{{isLoading}}" class="rise-in">
-    <loading-panel rows="2" />
+    <loading-panel rows="2" appearance-page-class="{{appearancePageClass}}" />
   </view>
 
   <block wx:else>
@@ -59,7 +59,7 @@
   </block>
 </view>
 
-<view wx:if="{{!isLoading}}" class="footer-bar">
+<view wx:if="{{!isLoading}}" class="footer-bar {{appearancePageClass}}">
   <view class="btn-ghost" bindtap="goBack">返回详情</view>
   <view class="btn-primary" bindtap="handleSave">{{isSaving ? '提交中...' : '提交成交'}}</view>
 </view>

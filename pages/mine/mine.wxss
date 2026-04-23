@@ -1,3 +1,278 @@
+.mine-page {
+  padding-bottom: 240rpx;
+}
+
+.mine-hero {
+  padding: 22rpx 26rpx;
+  border-radius: 30rpx;
+}
+
+.mine-hero .source-badge {
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 245, 233, 0.8);
+}
+
+.mine-hero .hero-title {
+  margin-top: 12rpx;
+  font-size: 36rpx;
+}
+
+.mine-hero .hero-subtitle {
+  margin-top: 6rpx;
+  font-size: 22rpx;
+  line-height: 1.45;
+}
+
+.mine-overview-card {
+  padding: 18rpx 20rpx 20rpx;
+}
+
+.mine-section-head {
+  align-items: center;
+  gap: 20rpx;
+}
+
+.mine-section-title {
+  font-size: 30rpx;
+}
+
+.mine-overview-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8rpx;
+  margin-top: 14rpx;
+}
+
+.mine-overview-metric {
+  padding: 14rpx 12rpx 12rpx;
+  border-radius: 20rpx;
+  background: var(--theme-soft-block-bg);
+  box-shadow: inset 0 0 0 1rpx rgba(24, 39, 51, 0.05);
+  text-align: center;
+}
+
+.mine-overview-metric .metric-label {
+  font-size: 18rpx;
+  color: var(--theme-text-muted);
+}
+
+.mine-overview-metric .metric-value {
+  margin-top: 4rpx;
+  font-size: 28rpx;
+  font-weight: 700;
+  color: var(--theme-title);
+}
+
+.mine-entry-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 10rpx;
+}
+
+.mine-entry-card {
+  padding: 18rpx 20rpx;
+}
+
+.mine-entry-head {
+  align-items: center;
+  gap: 16rpx;
+}
+
+.mine-entry-main {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.mine-entry-card .card-title {
+  font-size: 29rpx;
+}
+
+.mine-entry-card .card-subtitle {
+  margin-top: 6rpx;
+  font-size: 22rpx;
+  line-height: 1.45;
+}
+
+.mine-entry-card .section-link {
+  flex: 0 0 auto;
+  min-width: 72rpx;
+  text-align: right;
+}
+
+.mine-settings-card {
+  padding: 20rpx;
+}
+
+.mine-setting-group {
+  margin-top: 14rpx;
+}
+
+.mine-group-title {
+  margin-bottom: 10rpx;
+  font-size: 21rpx;
+  font-weight: 700;
+  color: var(--theme-text-muted);
+  letter-spacing: 1rpx;
+}
+
+.mine-plain-row {
+  padding: 14rpx 0 0;
+}
+
+.mine-last-row {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+.mine-font-card {
+  margin-top: 8rpx;
+  padding: 14rpx 14rpx 12rpx;
+  border-radius: 22rpx;
+  background: var(--theme-soft-block-bg);
+  box-shadow: inset 0 0 0 2rpx rgba(24, 39, 51, 0.04);
+}
+
+.mine-font-head {
+  align-items: center;
+  gap: 16rpx;
+}
+
+.mine-font-title {
+  margin-bottom: 0;
+}
+
+.mine-theme-card {
+  margin-top: 8rpx;
+}
+
+.mine-theme-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10rpx;
+  margin-top: 12rpx;
+}
+
+.mine-theme-option {
+  padding: 12rpx;
+  border-radius: 20rpx;
+  background: var(--theme-surface-bg);
+  box-shadow: inset 0 0 0 2rpx rgba(24, 39, 51, 0.04);
+}
+
+.mine-theme-option.is-active {
+  box-shadow:
+    inset 0 0 0 2rpx rgba(36, 75, 97, 0.16),
+    0 10rpx 20rpx rgba(24, 39, 51, 0.06);
+}
+
+.mine-theme-option.is-disabled {
+  opacity: 0.54;
+}
+
+.mine-theme-preview {
+  position: relative;
+  overflow: hidden;
+  padding: 12rpx;
+  border-radius: 18rpx;
+  min-height: 122rpx;
+}
+
+.mine-theme-preview-badge {
+  width: 54rpx;
+  height: 16rpx;
+  border-radius: 999rpx;
+  background: rgba(255, 255, 255, 0.26);
+}
+
+.mine-theme-preview-bars {
+  margin-top: 12rpx;
+}
+
+.mine-theme-preview-bar {
+  height: 12rpx;
+  width: 68%;
+  border-radius: 999rpx;
+  background: rgba(255, 255, 255, 0.34);
+}
+
+.mine-theme-preview-bar.is-strong {
+  width: 86%;
+}
+
+.mine-theme-preview-bar + .mine-theme-preview-bar {
+  margin-top: 8rpx;
+}
+
+.mine-theme-preview-pills {
+  display: flex;
+  gap: 8rpx;
+  margin-top: 14rpx;
+}
+
+.mine-theme-preview-pill {
+  width: 34rpx;
+  height: 18rpx;
+  border-radius: 999rpx;
+  background: rgba(255, 255, 255, 0.24);
+}
+
+.mine-theme-preview-pill.is-active {
+  width: 46rpx;
+  background: rgba(255, 255, 255, 0.92);
+}
+
+.mine-theme-copy {
+  margin-top: 10rpx;
+}
+
+.mine-theme-label {
+  font-size: 23rpx;
+  font-weight: 700;
+  color: var(--theme-title);
+}
+
+.mine-theme-desc {
+  margin-top: 6rpx;
+  font-size: 20rpx;
+  line-height: 1.5;
+  color: var(--theme-text-soft);
+}
+
+.mine-theme-preview-deep_business {
+  background: linear-gradient(145deg, #183145 0%, #274a61 54%, #917955 100%);
+}
+
+.mine-theme-preview-warm_almond {
+  background: linear-gradient(145deg, #6f4032 0%, #9f5f43 52%, #d1a06e 100%);
+}
+
+.mine-theme-preview-misty_blossom {
+  background: linear-gradient(145deg, #815f76 0%, #b3879b 52%, #e4c9d4 100%);
+}
+
+.mine-theme-preview-festive_crimson {
+  background: linear-gradient(145deg, #7c1f2b 0%, #b9393c 54%, #d6a356 100%);
+}
+
+.mine-theme-preview-cloud_mist {
+  background: linear-gradient(145deg, #708268 0%, #8f9b81 52%, #c8a06a 100%);
+}
+
+.mine-theme-preview-ink_readable {
+  background: linear-gradient(145deg, #374a41 0%, #5c7165 52%, #aab6aa 100%);
+}
+
+.mine-font-pill-row {
+  margin-top: 12rpx;
+  gap: 10rpx;
+}
+
+.mine-font-chip {
+  min-height: 44rpx;
+  padding: 0 16rpx;
+  font-size: 20rpx;
+}
+
 .menu-row.reminder-menu-row {
   align-items: flex-start;
   gap: 24rpx;
@@ -16,11 +291,27 @@
 
 .menu-saving-text {
   font-size: 22rpx;
-  color: #8a6d52;
+  color: var(--theme-status-text);
+}
+
+.mine-reminder-card {
+  padding: 0 14rpx;
+  border-radius: 22rpx;
+  background: var(--theme-soft-block-bg);
+  box-shadow: inset 0 0 0 2rpx rgba(24, 39, 51, 0.04);
+}
+
+.mine-reminder-card + .mine-reminder-card {
+  margin-top: 10rpx;
+}
+
+.mine-reminder-row {
+  padding-top: 14rpx;
+  padding-bottom: 10rpx;
 }
 
 .reminder-option-row {
-  padding: 8rpx 0 22rpx;
+  padding: 0 0 12rpx;
   border-bottom: 1rpx solid rgba(24, 39, 51, 0.08);
 }
 
@@ -29,10 +320,122 @@
   padding-bottom: 0;
 }
 
+.mine-reminder-option-row {
+  border-bottom: 0;
+}
+
 .reminder-pill-row {
-  margin-top: 12rpx;
+  margin-top: 8rpx;
+}
+
+.mine-reminder-pill-row {
+  gap: 10rpx;
+}
+
+.mine-reminder-chip {
+  min-height: 44rpx;
+  padding: 0 16rpx;
+  font-size: 20rpx;
 }
 
 .chip.is-disabled {
   opacity: 0.42;
+}
+
+.page-shell.mine-page.appearance-font-large .mine-hero {
+  padding: 26rpx 28rpx;
+}
+
+.page-shell.mine-page.appearance-font-large .mine-hero .hero-title {
+  font-size: 46rpx;
+}
+
+.page-shell.mine-page.appearance-font-large .mine-hero .hero-subtitle {
+  font-size: 28rpx;
+  line-height: 1.62;
+}
+
+.page-shell.mine-page.appearance-font-large .mine-overview-metric,
+.page-shell.mine-page.appearance-font-large .mine-entry-card,
+.page-shell.mine-page.appearance-font-large .mine-font-card,
+.page-shell.mine-page.appearance-font-large .mine-reminder-card {
+  border-radius: 24rpx;
+}
+
+.page-shell.mine-page.appearance-font-large .mine-overview-grid {
+  gap: 10rpx;
+}
+
+.page-shell.mine-page.appearance-font-large .mine-entry-card .section-link {
+  font-size: 26rpx;
+}
+
+.page-shell.mine-page.appearance-font-large .mine-theme-option,
+.page-shell.mine-page.appearance-font-large .mine-font-card,
+.page-shell.mine-page.appearance-font-large .mine-reminder-card {
+  border-radius: 24rpx;
+}
+
+.page-shell.mine-page.appearance-font-large .mine-theme-label {
+  font-size: 27rpx;
+}
+
+.page-shell.mine-page.appearance-font-large .mine-theme-desc {
+  font-size: 23rpx;
+}
+
+.page-shell.mine-page.appearance-font-readable .mine-hero {
+  padding: 30rpx;
+}
+
+.page-shell.mine-page.appearance-font-readable .mine-hero .hero-title {
+  font-size: 56rpx;
+  line-height: 1.34;
+}
+
+.page-shell.mine-page.appearance-font-readable .mine-hero .hero-subtitle {
+  font-size: 36rpx;
+  line-height: 1.72;
+}
+
+.page-shell.mine-page.appearance-font-readable .mine-overview-card,
+.page-shell.mine-page.appearance-font-readable .mine-settings-card {
+  padding: 24rpx;
+}
+
+.page-shell.mine-page.appearance-font-readable .mine-overview-grid {
+  gap: 12rpx;
+}
+
+.page-shell.mine-page.appearance-font-readable .mine-overview-metric,
+.page-shell.mine-page.appearance-font-readable .mine-entry-card,
+.page-shell.mine-page.appearance-font-readable .mine-font-card,
+.page-shell.mine-page.appearance-font-readable .mine-reminder-card {
+  border-radius: 26rpx;
+}
+
+.page-shell.mine-page.appearance-font-readable .mine-entry-card .section-link {
+  font-size: 30rpx;
+}
+
+.page-shell.mine-page.appearance-font-readable .mine-theme-grid {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.page-shell.mine-page.appearance-font-readable .mine-theme-option {
+  border-radius: 26rpx;
+}
+
+.page-shell.mine-page.appearance-font-readable .mine-theme-preview {
+  min-height: 148rpx;
+  border-radius: 22rpx;
+}
+
+.page-shell.mine-page.appearance-font-readable .mine-theme-label {
+  font-size: 34rpx;
+}
+
+.page-shell.mine-page.appearance-font-readable .mine-theme-desc {
+  font-size: 28rpx;
+  line-height: 1.65;
 }

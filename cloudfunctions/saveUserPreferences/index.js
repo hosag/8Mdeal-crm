@@ -13,6 +13,14 @@ function getDefaultReminderSettings() {
   }
 }
 
+function getDefaultAppearanceSettings() {
+  return {
+    themeKey: 'deep_business',
+    fontScaleMode: 'default',
+    festivalThemeEnabled: false
+  }
+}
+
 function normalizeAdvance(value) {
   const current = String(value || '').trim()
   return current === 'one_day_before' ? 'one_day_before' : 'same_day'
@@ -29,19 +37,51 @@ function normalizeReminderSettings(value) {
   }
 }
 
+function normalizeThemeKey(value) {
+  const current = String(value || '').trim()
+  return ['deep_business', 'warm_almond', 'misty_blossom', 'festive_crimson', 'cloud_mist', 'ink_readable'].includes(current)
+    ? current
+    : 'deep_business'
+}
+
+function normalizeFontScaleMode(value) {
+  const current = String(value || '').trim()
+  return ['default', 'large', 'readable'].includes(current) ? current : 'default'
+}
+
+function normalizeAppearanceSettings(value) {
+  const source = value && typeof value === 'object' && !Array.isArray(value) ? value : {}
+  const defaults = getDefaultAppearanceSettings()
+  return {
+    themeKey: normalizeThemeKey(source.themeKey || defaults.themeKey),
+    fontScaleMode: normalizeFontScaleMode(source.fontScaleMode || defaults.fontScaleMode),
+    festivalThemeEnabled: typeof source.festivalThemeEnabled === 'boolean'
+      ? source.festivalThemeEnabled
+      : defaults.festivalThemeEnabled
+  }
+}
+
 exports.main = async (event) => {
   const wxContext = cloud.getWXContext()
   const now = new Date()
-  const reminderSettings = normalizeReminderSettings(event.reminderSettings)
   const users = db.collection('users')
   const existing = await users.where({
     _openid: wxContext.OPENID
   }).limit(1).get()
+  const currentUser = existing.data[0] || null
 
-  if (existing.data.length) {
-    await users.doc(existing.data[0]._id).update({
+  const reminderSettings = Object.prototype.hasOwnProperty.call(event || {}, 'reminderSettings')
+    ? normalizeReminderSettings(event.reminderSettings)
+    : normalizeReminderSettings(currentUser && currentUser.reminderSettings)
+  const appearanceSettings = Object.prototype.hasOwnProperty.call(event || {}, 'appearanceSettings')
+    ? normalizeAppearanceSettings(event.appearanceSettings)
+    : normalizeAppearanceSettings(currentUser && currentUser.appearanceSettings)
+
+  if (currentUser) {
+    await users.doc(currentUser._id).update({
       data: {
         reminderSettings,
+        appearanceSettings,
         updatedAt: now
       }
     })
@@ -53,6 +93,7 @@ exports.main = async (event) => {
         avatarUrl: '',
         shareTags: [],
         reminderSettings,
+        appearanceSettings,
         createdAt: now,
         updatedAt: now
       }
@@ -61,6 +102,7 @@ exports.main = async (event) => {
 
   return {
     ok: true,
-    reminderSettings
+    reminderSettings,
+    appearanceSettings
   }
 }

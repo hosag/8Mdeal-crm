@@ -2,6 +2,7 @@ const { loadProjectsData, updateTaskStatusData } = require('../../services/data'
 const { buildTaskCompletionFeedback, getTaskCompletionToastTitle } = require('../../services/task-feedback')
 const { buildProjectsEntryContext } = require('../../utils/navigation-context')
 const { touchNotificationSync } = require('../../utils/notification-sync')
+const { syncPageAppearance } = require('../../utils/appearance')
 
 const STAGES = ['全部阶段', '线索', '洽谈', '方案', '商务', '成交', '流失']
 const QUICK_FILTERS = [
@@ -20,7 +21,6 @@ const SORT_OPTIONS = [
   { key: 'task', label: '动作优先' },
   { key: 'amount', label: '金额优先' }
 ]
-const SORT_OPTION_LABELS = SORT_OPTIONS.map((item) => item.label)
 const HIGH_VALUE_THRESHOLD = 500000
 
 function normalizeQuickFilter(value) {
@@ -63,21 +63,6 @@ function normalizeStageFilter(value) {
   return STAGES.includes(value) ? value : '全部阶段'
 }
 
-function getStagePickerIndex(stageFilter) {
-  const index = STAGES.indexOf(stageFilter)
-  return index > -1 ? index : 0
-}
-
-function getSortPickerIndex(sortMode) {
-  const index = SORT_OPTIONS.findIndex((item) => item.key === sortMode)
-  return index > -1 ? index : 0
-}
-
-function getSortLabel(sortMode) {
-  const current = SORT_OPTIONS.find((item) => item.key === sortMode)
-  return current ? current.label : SORT_OPTIONS[0].label
-}
-
 function startOfDay(value = new Date()) {
   const date = value instanceof Date ? new Date(value) : new Date(value)
   date.setHours(0, 0, 0, 0)
@@ -100,20 +85,6 @@ function parseAmountValue(value) {
   }
 
   return text.includes('万') ? amount * 10000 : amount
-}
-
-function formatHighValueThreshold(value) {
-  const amount = Number(value || 0)
-  if (!amount) {
-    return '0'
-  }
-
-  if (amount >= 10000) {
-    const wan = amount / 10000
-    return `${Number.isInteger(wan) ? wan : wan.toFixed(1)}万`
-  }
-
-  return String(amount)
 }
 
 function parseDateTime(value) {
@@ -527,7 +498,7 @@ function normalizeProject(project, index) {
   const primaryTaskStatus = getPrimaryTaskStatusMeta(project, nextTaskDate, today)
   const contactCount = Number(project.contactCount || contactNames.length || 0)
   const amountValue = Number(project.amountValue || parseAmountValue(project.amount))
-  const latestSummary = String(project.latestSummary || '当前还没有跟进摘要').trim()
+  const latestSummary = String(project.latestSummary || '暂无跟进摘要').trim()
   const description = String(project.description || '').trim()
   const nextTaskTitle = String(project.nextTaskTitle || '').trim()
   const hasQuoteTask = openTaskTypes.includes('send_quote') || containsKeyword(nextTaskTitle, '报价')
@@ -623,23 +594,19 @@ function normalizeProject(project, index) {
 
 Page({
   data: {
+    appearancePageClass: '',
     searchKeyword: '',
     quickFilter: 'all',
     sortMode: 'updated',
-    sortOptionLabels: SORT_OPTION_LABELS,
-    sortLabelText: getSortLabel('updated'),
-    stagePickerIndex: getStagePickerIndex('全部阶段'),
-    sortPickerIndex: getSortPickerIndex('updated'),
     stageFilter: '全部阶段',
     stages: STAGES,
-    quickFilters: QUICK_FILTERS,
     sortOptions: SORT_OPTIONS,
     projectCards: [],
     filteredProjects: [],
     summaryCards: [],
-    resultSummaryText: '正在整理我的项目',
+    resultSummaryText: '正在整理项目数据',
     emptyTitle: '当前筛选下暂无项目',
-    emptyDesc: '你可以切回“全部阶段”，或立即新建一个项目，把跟进动作推进到首页待办。',
+    emptyDesc: '你可以切回全部项目，或直接新建项目。',
     emptyActionText: '新建项目',
     entryContextText: '',
     nextTaskTemplates: [
@@ -678,6 +645,7 @@ Page({
   },
 
   async onLoad(options) {
+    syncPageAppearance(this)
     const quickFilter = normalizeQuickFilter(options && options.quickFilter)
     const sortMode = normalizeSortMode(options && options.sortMode)
     const stageFilter = normalizeStageFilter(options && options.stageFilter ? decodeURIComponent(options.stageFilter) : '全部阶段')
@@ -685,9 +653,6 @@ Page({
       quickFilter,
       sortMode,
       stageFilter,
-      stagePickerIndex: getStagePickerIndex(stageFilter),
-      sortPickerIndex: getSortPickerIndex(sortMode),
-      sortLabelText: getSortLabel(sortMode),
       entryContextText: buildProjectsEntryContext(
         options && options.source,
         quickFilter,
@@ -700,6 +665,7 @@ Page({
   },
 
   async onShow() {
+    syncPageAppearance(this)
     this.initTaskCompletionKeyboard()
     if (!this.data.isLoading) {
       await this.fetchProjects()
@@ -778,21 +744,21 @@ Page({
         () => this.applyFilters()
       )
     } catch (error) {
-      const message = error && error.message ? error.message : '暂时无法同步我的项目，请稍后重试'
+      const message = error && error.message ? error.message : '当前无法同步云端数据，请稍后重试'
       this.setData({
         projectCards: [],
         filteredProjects: [],
         summaryCards: [],
-        resultSummaryText: '当前无法读取我的项目',
-        emptyTitle: '暂时无法连接项目池',
-        emptyDesc: '请检查网络或云环境连接状态后，再重新读取。',
+        resultSummaryText: '当前无法同步项目数据',
+        emptyTitle: '当前无法同步项目数据',
+        emptyDesc: '请检查网络或云环境连接后重新加载。',
         emptyActionText: '新建项目',
         isLoading: false,
         isLoadFailed: true,
         loadError: message
       })
       wx.showToast({
-        title: '暂时无法同步我的项目',
+        title: '当前无法同步项目数据',
         icon: 'none'
       })
     }
@@ -814,45 +780,17 @@ Page({
     }, () => this.applyFilters())
   },
 
-  setQuickFilter(event) {
-    this.setData({
-      quickFilter: event.currentTarget.dataset.filter
-    }, () => this.applyFilters())
-  },
-
   setSortMode(event) {
     const sortMode = event.currentTarget.dataset.sort
     this.setData({
-      sortMode,
-      sortPickerIndex: getSortPickerIndex(sortMode),
-      sortLabelText: getSortLabel(sortMode)
+      sortMode
     }, () => this.applyFilters())
   },
 
   setStage(event) {
     const stageFilter = event.currentTarget.dataset.stage
     this.setData({
-      stageFilter,
-      stagePickerIndex: getStagePickerIndex(stageFilter)
-    }, () => this.applyFilters())
-  },
-
-  onStagePickerChange(event) {
-    const index = Number(event.detail.value || 0)
-    const stageFilter = STAGES[index] || '全部阶段'
-    this.setData({
-      stageFilter,
-      stagePickerIndex: getStagePickerIndex(stageFilter)
-    }, () => this.applyFilters())
-  },
-
-  onSortPickerChange(event) {
-    const index = Number(event.detail.value || 0)
-    const current = SORT_OPTIONS[index] || SORT_OPTIONS[0]
-    this.setData({
-      sortMode: current.key,
-      sortPickerIndex: index,
-      sortLabelText: current.label
+      stageFilter
     }, () => this.applyFilters())
   },
 
@@ -939,32 +877,25 @@ Page({
       })
 
     const totalCount = allProjects.length
-    const taskCount = allProjects.filter((project) => project.hasOpenTask).length
-    const todayTaskCount = allProjects.filter((project) => project.hasTodayTask || project.isTodayFollowUp).length
-    const overdueTaskCount = allProjects.filter((project) => project.hasOverdueTask || project.isOverdueFollowUp).length
-    const noTaskCount = allProjects.filter((project) => !project.isClosed && !project.hasOpenTask).length
-    const quoteCount = allProjects.filter((project) => project.hasQuoteTask).length
-    const highValueCount = allProjects.filter((project) => project.isHighValue).length
+    const activeCount = allProjects.filter((project) => !project.isClosed).length
+    const dealCount = allProjects.filter((project) => project.stage === '成交').length
     const summaryCards = [
-      { label: '全部项目', value: String(totalCount), note: '当前可管理项目池' },
-      { label: '今天推进', value: String(todayTaskCount), note: '今天要跟进或处理动作' },
-      { label: '已逾期', value: String(overdueTaskCount), note: '优先收口，避免继续拖延' },
-      { label: '有待办', value: String(taskCount), note: `其中待报价 ${quoteCount} 项` },
-      { label: '待补动作', value: String(noTaskCount), note: '还没形成明确下一步动作' },
-      { label: '高金额', value: String(highValueCount), note: `金额大于 ${formatHighValueThreshold(HIGH_VALUE_THRESHOLD)}` }
+      { label: '全部项目', value: String(totalCount), note: '当前项目池' },
+      { label: '待推进', value: String(activeCount), note: '仍在持续跟进' },
+      { label: '已成交', value: String(dealCount), note: '已完成签约' }
     ]
 
     const hasCustomFilter = Boolean(keyword) || quickFilter !== 'all' || stageFilter !== '全部阶段'
     const emptyTitle = keyword
       ? '没有找到匹配项目'
       : (quickFilter === 'overdue'
-        ? '当前没有需要优先处理的项目'
+        ? '暂无优先处理项目'
         : '当前筛选下暂无项目')
     const emptyDesc = keyword
       ? '可以换项目名、客户名、联系人、摘要关键词或任务关键词再试一次。'
       : (quickFilter === 'overdue'
-        ? '当前项目节奏比较健康，你可以切回全部项目继续查看。'
-        : '你可以调整筛选条件，或直接新建一个项目。')
+        ? '当前没有逾期项目，可切回全部项目继续查看。'
+        : '你可以调整筛选条件，或直接新建项目。')
 
     this.setData({
       filteredProjects,
@@ -988,10 +919,7 @@ Page({
       searchKeyword: '',
       quickFilter: 'all',
       stageFilter: '全部阶段',
-      sortMode: 'task',
-      stagePickerIndex: getStagePickerIndex('全部阶段'),
-      sortPickerIndex: getSortPickerIndex('task'),
-      sortLabelText: getSortLabel('task')
+      sortMode: 'task'
     }, () => this.applyFilters())
   },
 

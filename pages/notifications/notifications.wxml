@@ -1,6 +1,6 @@
-<view class="page-shell notifications-page">
+<view class="page-shell notifications-page {{appearancePageClass}}">
   <view wx:if="{{isLoading}}" class="rise-in">
-    <loading-panel rows="2" />
+    <loading-panel rows="2" appearance-page-class="{{appearancePageClass}}" />
   </view>
 
   <block wx:else>
@@ -31,10 +31,10 @@
     </view>
 
     <view wx:if="{{isLoadFailed}}" class="form-card section state-card rise-in stagger-1">
-      <view class="form-card-title">暂时无法连接云端</view>
+      <view class="form-card-title">当前无法同步云端数据</view>
       <view class="form-card-desc">{{loadError}}</view>
       <view class="hero-actions state-actions">
-        <view class="btn-primary state-btn" bindtap="fetchNotifications">重新连接</view>
+        <view class="btn-primary state-btn" bindtap="fetchNotifications">重新加载</view>
       </view>
     </view>
 
@@ -107,10 +107,11 @@
 
       <empty-state
         wx:if="{{!notifications.length}}"
-        title="当前筛选下没有消息"
-        desc="待办动作、跟进提醒或业务动态出现后，这里会自动沉淀提醒。"
+        appearance-page-class="{{appearancePageClass}}"
+        title="当前筛选下暂无消息"
+        desc="待办、提醒和业务动态会自动显示在这里。"
         image="/assets/illustrations/empty-projects.svg"
-        actionText="重新刷新"
+        actionText="重新加载"
         bind:action="fetchNotifications"
       />
     </view>

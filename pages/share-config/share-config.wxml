@@ -1,6 +1,6 @@
-<view class="page-shell share-config-page">
+<view class="page-shell share-config-page {{appearancePageClass}}">
   <view wx:if="{{isLoading}}" class="rise-in">
-    <loading-panel rows="3" />
+    <loading-panel rows="3" appearance-page-class="{{appearancePageClass}}" />
   </view>
 
   <block wx:else>
@@ -16,32 +16,28 @@
     <view class="form-card section rise-in stagger-1">
       <view class="line-between">
         <view>
-          <view class="form-card-title">本次分享目的已确定</view>
-          <view class="form-card-desc">这一步只确认发送结果、卡片预览和后续维护归属。</view>
+          <view class="form-card-title">发送方式</view>
+          <view class="form-card-desc">{{activeMode === 'outbound' ? '转交后由接手方继续维护。' : '发送后仍由你继续维护。'}}</view>
         </view>
         <view class="status-badge is-brand">{{activeMode === 'outbound' ? '转交项目' : '发送资料'}}</view>
       </view>
-      <view class="helper-text share-purpose-note">{{activeMode === 'outbound' ? '对方打开后会接手项目，并进入对方“我的项目”。' : '对方只查看资料，不会接管项目。'}}</view>
-    </view>
-
-    <view class="summary-grid rise-in stagger-2">
-      <view class="summary-card" wx:for="{{summaryCards}}" wx:key="label">
-        <view class="summary-card-label">{{item.label}}</view>
-        <view class="summary-card-value">{{item.value}}</view>
-        <view class="summary-card-note">{{item.note}}</view>
+      <view class="compact-inline-metrics share-config-metrics">
+        <view class="compact-inline-item">{{activeMode === 'outbound' ? '接手推进' : '查看资料'}}</view>
+        <view class="compact-inline-item">{{activeMode === 'outbound' ? '接手方维护' : '仍由我维护'}}</view>
+        <view class="compact-inline-item">{{activeMode === 'outbound' ? '外发项目追踪' : '当前项目继续推进'}}</view>
       </view>
     </view>
 
-    <view class="form-card section rise-in stagger-3">
+    <view class="form-card section rise-in stagger-2">
       <view class="section-header">
-        <view class="section-title">默认展示规则</view>
+        <view class="section-title">默认规则</view>
         <view class="section-link" bindtap="openScopeSettings">统一管理</view>
       </view>
       <view class="form-card-desc">{{defaultRuleText}}</view>
     </view>
 
-    <view class="preview-card section rise-in stagger-4">
-      <view class="eyebrow">接收卡片预览</view>
+    <view class="preview-card section rise-in stagger-3">
+      <view class="eyebrow">卡片预览</view>
       <view class="preview-title">{{preview.project.name}}</view>
       <view class="preview-meta">
         <text wx:if="{{preview.showClient}}">客户：{{preview.project.client}}</text>
@@ -49,11 +45,11 @@
         <text wx:if="{{preview.showEstimatedAmount}}">{{preview.showClient || preview.showStage ? ' · ' : ''}}预计金额：{{preview.project.estimatedAmount}}</text>
       </view>
       <view wx:if="{{preview.showDescription}}" class="preview-block">
-        <view class="preview-block-title">项目描述</view>
+        <view class="preview-block-title">项目信息</view>
         <view class="preview-block-text">{{preview.project.description}}</view>
       </view>
       <view wx:if="{{preview.showSummary}}" class="preview-block">
-        <view class="preview-block-title">跟进摘要</view>
+        <view class="preview-block-title">项目摘要</view>
         <view class="preview-block-text">{{preview.project.summary}}</view>
       </view>
       <view wx:if="{{preview.showNextFollowUp}}" class="preview-block">
@@ -72,15 +68,10 @@
       </view>
     </view>
 
-    <view class="form-card section rise-in stagger-4">
-      <view class="form-card-title">维护归属</view>
-      <view class="form-card-desc">{{activeMode === 'outbound' ? '发送后由接手方继续维护，你改在“外发项目”里查看后续进展。' : '发送后仍由你继续维护，后续跟进、阶段推进和成交都在当前项目里完成。'}}</view>
-    </view>
-
     <view class="bottom-space"></view>
   </block>
 </view>
 
-<view wx:if="{{!isLoading}}" class="footer-bar">
+<view wx:if="{{!isLoading}}" class="footer-bar {{appearancePageClass}}">
   <view class="btn-primary" bindtap="openShareCard">{{isCreatingShare ? '生成中...' : actionText}}</view>
 </view>

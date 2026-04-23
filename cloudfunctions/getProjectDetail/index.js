@@ -1,9 +1,68 @@
 const cloud = require('wx-server-sdk')
+const crypto = require('crypto')
 
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 
 const db = cloud.database()
 const _ = db.command
+const CONTACT_CRYPTO_SECRET = process.env.CONTACT_CRYPTO_SECRET || 'deal-crm-contact-v1'
+const CONTACT_CRYPTO_PREFIX = 'enc:v1'
+const CONTACT_CRYPTO_KEY = crypto.createHash('sha256').update(CONTACT_CRYPTO_SECRET).digest()
+
+function isEncryptedValue(value) {
+  return String(value || '').trim().startsWith(`${CONTACT_CRYPTO_PREFIX}:`)
+}
+
+function encryptSensitiveValue(value) {
+  const text = String(value || '').trim()
+  if (!text) {
+    return ''
+  }
+
+  if (isEncryptedValue(text)) {
+    return text
+  }
+
+  const iv = crypto.randomBytes(12)
+  const cipher = crypto.createCipheriv('aes-256-gcm', CONTACT_CRYPTO_KEY, iv)
+  const encrypted = Buffer.concat([cipher.update(text, 'utf8'), cipher.final()])
+  const authTag = cipher.getAuthTag()
+
+  return [
+    CONTACT_CRYPTO_PREFIX,
+    iv.toString('base64'),
+    authTag.toString('base64'),
+    encrypted.toString('base64')
+  ].join(':')
+}
+
+function decryptSensitiveValue(value) {
+  const text = String(value || '').trim()
+  if (!text) {
+    return ''
+  }
+
+  if (!isEncryptedValue(text)) {
+    return text
+  }
+
+  const parts = text.split(':')
+  if (parts.length !== 5) {
+    return ''
+  }
+
+  try {
+    const iv = Buffer.from(parts[2], 'base64')
+    const authTag = Buffer.from(parts[3], 'base64')
+    const encrypted = Buffer.from(parts[4], 'base64')
+    const decipher = crypto.createDecipheriv('aes-256-gcm', CONTACT_CRYPTO_KEY, iv)
+    decipher.setAuthTag(authTag)
+    const decrypted = Buffer.concat([decipher.update(encrypted), decipher.final()])
+    return decrypted.toString('utf8').trim()
+  } catch (error) {
+    return ''
+  }
+}
 
 function startOfDay(value = new Date()) {
   const date = value instanceof Date ? new Date(value) : new Date(value)
@@ -82,6 +141,113 @@ function maskOpenid(value) {
   }
 
   return `${text.slice(0, 4)}...${text.slice(-4)}`
+}
+
+function parseDate(value) {
+  if (!value) {
+    return null
+  }
+
+  const date = value instanceof Date ? value : new Date(value)
+  return Number.isNaN(date.getTime()) ? null : date
+}
+
+function normalizeText(value) {
+  return String(value || '').trim()
+}
+
+function normalizeShareViewLog(item) {
+  const current = item && typeof item === 'object' && !Array.isArray(item) ? item : {}
+  const firstOpenedAt = parseDate(current.firstOpenedAt || current.openedAt || current.createdAt)
+  const lastViewedAt = parseDate(current.lastViewedAt || current.firstOpenedAt || current.updatedAt)
+  const importedAt = parseDate(current.importedAt)
+
+  return {
+    viewerOpenid: normalizeText(current.viewerOpenid || current.openid),
+    viewerName: normalizeText(current.viewerName || current.name),
+    firstOpenedAt,
+    lastViewedAt: lastViewedAt || firstOpenedAt,
+    viewCount: Math.max(0, Number(current.viewCount || 0) || 0),
+    importedProjectId: normalizeText(current.importedProjectId),
+    importedAt
+  }
+}
+
+function getShareViewLogs(record) {
+  const rawRecord = record && typeof record === 'object' && !Array.isArray(record) ? record : {}
+  const logs = (Array.isArray(rawRecord.viewLogs) ? rawRecord.viewLogs : [])
+    .map(normalizeShareViewLog)
+    .filter((item) => item.viewerOpenid || item.viewerName || item.firstOpenedAt || item.lastViewedAt)
+
+  const legacyViewerOpenid = normalizeText(rawRecord.receiverOpenid)
+  const legacyViewerName = normalizeText(rawRecord.receiverName)
+  const legacyFirstOpenedAt = parseDate(rawRecord.firstOpenedAt)
+  const legacyLastViewedAt = parseDate(rawRecord.lastViewedAt)
+  const legacyImportedProjectId = normalizeText(rawRecord.importedProjectId)
+  const legacyImportedAt = parseDate(rawRecord.importedAt)
+  const hasLegacyViewer = legacyViewerOpenid || legacyViewerName || legacyFirstOpenedAt || legacyLastViewedAt
+
+  if (hasLegacyViewer && !logs.some((item) => item.viewerOpenid && item.viewerOpenid === legacyViewerOpenid)) {
+    logs.push({
+      viewerOpenid: legacyViewerOpenid,
+      viewerName: legacyViewerName,
+      firstOpenedAt: legacyFirstOpenedAt,
+      lastViewedAt: legacyLastViewedAt || legacyFirstOpenedAt,
+      viewCount: Math.max(0, Number(rawRecord.viewCount || 0) || 0),
+      importedProjectId: legacyImportedProjectId,
+      importedAt: legacyImportedAt
+    })
+  }
+
+  return logs
+}
+
+function buildShareViewMeta(record) {
+  const logs = getShareViewLogs(record)
+  let firstOpenedAt = parseDate(record && record.firstOpenedAt)
+  let lastViewedAt = parseDate(record && record.lastViewedAt)
+  let latestViewer = null
+  let totalViewCount = Math.max(0, Number(record && record.viewCount ? record.viewCount : 0) || 0)
+
+  if (!logs.length) {
+    return {
+      totalViewCount,
+      viewerCount: Math.max(0, Number(record && record.viewerCount ? record.viewerCount : 0) || 0),
+      firstOpenedAt,
+      lastViewedAt,
+      latestViewerOpenid: normalizeText(record && record.receiverOpenid),
+      latestViewerName: normalizeText(record && record.receiverName)
+    }
+  }
+
+  totalViewCount = 0
+
+  logs.forEach((item) => {
+    const firstTime = item.firstOpenedAt ? item.firstOpenedAt.getTime() : NaN
+    const latestTime = (item.importedAt || item.lastViewedAt || item.firstOpenedAt)
+      ? (item.importedAt || item.lastViewedAt || item.firstOpenedAt).getTime()
+      : NaN
+
+    totalViewCount += Math.max(0, Number(item.viewCount || 0) || 0)
+
+    if (!Number.isNaN(firstTime) && (!firstOpenedAt || firstTime < firstOpenedAt.getTime())) {
+      firstOpenedAt = item.firstOpenedAt
+    }
+
+    if (!Number.isNaN(latestTime) && (!lastViewedAt || latestTime > lastViewedAt.getTime())) {
+      lastViewedAt = item.importedAt || item.lastViewedAt || item.firstOpenedAt
+      latestViewer = item
+    }
+  })
+
+  return {
+    totalViewCount,
+    viewerCount: logs.length,
+    firstOpenedAt,
+    lastViewedAt,
+    latestViewerOpenid: latestViewer ? latestViewer.viewerOpenid : '',
+    latestViewerName: latestViewer ? latestViewer.viewerName : ''
+  }
 }
 
 function buildTimelineKey(prefix, id, time, suffix = '') {
@@ -379,6 +545,29 @@ exports.main = async (event) => {
   }
 
   const item = result.data[0]
+  const rawContacts = Array.isArray(item.contacts) ? item.contacts : []
+  const shouldMigrateContacts = rawContacts.some((contact) => {
+    const phone = String(contact && contact.phone ? contact.phone : '').trim()
+    const wechat = String(contact && contact.wechat ? contact.wechat : '').trim()
+    return (phone && !isEncryptedValue(phone)) || (wechat && !isEncryptedValue(wechat))
+  })
+
+  if (shouldMigrateContacts) {
+    const encryptedContacts = rawContacts.map((contact) => ({
+      ...contact,
+      phone: encryptSensitiveValue(contact && contact.phone),
+      wechat: encryptSensitiveValue(contact && contact.wechat)
+    }))
+
+    await db.collection('projects').doc(item._id).update({
+      data: {
+        contacts: encryptedContacts
+      }
+    })
+
+    item.contacts = encryptedContacts
+  }
+
   await syncSharedSourceFollowUps(item)
 
   const followResult = await db.collection('followUps').where({
@@ -396,7 +585,8 @@ exports.main = async (event) => {
   }
   const shareResult = await db.collection('shareRecords').where({
     projectId: event.projectId,
-    _openid: wxContext.OPENID
+    _openid: wxContext.OPENID,
+    shareMode: 'info'
   }).orderBy('updatedAt', 'desc').get()
 
   const contacts = Array.isArray(item.contacts)
@@ -404,8 +594,8 @@ exports.main = async (event) => {
         id: contact.contactId || `contact-${index}`,
         name: contact.name || '',
         role: contact.role || '',
-        phone: contact.phone || '',
-        wechat: contact.wechat || '',
+        phone: decryptSensitiveValue(contact.phone),
+        wechat: decryptSensitiveValue(contact.wechat),
         company: contact.company || ''
       }))
     : []
@@ -554,27 +744,41 @@ exports.main = async (event) => {
 
   const shareHistory = shareResult.data.map((record) => {
     const collaboratorFollow = collaboratorFollowCountMap[record.importedProjectId] || { count: 0, latestAt: '' }
+    const shareViewMeta = buildShareViewMeta(record)
+    const isOutbound = record.shareMode === 'outbound'
+    const firstOpenedAt = shareViewMeta.firstOpenedAt || parseDate(record.firstOpenedAt)
+    const lastViewedAt = shareViewMeta.lastViewedAt || parseDate(record.lastViewedAt)
+    const singleViewerName = shareViewMeta.latestViewerName || normalizeText(record.receiverName)
+    const singleViewerMasked = maskOpenid(shareViewMeta.latestViewerOpenid || record.receiverOpenid)
+    const receiverDisplayName = isOutbound
+      ? (singleViewerName || singleViewerMasked || '待接手方')
+      : (shareViewMeta.viewerCount > 1
+        ? `${shareViewMeta.viewerCount}人查看`
+        : (singleViewerName || singleViewerMasked || '暂未识别'))
     const status = record.shareMode === 'outbound'
       ? (collaboratorFollow.count > 0
         ? '已跟进'
-        : (record.importedProjectId ? '已导入' : (record.firstOpenedAt ? '已打开' : '未打开')))
-      : (record.firstOpenedAt ? '已打开' : '未打开')
+        : (record.importedProjectId ? '已导入' : ((firstOpenedAt || shareViewMeta.totalViewCount > 0) ? '已打开' : '未打开')))
+      : ((firstOpenedAt || shareViewMeta.totalViewCount > 0) ? '已打开' : '未打开')
 
     return {
       id: record._id,
-      mode: record.shareModeTitle || (record.shareMode === 'outbound' ? '项目外发' : '分享信息'),
+      mode: '发送资料',
       tagName: record.shareTagName || '未命名标签',
-      viewed: Number(record.viewCount || 0),
-      receiverName: record.receiverName || '',
-      receiverOpenidMasked: maskOpenid(record.receiverOpenid),
+      viewed: shareViewMeta.totalViewCount,
+      viewCount: shareViewMeta.totalViewCount,
+      viewerCount: shareViewMeta.viewerCount,
+      receiverName: receiverDisplayName,
+      receiverOpenidMasked: singleViewerMasked,
+      latestViewerName: singleViewerName,
       createdAt: formatDateTime(record.createdAt),
-      firstOpenedAt: record.firstOpenedAt ? formatDateTime(record.firstOpenedAt) : '',
-      lastViewedAt: record.lastViewedAt ? formatDateTime(record.lastViewedAt) : '',
+      firstOpenedAt: firstOpenedAt ? formatDateTime(firstOpenedAt) : '',
+      lastViewedAt: lastViewedAt ? formatDateTime(lastViewedAt) : '',
       updatedAt: formatDateTime(record.updatedAt || record.createdAt),
       status,
       importedProjectId: record.importedProjectId || '',
       importedAt: record.importedAt ? formatDateTime(record.importedAt) : '',
-      receiverOpenid: record.receiverOpenid || '',
+      receiverOpenid: shareViewMeta.latestViewerOpenid || record.receiverOpenid || '',
       collaboratorFollowCount: collaboratorFollow.count,
       collaboratorLatestFollowAt: collaboratorFollow.latestAt
     }

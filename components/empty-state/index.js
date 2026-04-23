@@ -1,12 +1,16 @@
 Component({
   properties: {
+    appearancePageClass: {
+      type: String,
+      value: ''
+    },
     title: {
       type: String,
-      value: '当前还没有内容'
+      value: '暂无内容'
     },
     desc: {
       type: String,
-      value: '有数据后会自动显示在这里。'
+      value: '有内容后会自动显示在这里。'
     },
     image: {
       type: String,

@@ -1,6 +1,6 @@
-<view class="page-shell share-timeline-page">
+<view class="page-shell share-timeline-page {{appearancePageClass}}">
   <view wx:if="{{isLoading}}" class="rise-in">
-    <loading-panel rows="3" />
+    <loading-panel rows="3" appearance-page-class="{{appearancePageClass}}" />
   </view>
 
   <block wx:else>
@@ -24,7 +24,7 @@
     </view>
 
     <view class="glass-card section rise-in stagger-2">
-      <view wx:if="{{!followTimeline.length}}" class="card-subtitle">当前暂无历史记录。</view>
+      <view wx:if="{{!followTimeline.length}}" class="card-subtitle">暂无时间线记录。</view>
       <view class="timeline-group" wx:for="{{followTimeline}}" wx:key="date">
         <view class="timeline-group-title">{{item.date}}</view>
         <view class="timeline-item" wx:for="{{item.items}}" wx:key="timelineKey">

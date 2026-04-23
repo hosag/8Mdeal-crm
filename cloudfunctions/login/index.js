@@ -19,6 +19,11 @@ exports.main = async (event) => {
     taskEnabled: true,
     taskAdvance: 'same_day'
   }
+  const appearanceSettings = {
+    themeKey: 'deep_business',
+    fontScaleMode: 'default',
+    festivalThemeEnabled: false
+  }
 
   const existing = await users.where({
     _openid: wxContext.OPENID
@@ -34,6 +39,7 @@ exports.main = async (event) => {
         _openid: wxContext.OPENID,
         shareTags: [],
         reminderSettings,
+        appearanceSettings,
         createdAt: now,
         ...profile
       }

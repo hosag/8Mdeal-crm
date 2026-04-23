@@ -1,10 +1,17 @@
-<view class="page-shell share-card-page">
+<view class="page-shell share-card-page {{appearancePageClass}}">
   <view wx:if="{{isLoading}}" class="rise-in">
-    <loading-panel rows="2" />
+    <loading-panel rows="2" appearance-page-class="{{appearancePageClass}}" />
   </view>
 
   <block wx:else>
     <view class="hero rise-in">
+      <view class="brand-lockup brand-lockup-share">
+        <image class="brand-lockup-image brand-lockup-image-share" src="/assets/brand/logo-core-transparent.png" mode="aspectFit" />
+        <view class="brand-lockup-copy brand-lockup-copy-share">
+          <view class="brand-lockup-title brand-lockup-title-share">八面成交</view>
+          <view class="brand-lockup-subtitle brand-lockup-subtitle-share">您的私人 CRM 引擎</view>
+        </view>
+      </view>
       <view class="eyebrow-row">
         <view class="eyebrow">{{heroEyebrow}}</view>
         <view class="source-badge">{{dataSource}}</view>
@@ -14,7 +21,6 @@
     </view>
 
     <view wx:if="{{!isSenderEntry}}" class="source-banner section">{{preview.shareSourceText}}</view>
-    <view wx:if="{{isImported}}" class="source-banner section">接手已生效：项目已经进入你的“我的项目”，后续请直接在你的项目中继续推进。</view>
 
     <view wx:if="{{showStateCard}}" class="form-card section state-card rise-in stagger-1">
       <view class="line-between">
@@ -24,11 +30,11 @@
       <view class="form-card-desc">{{stateDesc}}</view>
       <view class="detail-grid">
         <view class="detail-box">
-          <view class="detail-box-label">联系人策略</view>
+          <view class="detail-box-label">联系人</view>
           <view class="detail-box-value">{{contactPolicy}}</view>
         </view>
         <view class="detail-box">
-          <view class="detail-box-label">项目归属</view>
+          <view class="detail-box-label">归属</view>
           <view class="detail-box-value">{{ownershipLabel}}</view>
         </view>
       </view>
@@ -47,8 +53,6 @@
           <view class="share-config-project-name">{{preview.project.name}}</view>
           <view class="share-config-project-meta">
             <text>{{preview.showStage ? preview.project.stage : '当前阶段按范围隐藏'}}</text>
-            <text> · </text>
-            <text>{{historyScopeLabel}}</text>
           </view>
         </view>
         <view class="status-badge is-brand share-preview-mode">{{activeMode === 'outbound' ? '转交项目' : '发送资料'}}</view>
@@ -59,8 +63,8 @@
           <view class="detail-box-value shared-detail-value shared-detail-value-strong">{{preview.showStage ? preview.project.stage : '按当前范围隐藏'}}</view>
         </view>
         <view class="detail-box">
-          <view class="detail-box-label">历史记录</view>
-          <view class="detail-box-value shared-detail-value shared-detail-value-strong">{{historyScopeLabel}}</view>
+          <view class="detail-box-label">字段范围</view>
+          <view class="detail-box-value shared-detail-value shared-detail-value-strong">{{visibleFields.length}} 项</view>
         </view>
       </view>
       <view class="share-config-fields">
@@ -91,17 +95,17 @@
       </view>
 
       <view class="share-preview-section share-preview-summary">
-        <view class="card-title">卡片摘要</view>
-        <view class="card-subtitle">{{preview.project.summary || '当前还没有可展示的摘要内容。'}}</view>
+        <view class="card-title">项目摘要</view>
+        <view class="card-subtitle">{{preview.project.summary || '暂无可展示摘要。'}}</view>
       </view>
     </view>
 
     <view wx:if="{{showShareBriefCard}}" class="form-card section rise-in stagger-3 share-brief-card">
       <view class="line-between share-brief-head">
-        <view class="form-card-title">卡片摘要</view>
+        <view class="form-card-title">摘要设置</view>
         <view wx:if="{{isSenderEntry}}" class="share-brief-btn" bindtap="handleGenerateShareBrief">
           <view wx:if="{{isBriefLoading}}" class="share-brief-btn-spinner"></view>
-          <view class="share-brief-btn-text">{{isBriefLoading ? '生成中' : (shareBrief && shareBrief.title ? shareBrief.regenerateLabel : 'AI生成') }}</view>
+          <view class="share-brief-btn-text">{{isBriefLoading ? '生成中' : (shareBrief && shareBrief.title ? shareBrief.regenerateLabel : 'AI整理') }}</view>
           <view wx:if="{{isBriefLoading}}" class="share-brief-btn-spinner share-brief-btn-spinner-ghost"></view>
         </view>
       </view>
@@ -132,7 +136,7 @@
           value="{{summaryDraftText}}"
           bindinput="onSummaryDraftInput"
           bindblur="persistSummaryDraft"
-          placeholder="这里是最终展示在卡片上的摘要内容。"
+          placeholder="这里是最终显示在卡片上的摘要内容。"
           placeholder-class="input-placeholder"
           maxlength="-1"
         ></textarea>
@@ -141,6 +145,7 @@
 
     <view wx:if="{{isSenderEntry}}" class="form-card section rise-in stagger-3 history-scope-card">
       <view class="form-card-title">历史记录范围</view>
+      <view class="form-card-desc">{{historyScopeLabel}}</view>
       <view class="history-scope-row">
         <view
           class="history-scope-radio {{item.isActive ? 'is-active' : ''}}"
@@ -170,7 +175,7 @@
 
     <view wx:if="{{!showTimelineEntry && !isSenderEntry}}" class="form-card section rise-in stagger-3 share-history-note">
       <view class="form-card-title">项目历史</view>
-      <view class="form-card-desc">本次分享不附带历史记录，接收方只查看当前概览。</view>
+      <view class="form-card-desc">本次未附带项目历史。</view>
     </view>
 
     <view wx:if="{{showVisibleFields && !isSenderEntry}}" class="form-card section rise-in stagger-3 visible-fields-card">
@@ -184,14 +189,14 @@
   </block>
 </view>
 
-<view wx:if="{{!isLoading && showShareFooter}}" class="footer-bar share-footer">
+<view wx:if="{{!isLoading && showShareFooter}}" class="footer-bar share-footer {{appearancePageClass}}">
   <view class="btn-ghost share-preview-trigger" bindtap="openPreviewSheet">卡片预览</view>
   <button class="btn-primary share-action" open-type="share">{{footerShareText}}</button>
 </view>
 
 <block wx:if="{{showPreviewSheet}}">
   <view class="sheet-mask" bindtap="closePreviewSheet"></view>
-  <view class="sheet-panel share-preview-sheet">
+  <view class="sheet-panel share-preview-sheet {{appearancePageClass}}">
     <view class="sheet-handle"></view>
     <view class="sheet-header">
       <view class="sheet-title">{{activeMode === 'outbound' ? '交接卡预览' : '资料卡预览'}}</view>
@@ -216,8 +221,8 @@
           <view class="status-badge">{{preview.tag.name}}</view>
         </view>
         <view class="share-preview-section share-preview-summary">
-          <view class="card-title">卡片摘要</view>
-          <view class="card-subtitle">{{preview.project.summary || '当前还没有可展示的摘要内容。'}}</view>
+          <view class="card-title">项目摘要</view>
+          <view class="card-subtitle">{{preview.project.summary || '暂无可展示摘要。'}}</view>
         </view>
       </view>
 
@@ -236,7 +241,7 @@
 
       <view wx:if="{{!showTimelineEntry}}" class="form-card section share-history-note">
         <view class="form-card-title">项目历史</view>
-        <view class="form-card-desc">本次分享不附带历史记录，接收方只查看当前概览。</view>
+        <view class="form-card-desc">本次未附带项目历史。</view>
       </view>
 
       <view class="form-card section visible-fields-card">

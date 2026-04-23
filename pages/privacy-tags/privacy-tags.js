@@ -1,17 +1,21 @@
 const { loadPrivacyTagsData } = require('../../services/data')
+const { syncPageAppearance } = require('../../utils/appearance')
 
 Page({
   data: {
+    appearancePageClass: '',
     privacyTags: [],
     isLoading: true,
     dataSource: 'Mock Demo'
   },
 
   async onLoad() {
+    syncPageAppearance(this)
     await this.fetchTags()
   },
 
   async onShow() {
+    syncPageAppearance(this)
     if (!this.data.isLoading) {
       await this.fetchTags()
     }
@@ -31,7 +35,7 @@ Page({
         isLoading: false
       })
       wx.showToast({
-        title: '暂时无法加载隐私标签',
+        title: '当前无法加载隐私标签',
         icon: 'none'
       })
     }

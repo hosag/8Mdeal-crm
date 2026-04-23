@@ -1,4 +1,5 @@
 const { loadOutboundData, markNotificationReadData, resolveNotificationData } = require('../../services/data')
+const { syncPageAppearance } = require('../../utils/appearance')
 
 const STATUS_FILTERS = [
   { key: 'all', label: '全部外发' },
@@ -11,17 +12,6 @@ const SORT_OPTIONS = [
   { key: 'updated', label: '最近更新' },
   { key: 'viewed', label: '浏览优先' }
 ]
-const SORT_OPTION_LABELS = SORT_OPTIONS.map((item) => item.label)
-
-function getSortPickerIndex(sortMode) {
-  const index = SORT_OPTIONS.findIndex((item) => item.key === sortMode)
-  return index > -1 ? index : 0
-}
-
-function getSortLabel(sortMode) {
-  const current = SORT_OPTIONS.find((item) => item.key === sortMode)
-  return current ? current.label : SORT_OPTIONS[0].label
-}
 
 function parseDateTime(value) {
   if (!value) {
@@ -65,27 +55,34 @@ function normalizeRecord(record, index) {
   const receiverName = record.receiverName || record.receiverOpenidMasked || '暂未识别'
   const isOutbound = (record.mode || '项目外发') === '项目外发'
   let statusSummary = '已发出，等待对方查看'
-  let nextActionText = '当前可继续观察打开状态'
+  let trackingSummary = '已发出，当前还在等待对方打开交接卡。'
 
   if (statusText === '已打开') {
     statusSummary = isOutbound
       ? '对方已查看，正在等待正式接手'
       : '对方已查看，这次分享主要用于信息同步'
-    nextActionText = isOutbound
-      ? '如果对方需要继续推进，可以提醒对方从卡片进入自己的项目'
-      : '这类分享不会转入对方“我的项目”，后续仍由你继续维护'
+    trackingSummary = isOutbound
+      ? `${receiverName} 已查看交接卡，暂未接手项目。`
+      : `${receiverName} 已查看资料卡，本次分享仍由你继续维护。`
   }
 
   if (statusText === '已导入') {
     statusSummary = '对方已接手项目，正在等待首条推进记录'
-    nextActionText = '当前已进入接手阶段，重点关注对方何时开始推进'
+    trackingSummary = `${receiverName} 已接手项目，暂未新增推进记录。`
   }
 
   if (statusText === '已跟进') {
     statusSummary = `对方已继续跟进 ${Number(record.collaboratorFollowCount || 0)} 条`
-    nextActionText = record.collaboratorLatestFollowAt
-      ? `最近推进时间：${record.collaboratorLatestFollowAt}`
-      : '可以进入外发详情查看推进时间线'
+    trackingSummary = record.collaboratorLatestFollowAt
+      ? `${receiverName} 已新增 ${Number(record.collaboratorFollowCount || 0)} 条推进记录，最近更新 ${record.collaboratorLatestFollowAt}。`
+      : `${receiverName} 已开始继续推进，当前可进入详情查看完整时间线。`
+  }
+
+  let receiverSummary = '等待接手方打开交接卡'
+  if (statusText === '已打开') {
+    receiverSummary = `${receiverName} 已查看交接卡`
+  } else if (statusText === '已导入' || statusText === '已跟进') {
+    receiverSummary = `${receiverName} 已接手项目`
   }
 
   return {
@@ -107,10 +104,8 @@ function normalizeRecord(record, index) {
     status: record.status || '进行中',
     statusText,
     statusSummary,
-    nextActionText,
-    receiverSummary: record.mode === '项目外发'
-      ? `${receiverName} 已接手项目`
-      : `${receiverName} 已查看分享卡片`,
+    trackingSummary,
+    receiverSummary,
     syncSummary: statusText === '已跟进'
       ? `对方已新增推进记录 ${Number(record.collaboratorFollowCount || 0)} 条`
       : (statusText === '已导入'
@@ -132,28 +127,44 @@ function normalizeRecord(record, index) {
     progressBadgeClass: statusText === '已跟进'
       ? 'is-success'
       : (statusText === '未打开' ? 'is-danger' : (statusText === '已打开' ? 'is-brand' : '')),
-    actionLabel: statusText === '已跟进'
-      ? '查看推进详情'
-      : (statusText === '已导入' ? '查看接手后进展' : '查看外发详情')
+    latestTrackingAt: record.collaboratorLatestFollowAt || record.importedAt || record.firstOpenedAt || record.lastViewedAt || record.createdAt || ''
   }
+}
+
+function buildResultSummaryText({ count, total, statusFilter, sortMode, keyword }) {
+  const parts = [`共 ${count} 条记录 / ${total} 条外发`]
+  const currentStatus = STATUS_FILTERS.find((item) => item.key === statusFilter)
+  const currentSort = SORT_OPTIONS.find((item) => item.key === sortMode)
+
+  if (keyword) {
+    parts.push(`搜索“${keyword}”`)
+  }
+
+  if (currentStatus && currentStatus.key !== 'all') {
+    parts.push(`状态：${currentStatus.label}`)
+  }
+
+  if (currentSort) {
+    parts.push(`排序：${currentSort.label}`)
+  }
+
+  return parts.join(' · ')
 }
 
 Page({
   data: {
+    appearancePageClass: '',
     searchKeyword: '',
     statusFilter: 'all',
     sortMode: 'updated',
-    sortOptionLabels: SORT_OPTION_LABELS,
-    sortLabelText: getSortLabel('updated'),
-    sortPickerIndex: getSortPickerIndex('updated'),
     statusFilters: STATUS_FILTERS,
     sortOptions: SORT_OPTIONS,
     outboundProjects: [],
     filteredRecords: [],
     summaryCards: [],
-    resultSummaryText: '正在整理外发项目',
+    resultSummaryText: '正在整理外发数据',
     emptyTitle: '当前筛选下暂无外发记录',
-    emptyDesc: '你可以切回全部外发项目，或先去项目详情发起一次项目外发。',
+    emptyDesc: '你可以切回全部外发项目，或先发起一次项目外发。',
     emptyActionText: '查看我的项目',
     isLoading: true,
     isLoadFailed: false,
@@ -171,11 +182,13 @@ Page({
 
   async onLoad() {
     this.isPageActive = true
+    syncPageAppearance(this)
     await this.fetchOutboundProjects()
   },
 
   async onShow() {
     this.isPageActive = true
+    syncPageAppearance(this)
     if (!this.data.isLoading) {
       await this.fetchOutboundProjects()
     }
@@ -206,21 +219,21 @@ Page({
       }, () => this.applyFilters())
       this.syncSharedNotifications()
     } catch (error) {
-      const message = error && error.message ? error.message : '暂时无法同步外发项目，请稍后重试'
+      const message = error && error.message ? error.message : '当前无法同步云端数据，请稍后重试'
       this.safeSetData({
         outboundProjects: [],
         filteredRecords: [],
         summaryCards: [],
-        resultSummaryText: '当前无法读取外发项目',
-        emptyTitle: '暂时无法同步外发项目',
-        emptyDesc: '请检查网络或云环境连接状态后，再重新连接。',
+        resultSummaryText: '当前无法同步外发数据',
+        emptyTitle: '当前无法同步外发数据',
+        emptyDesc: '请检查网络或云环境连接后重新加载。',
         emptyActionText: '查看我的项目',
         isLoading: false,
         isLoadFailed: true,
         loadError: message
       })
       wx.showToast({
-        title: '暂时无法同步外发项目',
+        title: '当前无法同步外发数据',
         icon: 'none'
       })
     }
@@ -263,18 +276,15 @@ Page({
     }, () => this.applyFilters())
   },
 
-  onSortPickerChange(event) {
-    const index = Number(event.detail.value || 0)
-    const current = SORT_OPTIONS[index] || SORT_OPTIONS[0]
+  setSortMode(event) {
     this.setData({
-      sortMode: current.key,
-      sortPickerIndex: index,
-      sortLabelText: current.label
+      sortMode: event.currentTarget.dataset.sort
     }, () => this.applyFilters())
   },
 
   applyFilters() {
-    const keyword = String(this.data.searchKeyword || '').trim().toLowerCase()
+    const rawKeyword = String(this.data.searchKeyword || '').trim()
+    const keyword = rawKeyword.toLowerCase()
     const statusFilter = this.data.statusFilter
     const sortMode = this.data.sortMode
 
@@ -306,22 +316,26 @@ Page({
 
     const allRecords = this.data.outboundProjects
     const summaryCards = [
-      { label: '外发项目', value: String(allRecords.length), note: '当前外发追踪池' },
-      { label: '未打开', value: String(allRecords.filter((item) => item.statusText === '未打开').length), note: '可优先提醒查看' },
-      { label: '已接手', value: String(allRecords.filter((item) => item.statusText === '已导入' || item.statusText === '已跟进').length), note: '对方已接手项目' },
-      { label: '已跟进', value: String(allRecords.filter((item) => item.statusText === '已跟进').length), note: '能看到后续推进结果' }
+      { label: '全部外发', value: String(allRecords.length), note: '当前追踪池' },
+      { label: '待查看', value: String(allRecords.filter((item) => item.statusText === '未打开').length), note: '对方还未打开' },
+      { label: '已接手', value: String(allRecords.filter((item) => item.statusText === '已导入' || item.statusText === '已跟进').length), note: '已进入对方项目池' }
     ]
 
-    const statusLabel = STATUS_FILTERS.find((item) => item.key === statusFilter)
     const hasCustomFilter = Boolean(keyword) || statusFilter !== 'all'
     this.setData({
       filteredRecords,
       summaryCards,
-      resultSummaryText: `共 ${filteredRecords.length} 条记录 · ${statusLabel ? statusLabel.label : '全部'} · ${SORT_OPTIONS.find((item) => item.key === sortMode).label}`,
+      resultSummaryText: buildResultSummaryText({
+        count: filteredRecords.length,
+        total: allRecords.length,
+        statusFilter,
+        sortMode,
+        keyword: rawKeyword
+      }),
       emptyTitle: keyword ? '没有找到匹配记录' : '当前筛选下暂无外发记录',
       emptyDesc: keyword
         ? '可以换项目名、接收方或标签再试一次。'
-        : '你可以切回全部外发项目，或先去项目详情发起一次项目外发。',
+        : '你可以切回全部外发项目，或先发起一次项目外发。',
       emptyActionText: hasCustomFilter ? '重置筛选' : '查看我的项目'
     })
   },
@@ -330,9 +344,7 @@ Page({
     this.setData({
       searchKeyword: '',
       statusFilter: 'all',
-      sortMode: 'updated',
-      sortPickerIndex: getSortPickerIndex('updated'),
-      sortLabelText: getSortLabel('updated')
+      sortMode: 'updated'
     }, () => this.applyFilters())
   },
 

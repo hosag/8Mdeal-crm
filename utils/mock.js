@@ -203,30 +203,6 @@ const outboundProjects = [
     collaboratorLatestFollowAt: '04-18 09:12',
     status: '进行中',
     stage: '方案'
-  },
-  {
-    id: 's2',
-    projectId: 'p1',
-    importedProjectId: '',
-    name: '晨曜咨询流程优化项目',
-    partner: '售前支持群',
-    mode: '分享信息',
-    viewed: '预览 2 次',
-    viewCount: 2,
-    receiverName: '售前值班组',
-    createdAt: '04-12 18:00',
-    createdAtRaw: '2026-04-12T18:00:00+08:00',
-    updatedAtRaw: '2026-04-12T18:40:00+08:00',
-    firstOpenedAt: '04-12 18:08',
-    firstOpenedAtRaw: '2026-04-12T18:08:00+08:00',
-    lastViewedAt: '04-12 18:40',
-    importedAt: '',
-    importedAtRaw: '',
-    statusText: '已打开',
-    collaboratorFollowCount: 0,
-    collaboratorLatestFollowAt: '',
-    status: '已成交',
-    stage: '成交'
   }
 ]
 

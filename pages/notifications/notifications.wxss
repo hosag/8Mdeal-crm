@@ -39,8 +39,8 @@
   width: calc((100% - 24rpx) / 3);
   padding: 16rpx 10rpx 14rpx;
   border-radius: 22rpx;
-  background: rgba(244, 239, 231, 0.82);
-  box-shadow: inset 0 0 0 2rpx rgba(24, 39, 51, 0.04);
+  background: var(--theme-soft-block-bg);
+  box-shadow: inset 0 0 0 2rpx var(--theme-divider);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -49,18 +49,18 @@
 }
 
 .notifications-page .notifications-quick-chip.is-active {
-  background: rgba(53, 93, 118, 0.14);
-  box-shadow: inset 0 0 0 2rpx rgba(53, 93, 118, 0.16);
+  background: var(--theme-brand-bg);
+  box-shadow: inset 0 0 0 2rpx var(--theme-divider);
 }
 
 .notifications-page .notifications-quick-label {
   font-size: 22rpx;
   line-height: 1.2;
-  color: #5c6974;
+  color: var(--theme-text-soft);
 }
 
 .notifications-page .notifications-quick-chip.is-active .notifications-quick-label {
-  color: #2f556c;
+  color: var(--theme-brand-text);
   font-weight: 700;
 }
 
@@ -68,7 +68,7 @@
   font-size: 28rpx;
   line-height: 1;
   font-weight: 700;
-  color: #182730;
+  color: var(--theme-title);
 }
 
 .notifications-page .notifications-result-text {
@@ -85,8 +85,8 @@
   margin-top: 18rpx;
   padding: 24rpx;
   border-radius: 30rpx;
-  background: linear-gradient(180deg, rgba(255, 254, 251, 0.98) 0%, rgba(248, 244, 237, 0.96) 100%);
-  box-shadow: 0 18rpx 38rpx rgba(25, 40, 52, 0.08);
+  background: var(--theme-project-card-bg);
+  box-shadow: var(--theme-project-card-shadow);
 }
 
 .notifications-page .notification-card::before {
@@ -97,53 +97,53 @@
   bottom: 28rpx;
   width: 8rpx;
   border-radius: 999rpx;
-  background: rgba(177, 139, 86, 0.16);
+  background: var(--theme-soft-badge-text);
 }
 
 .notifications-page .notification-card.is-overdue {
-  background: linear-gradient(180deg, rgba(255, 251, 249, 0.98) 0%, rgba(250, 240, 236, 0.98) 100%);
-  box-shadow: 0 18rpx 40rpx rgba(120, 54, 42, 0.10);
+  background: var(--theme-project-card-bg);
+  box-shadow: var(--theme-project-card-shadow);
 }
 
 .notifications-page .notification-card.is-overdue::before {
-  background: rgba(154, 64, 64, 0.44);
+  background: var(--theme-danger-text);
 }
 
 .notifications-page .notification-card.is-today {
-  background: linear-gradient(180deg, rgba(251, 253, 255, 0.98) 0%, rgba(240, 247, 250, 0.98) 100%);
+  background: var(--theme-project-card-bg);
 }
 
 .notifications-page .notification-card.is-today::before {
-  background: rgba(36, 75, 97, 0.36);
+  background: var(--theme-brand-text);
 }
 
 .notifications-page .notification-card.is-tomorrow {
-  background: linear-gradient(180deg, rgba(255, 254, 250, 0.98) 0%, rgba(247, 242, 232, 0.98) 100%);
+  background: var(--theme-project-card-bg);
 }
 
 .notifications-page .notification-card.is-tomorrow::before {
-  background: rgba(141, 102, 49, 0.30);
+  background: var(--theme-soft-badge-text);
 }
 
 .notifications-page .notification-card.is-update {
-  background: linear-gradient(180deg, rgba(252, 254, 255, 0.98) 0%, rgba(243, 248, 250, 0.98) 100%);
+  background: var(--theme-project-card-bg);
 }
 
 .notifications-page .notification-card.is-update::before {
-  background: rgba(53, 93, 118, 0.24);
+  background: var(--theme-brand-text);
 }
 
 .notifications-page .notification-card.is-system::before {
-  background: rgba(122, 92, 56, 0.28);
+  background: var(--theme-inline-text);
 }
 
 .notifications-page .notification-card.is-resolved {
-  background: linear-gradient(180deg, rgba(252, 252, 249, 0.94) 0%, rgba(245, 244, 239, 0.94) 100%);
-  box-shadow: 0 12rpx 26rpx rgba(25, 40, 52, 0.05);
+  background: var(--theme-state-card-bg);
+  box-shadow: var(--theme-state-card-shadow);
 }
 
 .notifications-page .notification-card.is-resolved::before {
-  background: rgba(89, 116, 100, 0.22);
+  background: var(--theme-success-text);
 }
 
 .notifications-page .notification-top {
@@ -182,57 +182,57 @@
   font-size: 20rpx;
   line-height: 1;
   letter-spacing: 0.04em;
-  background: rgba(177, 139, 86, 0.12);
-  color: #8d6631;
+  background: var(--theme-soft-badge-bg);
+  color: var(--theme-soft-badge-text);
 }
 
 .notifications-page .notification-tone-pill.is-overdue {
-  background: rgba(154, 64, 64, 0.12);
-  color: #9a4040;
+  background: var(--theme-danger-bg);
+  color: var(--theme-danger-text);
 }
 
 .notifications-page .notification-tone-pill.is-today,
 .notifications-page .notification-tone-pill.is-update {
-  background: rgba(36, 75, 97, 0.12);
-  color: #244b61;
+  background: var(--theme-brand-bg);
+  color: var(--theme-brand-text);
 }
 
 .notifications-page .notification-tone-pill.is-tomorrow {
-  background: rgba(141, 102, 49, 0.12);
-  color: #8d6631;
+  background: var(--theme-soft-badge-bg);
+  color: var(--theme-soft-badge-text);
 }
 
 .notifications-page .notification-tone-pill.is-system {
-  background: rgba(122, 92, 56, 0.12);
-  color: #7a5c38;
+  background: var(--theme-inline-bg);
+  color: var(--theme-inline-text);
 }
 
 .notifications-page .notification-tone-pill.is-resolved {
-  background: rgba(74, 132, 98, 0.12);
-  color: #2b6a49;
+  background: var(--theme-success-bg);
+  color: var(--theme-success-text);
 }
 
 .notifications-page .notification-title {
   font-size: 30rpx;
   font-weight: 700;
-  color: #16242f;
+  color: var(--theme-title);
 }
 
 .notifications-page .notification-project {
   margin-top: 10rpx;
-  color: #6d7882;
+  color: var(--theme-text-soft);
   font-size: 23rpx;
 }
 
 .notifications-page .notification-card-action-text {
   font-size: 21rpx;
   line-height: 1.2;
-  color: #6a7b87;
+  color: var(--theme-text-soft);
 }
 
 .notifications-page .notification-summary {
   margin-top: 16rpx;
-  color: #253543;
+  color: var(--theme-text-main);
   font-size: 25rpx;
   line-height: 1.7;
 }
@@ -243,13 +243,13 @@
 }
 
 .notifications-page .notification-category-badge {
-  background: rgba(177, 139, 86, 0.14);
-  color: #8d6631;
+  background: var(--theme-soft-badge-bg);
+  color: var(--theme-soft-badge-text);
 }
 
 .notifications-page .notification-source-pill {
-  background: #eff4f6;
-  color: #36515f;
+  background: var(--theme-field-pill-bg);
+  color: var(--theme-field-pill-text);
 }
 
 .notifications-page .notification-hint {

@@ -1,4 +1,4 @@
-<view class="loading-panel">
+<view class="loading-panel {{appearancePageClass}}">
   <view class="loading-shell">
     <view class="loading-hero shimmer"></view>
     <view class="loading-summary">

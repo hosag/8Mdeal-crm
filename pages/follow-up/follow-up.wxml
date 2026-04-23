@@ -1,4 +1,4 @@
-<view class="page-shell follow-page">
+<view class="page-shell follow-page {{appearancePageClass}}">
   <view class="hero">
     <view class="eyebrow-row">
       <view class="eyebrow">新增跟进</view>
@@ -163,7 +163,7 @@
       <view class="field-group editor-field-group editor-field-group-tight">
         <view wx:if="{{attachments.length}}" class="attachment-grid">
           <view class="attachment attachment-image" wx:for="{{attachments}}" wx:key="fileId">
-            <image class="attachment-thumb" src="{{item.previewPath || item.tempFilePath || item.fileId}}" mode="aspectFill"></image>
+            <image class="attachment-thumb" src="{{item.previewPath || item.tempFilePath || item.fileId}}" mode="aspectFill" />
             <view class="attachment-remove" data-index="{{index}}" bindtap="removeAttachment">删除</view>
             <view class="attachment-caption">{{item.name}}</view>
           </view>
@@ -183,14 +183,14 @@
   <view class="bottom-space"></view>
 </view>
 
-<view class="footer-bar">
+<view class="footer-bar {{appearancePageClass}}">
   <view class="btn-ghost" bindtap="saveDraft">暂存草稿</view>
   <view class="btn-primary" bindtap="handleSave">{{isSaving ? '提交中...' : '提交跟进'}}</view>
 </view>
 
 <view wx:if="{{showHelpDialog}}">
   <view class="sheet-mask" bindtap="closeHelp"></view>
-  <view class="help-dialog">
+  <view class="help-dialog {{appearancePageClass}}">
     <view class="help-dialog-head">
       <view class="sheet-title">{{helpTitle}}</view>
       <view class="sheet-close" bindtap="closeHelp">关闭</view>
@@ -201,7 +201,7 @@
 
 <view wx:if="{{showAiDialog && aiResult}}">
   <view class="sheet-mask ai-sheet-mask" bindtap="closeAiDialog"></view>
-  <view class="sheet-panel ai-sheet-panel">
+  <view class="sheet-panel ai-sheet-panel {{appearancePageClass}}">
     <view class="sheet-handle"></view>
     <view class="follow-result-card">
       <view class="sheet-header result-sheet-header">
@@ -210,7 +210,6 @@
             <view class="sheet-title">AI 整理结果</view>
             <view class="result-status-badge">建议草稿</view>
           </view>
-          <view class="ai-sheet-note">结果按摘要、关键进展、风险和下一步建议分段展示，确认后再回填。</view>
           <view class="ai-origin-row">
             <view class="ai-origin-badge">{{aiResult.sourceLabel}}</view>
             <view class="ai-origin-text">{{aiResult.sourceCaption}}</view>
@@ -267,7 +266,6 @@
         </view>
 
         <view wx:if="{{aiNextError}}" class="helper-text result-helper-text is-danger">{{aiNextError}}</view>
-        <view wx:if="{{isAiNextLoading}}" class="helper-text result-helper-text">AI 正在结合当前摘要、最近跟进和开放任务生成下一步建议。</view>
 
         <block wx:if="{{aiNextSuggestion}}">
           <view class="ai-origin-row ai-origin-row-inline">

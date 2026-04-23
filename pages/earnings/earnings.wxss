@@ -1,0 +1,121 @@
+.earnings-hero {
+  padding: 20rpx 28rpx 18rpx;
+  border-radius: 28rpx;
+}
+
+.earnings-hero-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16rpx;
+}
+
+.earnings-hero .eyebrow {
+  padding: 7rpx 16rpx;
+  font-size: 20rpx;
+  letter-spacing: 1rpx;
+}
+
+.earnings-hero .source-badge {
+  flex: 0 0 auto;
+  max-width: 220rpx;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.earnings-hero-metrics {
+  margin-top: 8rpx;
+  gap: 8rpx;
+}
+
+.earnings-metric-card {
+  padding: 13rpx 13rpx 11rpx;
+  border-radius: 20rpx;
+  background: var(--theme-badge-bg);
+}
+
+.earnings-metric-card .metric-label {
+  font-size: 18rpx;
+}
+
+.earnings-metric-card .metric-value {
+  margin-top: 4rpx;
+  font-size: 26rpx;
+}
+
+.earnings-section-header {
+  margin-bottom: 12rpx;
+}
+
+.earnings-month-chip {
+  min-height: 44rpx;
+  padding: 0 16rpx;
+  font-size: 20rpx;
+  background: var(--theme-soft-badge-bg);
+  color: var(--theme-soft-badge-text);
+}
+
+.earnings-deal-card {
+  padding: 18rpx;
+}
+
+.earnings-deal-card + .earnings-deal-card {
+  margin-top: 8rpx;
+}
+
+.earnings-deal-top {
+  gap: 16rpx;
+}
+
+.earnings-deal-main {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.earnings-inline-metrics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-top: 10rpx;
+  gap: 8rpx;
+}
+
+.earnings-inline-item {
+  justify-content: flex-start;
+  padding: 12rpx 14rpx;
+  border-radius: 16rpx;
+  background: var(--theme-inline-bg);
+  color: var(--theme-inline-text);
+  font-size: 21rpx;
+}
+
+.earnings-note-card {
+  margin-top: 10rpx;
+  padding: 14rpx 16rpx;
+}
+
+.page-shell.earnings-page.appearance-font-large .earnings-hero {
+  padding: 24rpx 30rpx 22rpx;
+}
+
+.page-shell.earnings-page.appearance-font-large .earnings-metric-card,
+.page-shell.earnings-page.appearance-font-large .earnings-deal-card {
+  border-radius: 24rpx;
+}
+
+.page-shell.earnings-page.appearance-font-large .earnings-inline-metrics {
+  gap: 10rpx;
+}
+
+.page-shell.earnings-page.appearance-font-readable .earnings-hero {
+  padding: 28rpx 32rpx 24rpx;
+}
+
+.page-shell.earnings-page.appearance-font-readable .earnings-metric-card,
+.page-shell.earnings-page.appearance-font-readable .earnings-deal-card {
+  border-radius: 26rpx;
+}
+
+.page-shell.earnings-page.appearance-font-readable .earnings-inline-metrics {
+  gap: 12rpx;
+}

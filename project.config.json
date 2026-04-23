@@ -35,7 +35,16 @@
   "condition": {},
   "simulatorPluginLibVersion": {},
   "packOptions": {
-    "ignore": [],
+    "ignore": [
+      {
+        "type": "folder",
+        "value": "图片"
+      },
+      {
+        "type": "file",
+        "value": "八面成交CRM.rar"
+      }
+    ],
     "include": []
   },
   "editorSetting": {},

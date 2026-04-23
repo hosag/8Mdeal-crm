@@ -1,0 +1,31 @@
+.page-shell.project-form-page.appearance-font-large .step-pill {
+  min-height: 56rpx;
+  font-size: 27rpx;
+}
+
+.page-shell.project-form-page.appearance-font-large .contact-name {
+  font-size: 28rpx;
+}
+
+.footer-bar.appearance-font-large .btn-primary,
+.footer-bar.appearance-font-large .btn-ghost {
+  height: 106rpx;
+  font-size: 31rpx;
+}
+
+.page-shell.project-form-page.appearance-font-readable .step-pill {
+  min-height: 68rpx;
+  padding-left: 26rpx;
+  padding-right: 26rpx;
+  font-size: 34rpx;
+}
+
+.page-shell.project-form-page.appearance-font-readable .contact-name {
+  font-size: 36rpx;
+}
+
+.footer-bar.appearance-font-readable .btn-primary,
+.footer-bar.appearance-font-readable .btn-ghost {
+  height: 128rpx;
+  font-size: 38rpx;
+}

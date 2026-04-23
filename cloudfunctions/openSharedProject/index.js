@@ -1,9 +1,13 @@
 const cloud = require('wx-server-sdk')
+const crypto = require('crypto')
 
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 
 const db = cloud.database()
 const _ = db.command
+const CONTACT_CRYPTO_SECRET = process.env.CONTACT_CRYPTO_SECRET || 'deal-crm-contact-v1'
+const CONTACT_CRYPTO_PREFIX = 'enc:v1'
+const CONTACT_CRYPTO_KEY = crypto.createHash('sha256').update(CONTACT_CRYPTO_SECRET).digest()
 
 const defaultShareTags = [
   {
@@ -28,6 +32,61 @@ const defaultShareTags = [
 
 function normalizeText(value) {
   return String(value || '').trim()
+}
+
+function isEncryptedValue(value) {
+  return normalizeText(value).startsWith(`${CONTACT_CRYPTO_PREFIX}:`)
+}
+
+function encryptSensitiveValue(value) {
+  const text = normalizeText(value)
+  if (!text) {
+    return ''
+  }
+
+  if (isEncryptedValue(text)) {
+    return text
+  }
+
+  const iv = crypto.randomBytes(12)
+  const cipher = crypto.createCipheriv('aes-256-gcm', CONTACT_CRYPTO_KEY, iv)
+  const encrypted = Buffer.concat([cipher.update(text, 'utf8'), cipher.final()])
+  const authTag = cipher.getAuthTag()
+
+  return [
+    CONTACT_CRYPTO_PREFIX,
+    iv.toString('base64'),
+    authTag.toString('base64'),
+    encrypted.toString('base64')
+  ].join(':')
+}
+
+function decryptSensitiveValue(value) {
+  const text = normalizeText(value)
+  if (!text) {
+    return ''
+  }
+
+  if (!isEncryptedValue(text)) {
+    return text
+  }
+
+  const parts = text.split(':')
+  if (parts.length !== 5) {
+    return ''
+  }
+
+  try {
+    const iv = Buffer.from(parts[2], 'base64')
+    const authTag = Buffer.from(parts[3], 'base64')
+    const encrypted = Buffer.from(parts[4], 'base64')
+    const decipher = crypto.createDecipheriv('aes-256-gcm', CONTACT_CRYPTO_KEY, iv)
+    decipher.setAuthTag(authTag)
+    const decrypted = Buffer.concat([decipher.update(encrypted), decipher.final()])
+    return decrypted.toString('utf8').trim()
+  } catch (error) {
+    return ''
+  }
 }
 
 function normalizeHistoryScope(value, mode) {
@@ -172,11 +231,153 @@ function mapContacts(contacts) {
         id: contact.contactId || contact.id || `contact-${index}`,
         name: contact.name || '',
         role: contact.role || '',
-        phone: contact.phone || '',
-        wechat: contact.wechat || '',
+        phone: decryptSensitiveValue(contact.phone),
+        wechat: decryptSensitiveValue(contact.wechat),
         company: contact.company || ''
       }))
     : []
+}
+
+function normalizeShareViewLog(item) {
+  const current = item && typeof item === 'object' && !Array.isArray(item) ? item : {}
+  const firstOpenedAt = parseDate(current.firstOpenedAt || current.openedAt || current.createdAt)
+  const lastViewedAt = parseDate(current.lastViewedAt || current.firstOpenedAt || current.updatedAt)
+  const importedAt = parseDate(current.importedAt)
+
+  return {
+    viewerOpenid: normalizeText(current.viewerOpenid || current.openid),
+    viewerName: normalizeText(current.viewerName || current.name),
+    firstOpenedAt,
+    lastViewedAt: lastViewedAt || firstOpenedAt,
+    viewCount: Math.max(0, Number(current.viewCount || 0) || 0),
+    importedProjectId: normalizeText(current.importedProjectId),
+    importedAt,
+    lastAction: normalizeText(current.lastAction || (normalizeText(current.importedProjectId) ? 'taken_over' : 'opened'))
+  }
+}
+
+function getShareViewLogs(record) {
+  const rawRecord = record && typeof record === 'object' && !Array.isArray(record) ? record : {}
+  const rawLogs = Array.isArray(rawRecord.viewLogs) ? rawRecord.viewLogs : []
+  const logs = rawLogs
+    .map(normalizeShareViewLog)
+    .filter((item) => item.viewerOpenid || item.viewerName || item.firstOpenedAt || item.lastViewedAt)
+
+  const legacyViewerOpenid = normalizeText(rawRecord.receiverOpenid)
+  const legacyViewerName = normalizeText(rawRecord.receiverName)
+  const legacyFirstOpenedAt = parseDate(rawRecord.firstOpenedAt)
+  const legacyLastViewedAt = parseDate(rawRecord.lastViewedAt)
+  const legacyImportedProjectId = normalizeText(rawRecord.importedProjectId)
+  const legacyImportedAt = parseDate(rawRecord.importedAt)
+  const hasLegacyViewer = legacyViewerOpenid || legacyViewerName || legacyFirstOpenedAt || legacyLastViewedAt
+
+  if (hasLegacyViewer && !logs.some((item) => item.viewerOpenid && item.viewerOpenid === legacyViewerOpenid)) {
+    logs.push({
+      viewerOpenid: legacyViewerOpenid,
+      viewerName: legacyViewerName,
+      firstOpenedAt: legacyFirstOpenedAt,
+      lastViewedAt: legacyLastViewedAt || legacyFirstOpenedAt,
+      viewCount: Math.max(0, Number(rawRecord.viewCount || 0) || 0),
+      importedProjectId: legacyImportedProjectId,
+      importedAt: legacyImportedAt,
+      lastAction: legacyImportedProjectId ? 'taken_over' : 'opened'
+    })
+  }
+
+  return logs
+}
+
+function serializeShareViewLogs(viewLogs) {
+  return (Array.isArray(viewLogs) ? viewLogs : [])
+    .map(normalizeShareViewLog)
+    .filter((item) => item.viewerOpenid || item.viewerName || item.firstOpenedAt || item.lastViewedAt)
+    .sort((left, right) => {
+      const leftTime = (left.importedAt || left.lastViewedAt || left.firstOpenedAt || new Date(0)).getTime()
+      const rightTime = (right.importedAt || right.lastViewedAt || right.firstOpenedAt || new Date(0)).getTime()
+      return rightTime - leftTime
+    })
+    .map((item) => ({
+      viewerOpenid: item.viewerOpenid,
+      viewerName: item.viewerName,
+      firstOpenedAt: item.firstOpenedAt || null,
+      lastViewedAt: item.lastViewedAt || item.firstOpenedAt || null,
+      viewCount: Math.max(0, Number(item.viewCount || 0) || 0),
+      importedProjectId: item.importedProjectId,
+      importedAt: item.importedAt || null,
+      lastAction: item.lastAction
+    }))
+}
+
+function buildShareViewMeta(viewLogs) {
+  const logs = (Array.isArray(viewLogs) ? viewLogs : [])
+    .map(normalizeShareViewLog)
+    .filter((item) => item.viewerOpenid || item.viewerName || item.firstOpenedAt || item.lastViewedAt)
+
+  let firstOpenedAt = null
+  let lastViewedAt = null
+  let latestViewer = null
+  let viewCount = 0
+
+  logs.forEach((item) => {
+    const firstTime = item.firstOpenedAt ? item.firstOpenedAt.getTime() : NaN
+    const lastTime = (item.importedAt || item.lastViewedAt || item.firstOpenedAt)
+      ? (item.importedAt || item.lastViewedAt || item.firstOpenedAt).getTime()
+      : NaN
+
+    viewCount += Math.max(0, Number(item.viewCount || 0) || 0)
+
+    if (!Number.isNaN(firstTime) && (!firstOpenedAt || firstTime < firstOpenedAt.getTime())) {
+      firstOpenedAt = item.firstOpenedAt
+    }
+
+    if (!Number.isNaN(lastTime) && (!lastViewedAt || lastTime > lastViewedAt.getTime())) {
+      lastViewedAt = item.importedAt || item.lastViewedAt || item.firstOpenedAt
+      latestViewer = item
+    }
+  })
+
+  return {
+    viewCount,
+    viewerCount: logs.length,
+    firstOpenedAt,
+    lastViewedAt,
+    latestViewerOpenid: latestViewer ? latestViewer.viewerOpenid : '',
+    latestViewerName: latestViewer ? latestViewer.viewerName : '',
+    latestImportedProjectId: latestViewer ? latestViewer.importedProjectId : '',
+    latestImportedAt: latestViewer ? latestViewer.importedAt : null
+  }
+}
+
+function upsertShareViewLog(viewLogs, payload = {}) {
+  const viewerOpenid = normalizeText(payload.viewerOpenid)
+  const viewerName = normalizeText(payload.viewerName)
+  const viewedAt = parseDate(payload.viewedAt) || new Date()
+  const importedProjectId = normalizeText(payload.importedProjectId)
+  const importedAt = parseDate(payload.importedAt)
+  const logs = getShareViewLogs({ viewLogs })
+  const matchedIndex = logs.findIndex((item) => item.viewerOpenid && item.viewerOpenid === viewerOpenid)
+  const existing = matchedIndex > -1 ? normalizeShareViewLog(logs[matchedIndex]) : null
+  const nextLog = {
+    viewerOpenid,
+    viewerName: viewerName || (existing ? existing.viewerName : ''),
+    firstOpenedAt: existing && existing.firstOpenedAt ? existing.firstOpenedAt : viewedAt,
+    lastViewedAt: viewedAt,
+    viewCount: Math.max(0, Number(existing && existing.viewCount ? existing.viewCount : 0) || 0) + 1,
+    importedProjectId: importedProjectId || (existing ? existing.importedProjectId : ''),
+    importedAt: importedAt || (existing ? existing.importedAt : null),
+    lastAction: importedProjectId ? 'taken_over' : 'opened'
+  }
+
+  if (matchedIndex > -1) {
+    logs.splice(matchedIndex, 1, nextLog)
+  } else {
+    logs.push(nextLog)
+  }
+
+  return {
+    viewLogs: logs,
+    isFirstViewer: matchedIndex === -1
+  }
 }
 
 function buildTimelineItem(followUp, extra = {}) {
@@ -430,7 +631,14 @@ function buildImportedProjectPayload(sourceProject, shareRecord, ownerName, rece
     nextFollowUpDate: sourceProject.nextFollowUpDate || '',
     status: sourceProject.status || '进行中',
     isClosed: !!sourceProject.isClosed,
-    contacts: Array.isArray(sourceProject.contacts) ? clone(sourceProject.contacts) : [],
+    contacts: Array.isArray(sourceProject.contacts)
+      ? sourceProject.contacts.map((contact, index) => ({
+          ...clone(contact),
+          contactId: normalizeText(contact && (contact.contactId || contact.id)) || `contact-${Date.now()}-${index}`,
+          phone: encryptSensitiveValue(contact && contact.phone),
+          wechat: encryptSensitiveValue(contact && contact.wechat)
+        }))
+      : [],
     tags: Array.isArray(sourceProject.tags) ? clone(sourceProject.tags) : [],
     isSharedProject: true,
     sourceProjectId: sourceProject._id,
@@ -559,6 +767,10 @@ exports.main = async (event) => {
   const receiverName = normalizeText(receiverUser.nickName) || '微信用户'
   const shareTag = resolveShareTag(shareRecord, ownerUser)
   const historyScope = normalizeHistoryScope(shareRecord.historyScope, shareRecord.shareMode)
+  const existingViewLogs = getShareViewLogs(shareRecord)
+  const existingViewMeta = buildShareViewMeta(existingViewLogs)
+  const lockedReceiverOpenid = normalizeText(shareRecord.receiverOpenid) || existingViewMeta.latestViewerOpenid
+  const lockedReceiverName = normalizeText(shareRecord.receiverName) || existingViewMeta.latestViewerName
 
   const sourceProjectResult = await db.collection('projects').where({
     _id: shareRecord.projectId,
@@ -582,130 +794,179 @@ exports.main = async (event) => {
   let effectiveFollowUps = sourceFollowResult.data
   let importedProjectId = ''
   let imported = false
+  let blocked = false
+  let blockedReason = ''
+  let blockedMessage = ''
+  let blockedReceiverName = ''
 
   if (shareRecord.shareMode === 'outbound' && receiverOpenid && receiverOpenid !== ownerOpenid) {
-    const existingProjectResult = await db.collection('projects').where({
-      _openid: receiverOpenid,
-      sourceProjectId: sourceProject._id,
-      sharedFromOpenid: ownerOpenid
-    }).limit(1).get()
+    const sourceOutboundShareRecordId = normalizeText(sourceProject.outboundShareRecordId)
+    const handedOverToOpenid = normalizeText(sourceProject.handoverToOpenid)
+    const projectLockedByAnotherRecord = sourceProject.handoverStatus === 'handed_over'
+      && sourceOutboundShareRecordId
+      && sourceOutboundShareRecordId !== shareRecord._id
 
-    const now = new Date()
-    const importPayload = buildImportedProjectPayload(sourceProject, shareRecord, ownerName, receiverOpenid, receiverName, now)
-    const isFirstImport = !existingProjectResult.data.length && !normalizeText(shareRecord.importedProjectId)
+    const projectLockedByAnotherReceiver = sourceProject.handoverStatus === 'handed_over'
+      && sourceOutboundShareRecordId === shareRecord._id
+      && handedOverToOpenid
+      && handedOverToOpenid !== receiverOpenid
 
-    if (existingProjectResult.data.length) {
-      importedProjectId = existingProjectResult.data[0]._id
-      await db.collection('projects').doc(importedProjectId).update({
-        data: importPayload
-      })
+    if (projectLockedByAnotherRecord || projectLockedByAnotherReceiver) {
+      blocked = true
+      blockedReason = 'project_already_handed_over'
+      blockedReceiverName = normalizeText(sourceProject.handoverToName) || lockedReceiverName || '其他接手方'
+      blockedMessage = `${blockedReceiverName} 已接手这个项目`
+      importedProjectId = normalizeText(shareRecord.importedProjectId)
+    } else if (lockedReceiverOpenid && lockedReceiverOpenid !== receiverOpenid) {
+      blocked = true
+      blockedReason = 'already_taken_over'
+      blockedReceiverName = lockedReceiverName || '其他接手方'
+      blockedMessage = `${blockedReceiverName} 已接手这个项目`
+      importedProjectId = normalizeText(shareRecord.importedProjectId)
     } else {
-      const addResult = await db.collection('projects').add({
+      const existingProjectResult = await db.collection('projects').where({
+        _openid: receiverOpenid,
+        sourceProjectId: sourceProject._id,
+        sharedFromOpenid: ownerOpenid
+      }).limit(1).get()
+
+      const now = new Date()
+      const importPayload = buildImportedProjectPayload(sourceProject, shareRecord, ownerName, receiverOpenid, receiverName, now)
+      const isFirstImport = !existingProjectResult.data.length && !normalizeText(shareRecord.importedProjectId)
+
+      if (existingProjectResult.data.length) {
+        importedProjectId = existingProjectResult.data[0]._id
+        await db.collection('projects').doc(importedProjectId).update({
+          data: importPayload
+        })
+      } else {
+        const addResult = await db.collection('projects').add({
+          data: {
+            _openid: receiverOpenid,
+            createdAt: now,
+            ...importPayload
+          }
+        })
+        importedProjectId = addResult._id
+      }
+
+      await syncImportedFollowUps(receiverOpenid, importedProjectId, sourceProject._id, ownerOpenid, ownerName, historyScope)
+
+      await db.collection('projects').doc(sourceProject._id).update({
         data: {
-          _openid: receiverOpenid,
-          createdAt: now,
-          ...importPayload
+          handoverStatus: 'handed_over',
+          handoverToOpenid: receiverOpenid,
+          handoverToName: receiverName,
+          handedOverAt: shareRecord.importedAt || now,
+          outboundShareRecordId: shareRecord._id,
+          updatedAt: now
         }
       })
-      importedProjectId = addResult._id
-    }
 
-    await syncImportedFollowUps(receiverOpenid, importedProjectId, sourceProject._id, ownerOpenid, ownerName, historyScope)
+      const importedProjectResult = await db.collection('projects').doc(importedProjectId).get()
+      const importedFollowResult = await db.collection('followUps').where({
+        _openid: receiverOpenid,
+        projectId: importedProjectId
+      }).orderBy('followUpTime', 'desc').get()
 
-    await db.collection('projects').doc(sourceProject._id).update({
-      data: {
-        handoverStatus: 'handed_over',
-        handoverToOpenid: receiverOpenid,
-        handoverToName: receiverName,
-        handedOverAt: shareRecord.importedAt || now,
-        outboundShareRecordId: shareRecord._id,
-        updatedAt: now
-      }
-    })
+      effectiveProject = importedProjectResult.data
+      effectiveFollowUps = importedFollowResult.data
+      imported = true
 
-    const importedProjectResult = await db.collection('projects').doc(importedProjectId).get()
-    const importedFollowResult = await db.collection('followUps').where({
-      _openid: receiverOpenid,
-      projectId: importedProjectId
-    }).orderBy('followUpTime', 'desc').get()
-
-    effectiveProject = importedProjectResult.data
-    effectiveFollowUps = importedFollowResult.data
-    imported = true
-
-    await db.collection('shareRecords').doc(shareRecordId).update({
-      data: {
-        receiverOpenid,
-        receiverName,
-        firstOpenedAt: shareRecord.firstOpenedAt || now,
-        lastViewedAt: now,
+      const nextImportedAt = shareRecord.importedAt || now
+      const viewUpdate = upsertShareViewLog(existingViewLogs, {
+        viewerOpenid: receiverOpenid,
+        viewerName: receiverName,
+        viewedAt: now,
         importedProjectId,
-        importedAt: shareRecord.importedAt || now,
-        updatedAt: now,
-        viewCount: _.inc(1)
-      }
-    })
+        importedAt: nextImportedAt
+      })
+      const nextViewMeta = buildShareViewMeta(viewUpdate.viewLogs)
 
-    if (isFirstImport) {
-      await Promise.all([
-        ensureNotification(receiverOpenid, {
-          type: 'project_taken_over',
-          level: 'normal',
-          title: '你已接手项目',
-          summary: `${buildProjectDetail(sourceProject).name} 已进入“我的项目”，后续由你继续推进。`,
-          projectId: importedProjectId,
-          projectName: buildProjectDetail(sourceProject).name,
-          shareRecordId,
-          sourceOpenid: ownerOpenid,
-          sourceName: ownerName,
-          actionUrl: `/pages/project-detail/project-detail?projectId=${importedProjectId}&view=projects`,
-          actionLabel: '查看项目',
-          bizDate: formatBizDate(now),
-          dedupeKey: `project_taken_over_${importedProjectId}`,
-          extra: {
-            importedProjectId,
-            sourceProjectId: sourceProject._id
-          },
-          createdAt: now
-        }),
-        ensureNotification(ownerOpenid, {
-          type: 'shared_imported',
-          level: 'normal',
-          title: '对方已接手项目',
-          summary: `${receiverName} 已接手 ${buildProjectDetail(sourceProject).name}，后续将由对方继续推进。`,
-          projectId: sourceProject._id,
-          projectName: buildProjectDetail(sourceProject).name,
-          shareRecordId,
-          sourceOpenid: receiverOpenid,
-          sourceName: receiverName,
-          actionUrl: `/pages/project-detail/project-detail?projectId=${sourceProject._id}&view=shared-out`,
-          actionLabel: '查看外发进展',
-          bizDate: formatBizDate(now),
-          dedupeKey: `shared_imported_${shareRecordId}`,
-          extra: {
-            importedProjectId,
-            receiverOpenid
-          },
-          createdAt: now
-        })
-      ])
+      await db.collection('shareRecords').doc(shareRecordId).update({
+        data: {
+          receiverOpenid: shareRecord.receiverOpenid || receiverOpenid,
+          receiverName: shareRecord.receiverName || receiverName,
+          receiverLockedAt: shareRecord.receiverLockedAt || nextImportedAt,
+          firstOpenedAt: nextViewMeta.firstOpenedAt || shareRecord.firstOpenedAt || now,
+          lastViewedAt: nextViewMeta.lastViewedAt || now,
+          importedProjectId,
+          importedAt: nextImportedAt,
+          viewCount: nextViewMeta.viewCount,
+          viewerCount: nextViewMeta.viewerCount,
+          viewLogs: serializeShareViewLogs(viewUpdate.viewLogs),
+          updatedAt: now
+        }
+      })
+
+      if (isFirstImport) {
+        await Promise.all([
+          ensureNotification(receiverOpenid, {
+            type: 'project_taken_over',
+            level: 'normal',
+            title: '你已接手项目',
+            summary: `${buildProjectDetail(sourceProject).name} 已进入“我的项目”，后续由你继续推进。`,
+            projectId: importedProjectId,
+            projectName: buildProjectDetail(sourceProject).name,
+            shareRecordId,
+            sourceOpenid: ownerOpenid,
+            sourceName: ownerName,
+            actionUrl: `/pages/project-detail/project-detail?projectId=${importedProjectId}&view=projects`,
+            actionLabel: '查看项目',
+            bizDate: formatBizDate(now),
+            dedupeKey: `project_taken_over_${importedProjectId}`,
+            extra: {
+              importedProjectId,
+              sourceProjectId: sourceProject._id
+            },
+            createdAt: now
+          }),
+          ensureNotification(ownerOpenid, {
+            type: 'shared_imported',
+            level: 'normal',
+            title: '对方已接手项目',
+            summary: `${receiverName} 已接手 ${buildProjectDetail(sourceProject).name}，后续将由对方继续推进。`,
+            projectId: sourceProject._id,
+            projectName: buildProjectDetail(sourceProject).name,
+            shareRecordId,
+            sourceOpenid: receiverOpenid,
+            sourceName: receiverName,
+            actionUrl: `/pages/project-detail/project-detail?projectId=${sourceProject._id}&view=shared-out`,
+            actionLabel: '查看外发进展',
+            bizDate: formatBizDate(now),
+            dedupeKey: `shared_imported_${shareRecordId}`,
+            extra: {
+              importedProjectId,
+              receiverOpenid
+            },
+            createdAt: now
+          })
+        ])
+      }
     }
   } else if (receiverOpenid && receiverOpenid !== ownerOpenid) {
     const now = new Date()
-    const isFirstOpen = !shareRecord.firstOpenedAt
+    const viewUpdate = upsertShareViewLog(existingViewLogs, {
+      viewerOpenid: receiverOpenid,
+      viewerName: receiverName,
+      viewedAt: now
+    })
+    const nextViewMeta = buildShareViewMeta(viewUpdate.viewLogs)
 
     await db.collection('shareRecords').doc(shareRecordId).update({
       data: {
-        receiverOpenid,
-        receiverName,
-        firstOpenedAt: shareRecord.firstOpenedAt || now,
-        lastViewedAt: now,
+        receiverOpenid: nextViewMeta.latestViewerOpenid || receiverOpenid,
+        receiverName: nextViewMeta.latestViewerName || receiverName,
+        firstOpenedAt: nextViewMeta.firstOpenedAt || shareRecord.firstOpenedAt || now,
+        lastViewedAt: nextViewMeta.lastViewedAt || now,
+        viewCount: nextViewMeta.viewCount,
+        viewerCount: nextViewMeta.viewerCount,
+        viewLogs: serializeShareViewLogs(viewUpdate.viewLogs),
         updatedAt: now,
-        viewCount: _.inc(1)
       }
     })
 
-    if (isFirstOpen) {
+    if (viewUpdate.isFirstViewer) {
       await ensureNotification(ownerOpenid, {
         type: 'shared_opened',
         level: 'info',
@@ -719,7 +980,7 @@ exports.main = async (event) => {
         actionUrl: `/pages/project-detail/project-detail?projectId=${sourceProject._id}&view=projects`,
         actionLabel: '查看项目',
         bizDate: formatBizDate(now),
-        dedupeKey: `shared_opened_${shareRecordId}`,
+        dedupeKey: `shared_opened_${shareRecordId}_${receiverOpenid}`,
         extra: {
           receiverOpenid,
           receiverName,
@@ -736,6 +997,10 @@ exports.main = async (event) => {
     importedProjectId,
     shareMode: shareRecord.shareMode || 'info',
     historyScope,
+    blocked,
+    blockedReason,
+    blockedMessage,
+    blockedReceiverName,
     summaryMode: normalizeSummaryMode(shareRecord.summaryMode),
     summaryText: normalizeText(shareRecord.summaryText),
     aiBrief: normalizeBriefPayload(shareRecord.aiBrief),

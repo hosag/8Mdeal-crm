@@ -14,20 +14,34 @@
 .share-config-page .preview-block-title {
   font-size: 24rpx;
   font-weight: 700;
-  color: #51616f;
+  color: var(--theme-text-soft);
 }
 
 .share-config-page .preview-block-text {
   margin-top: 8rpx;
   font-size: 25rpx;
   line-height: 1.72;
-  color: #182730;
+  color: var(--theme-title);
 }
 
-.share-config-page .summary-grid {
-  margin-top: 0;
+.share-config-page .share-config-metrics {
+  margin-top: 16rpx;
+  gap: 10rpx;
+}
+
+.share-config-page .share-config-metrics .compact-inline-item {
+  background: var(--theme-inline-bg);
+  color: var(--theme-inline-text);
 }
 
 .share-config-page .footer-bar {
   grid-template-columns: 1fr;
+}
+
+.footer-bar.appearance-font-large .btn-primary {
+  font-size: 30rpx;
+}
+
+.footer-bar.appearance-font-readable .btn-primary {
+  font-size: 38rpx;
 }

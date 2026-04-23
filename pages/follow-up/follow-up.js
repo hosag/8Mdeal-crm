@@ -8,6 +8,7 @@ const {
 } = require('../../services/data')
 const { buildFollowUpEntryHint } = require('../../utils/navigation-context')
 const { touchNotificationSync } = require('../../utils/notification-sync')
+const { syncPageAppearance } = require('../../utils/appearance')
 
 const MAX_RECORD_DURATION = 60000
 
@@ -242,6 +243,7 @@ function showStageConfirmModal(payload = {}) {
 
 Page({
   data: {
+    appearancePageClass: '',
     projectId: '',
     projectTitle: '未指定项目',
     projectStage: '线索',
@@ -279,6 +281,7 @@ Page({
   },
 
   async onLoad(options) {
+    syncPageAppearance(this)
     this.isPageActive = true
     const projectId = options.projectId || ''
     const entryHintText = buildFollowUpEntryHint(options.entry, options.source, options.type)
@@ -307,7 +310,7 @@ Page({
       })
     } catch (error) {
       wx.showToast({
-        title: '暂时无法加载完整项目上下文，将使用简化模式',
+        title: '当前无法加载完整项目上下文，将使用简化模式',
         icon: 'none'
       })
     }
@@ -317,6 +320,7 @@ Page({
   },
 
   onShow() {
+    syncPageAppearance(this)
     this.isPageActive = true
   },
 
@@ -1031,7 +1035,7 @@ Page({
       })
 
       if (!result || !result.ok) {
-        throw new Error(result && result.message ? result.message : 'AI整理失败')
+        throw new Error(result && result.message ? result.message : '当前无法完成 AI 整理')
       }
 
       await resolveNotificationData({
@@ -1048,8 +1052,8 @@ Page({
       await reportSystemFailureData({
         type: 'ai_failed',
         scene: 'follow_up_ai',
-        title: 'AI整理失败',
-        message: error.message || 'AI 整理暂时不可用，请稍后重试',
+        title: '当前无法完成 AI 整理',
+        message: error.message || '当前无法完成 AI 整理，请稍后重试',
         projectId: this.data.projectId,
         projectName: this.data.projectTitle,
         actionUrl: this.data.projectId
@@ -1059,10 +1063,10 @@ Page({
       })
 
       this.setData({
-        aiError: error.message || 'AI 整理暂时不可用，请稍后重试'
+        aiError: error.message || '当前无法完成 AI 整理，请稍后重试'
       })
       wx.showToast({
-        title: 'AI 整理暂时不可用',
+        title: '当前无法完成 AI 整理',
         icon: 'none'
       })
     } finally {
@@ -1179,7 +1183,7 @@ Page({
       })
 
       if (!result || !result.ok) {
-        throw new Error(result && result.message ? result.message : 'AI 下一步建议失败')
+        throw new Error(result && result.message ? result.message : '当前无法生成下一步建议')
       }
 
       await resolveNotificationData({
@@ -1196,8 +1200,8 @@ Page({
       await reportSystemFailureData({
         type: 'ai_failed',
         scene: 'follow_up_ai_next',
-        title: 'AI下一步建议失败',
-        message: error.message || 'AI 下一步建议暂时不可用，请稍后重试',
+        title: '当前无法生成下一步建议',
+        message: error.message || '当前无法生成下一步建议，请稍后重试',
         projectId: this.data.projectId,
         projectName: this.data.projectTitle,
         actionUrl: this.data.projectId
@@ -1207,10 +1211,10 @@ Page({
       })
 
       this.setData({
-        aiNextError: error.message || 'AI 下一步建议暂时不可用，请稍后重试'
+        aiNextError: error.message || '当前无法生成下一步建议，请稍后重试'
       })
       wx.showToast({
-        title: 'AI 下一步建议暂时不可用',
+        title: '当前无法生成下一步建议',
         icon: 'none'
       })
     } finally {
@@ -1250,7 +1254,7 @@ Page({
 
     if (!this.data.projectId) {
       wx.showToast({
-        title: '缺少项目信息，暂时无法提交跟进',
+        title: '缺少项目信息，当前无法提交跟进',
         icon: 'none'
       })
       return
@@ -1325,7 +1329,7 @@ Page({
         type: 'save_failed',
         scene: 'follow_up_save',
         title: '跟进保存失败',
-        message: error.message || '暂时无法提交跟进，请稍后重试',
+        message: error.message || '当前无法提交跟进，请稍后重试',
         projectId: this.data.projectId,
         projectName: this.data.projectTitle,
         actionUrl: this.data.projectId
@@ -1335,7 +1339,7 @@ Page({
       })
 
       wx.showToast({
-        title: error.message || '暂时无法提交跟进，请稍后重试',
+        title: error.message || '当前无法提交跟进，请稍后重试',
         icon: 'none'
       })
     } finally {

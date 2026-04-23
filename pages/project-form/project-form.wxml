@@ -1,6 +1,6 @@
-<view class="page-shell">
+<view class="page-shell project-form-page {{appearancePageClass}}">
   <view wx:if="{{isLoading}}" class="rise-in">
-    <loading-panel rows="3" />
+    <loading-panel rows="3" appearance-page-class="{{appearancePageClass}}" />
   </view>
 
   <block wx:else>
@@ -61,7 +61,10 @@
 
   <view class="form-card section rise-in stagger-3">
     <view class="section-header">
-      <view class="section-title">联系人</view>
+      <view>
+        <view class="section-title">联系人</view>
+        <view class="helper-text contact-security-hint">联系方式加密存储</view>
+      </view>
       <view class="section-link" bindtap="addContact">新增联系人</view>
     </view>
     <view class="contact-editor" wx:for="{{form.contacts}}" wx:key="index">
@@ -105,7 +108,7 @@
   </block>
 </view>
 
-<view wx:if="{{!isLoading}}" class="footer-bar">
+<view wx:if="{{!isLoading}}" class="footer-bar {{appearancePageClass}}">
   <view class="btn-ghost" bindtap="goBack">取消</view>
   <view class="btn-primary" bindtap="handleSave">{{isSaving ? '保存中...' : '保存项目'}}</view>
 </view>

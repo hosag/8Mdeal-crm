@@ -66,9 +66,29 @@ function getModeTitle(mode) {
   return mode === 'outbound' ? '项目外发' : '分享信息'
 }
 
+function pickPreferredOutboundRecord(records = []) {
+  const list = Array.isArray(records) ? records.slice() : []
+  if (!list.length) {
+    return null
+  }
+
+  return list.sort((left, right) => {
+    const leftImported = Number(Boolean(left && left.importedProjectId))
+    const rightImported = Number(Boolean(right && right.importedProjectId))
+    if (rightImported !== leftImported) {
+      return rightImported - leftImported
+    }
+
+    const leftUpdated = new Date(left && (left.updatedAt || left.createdAt || 0)).getTime()
+    const rightUpdated = new Date(right && (right.updatedAt || right.createdAt || 0)).getTime()
+    return rightUpdated - leftUpdated
+  })[0]
+}
+
 exports.main = async (event) => {
   const wxContext = cloud.getWXContext()
   const projectId = normalizeText(event.projectId)
+  const shareRecordId = normalizeText(event.shareRecordId)
   const shareMode = normalizeText(event.shareMode) || 'info'
   const shareTagId = normalizeText(event.shareTagId)
   const shareTagName = normalizeText(event.shareTagName) || '未命名标签'
@@ -99,13 +119,44 @@ exports.main = async (event) => {
 
   const project = projectResult.data[0]
   const now = new Date()
-  const existing = await db.collection('shareRecords').where({
-    _openid: wxContext.OPENID,
-    projectId,
-    shareMode,
-    shareTagId,
-    historyScope
-  }).limit(1).get()
+  let existingRecord = null
+  let existingOutboundRecord = null
+
+  if (shareRecordId) {
+    const existingResult = await db.collection('shareRecords').where({
+      _id: shareRecordId,
+      _openid: wxContext.OPENID,
+      projectId
+    }).limit(1).get()
+
+    existingRecord = existingResult.data[0] || null
+  }
+
+  if (shareMode === 'outbound') {
+    const outboundResult = await db.collection('shareRecords').where({
+      _openid: wxContext.OPENID,
+      projectId,
+      shareMode: 'outbound'
+    }).get()
+
+    const outboundRecords = (outboundResult.data || []).filter((item) => {
+      return !existingRecord || item._id !== existingRecord._id
+    })
+
+    existingOutboundRecord = pickPreferredOutboundRecord(outboundRecords)
+
+    if (project.handoverStatus === 'handed_over' && !project.isSharedProject) {
+      return {
+        ok: false,
+        code: 'PROJECT_ALREADY_HANDED_OVER',
+        message: '该项目已完成转交，请在外发项目中查看后续进展'
+      }
+    }
+  }
+
+  if (shareMode === 'outbound' && !existingRecord && existingOutboundRecord) {
+    existingRecord = existingOutboundRecord
+  }
 
   const payload = {
     projectId,
@@ -121,24 +172,29 @@ exports.main = async (event) => {
     projectName: normalizeText(project.projectName) || '未命名项目',
     clientName: normalizeText(project.clientName) || '未填写客户',
     projectStage: normalizeText(project.stage) || '线索',
-    viewCount: Number(existing.data[0] && existing.data[0].viewCount ? existing.data[0].viewCount : 0),
-    receiverOpenid: existing.data[0] && existing.data[0].receiverOpenid ? existing.data[0].receiverOpenid : '',
-    receiverName: existing.data[0] && existing.data[0].receiverName ? existing.data[0].receiverName : '',
-    firstOpenedAt: existing.data[0] && existing.data[0].firstOpenedAt ? existing.data[0].firstOpenedAt : null,
-    lastViewedAt: existing.data[0] && existing.data[0].lastViewedAt ? existing.data[0].lastViewedAt : null,
-    importedAt: existing.data[0] && existing.data[0].importedAt ? existing.data[0].importedAt : null,
-    importedProjectId: existing.data[0] && existing.data[0].importedProjectId ? existing.data[0].importedProjectId : '',
+    viewCount: Number(existingRecord && existingRecord.viewCount ? existingRecord.viewCount : 0),
+    viewerCount: Number(existingRecord && existingRecord.viewerCount ? existingRecord.viewerCount : 0),
+    viewLogs: Array.isArray(existingRecord && existingRecord.viewLogs) ? existingRecord.viewLogs : [],
+    receiverOpenid: existingRecord && existingRecord.receiverOpenid ? existingRecord.receiverOpenid : '',
+    receiverName: existingRecord && existingRecord.receiverName ? existingRecord.receiverName : '',
+    receiverLockedAt: existingRecord && existingRecord.receiverLockedAt ? existingRecord.receiverLockedAt : null,
+    firstOpenedAt: existingRecord && existingRecord.firstOpenedAt ? existingRecord.firstOpenedAt : null,
+    lastViewedAt: existingRecord && existingRecord.lastViewedAt ? existingRecord.lastViewedAt : null,
+    importedAt: existingRecord && existingRecord.importedAt ? existingRecord.importedAt : null,
+    importedProjectId: existingRecord && existingRecord.importedProjectId ? existingRecord.importedProjectId : '',
+    lastCollaboratorFollowAt: existingRecord && existingRecord.lastCollaboratorFollowAt ? existingRecord.lastCollaboratorFollowAt : null,
     updatedAt: now
   }
 
-  if (existing.data.length) {
-    await db.collection('shareRecords').doc(existing.data[0]._id).update({
+  if (existingRecord) {
+    await db.collection('shareRecords').doc(existingRecord._id).update({
       data: payload
     })
 
     return {
       ok: true,
-      shareRecordId: existing.data[0]._id,
+      shareRecordId: existingRecord._id,
+      reusedExistingOutbound: shareMode === 'outbound' && existingRecord._id === (existingOutboundRecord && existingOutboundRecord._id),
       historyScope,
       aiBrief,
       summaryMode,

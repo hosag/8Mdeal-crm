@@ -1,13 +1,14 @@
 const { loadShareConfigData, createShareRecordData, reportSystemFailureData, resolveNotificationData } = require('../../services/data')
 const { buildSharePreview } = require('../../services/share')
+const { syncPageAppearance } = require('../../utils/appearance')
 
 const SHARE_PURPOSES = {
   info: {
     key: 'info',
     title: '发送资料',
     heroTitle: '把资料发出去，不转走项目',
-    heroDesc: '适合项目介绍、阶段同步和授权查看。对方能看到你开放的内容，但不会接管项目本身。',
-    permissionText: '只看资料',
+    heroDesc: '适合资料同步与授权查看。对方只看你开放的内容，不接管项目。',
+    permissionText: '查看资料',
     ownershipText: '仍由我维护',
     followText: '后续仍在当前项目里推进',
     actionText: '生成资料卡并转发'
@@ -16,7 +17,7 @@ const SHARE_PURPOSES = {
     key: 'outbound',
     title: '转交项目',
     heroTitle: '把项目正式转给接手方',
-    heroDesc: '适合正式交接项目管理权。对方打开后自动接手项目，你改到“外发项目”中追踪后续进展。',
+    heroDesc: '适合正式交接。对方打开后接手项目，你在“外发项目”里查看后续。',
     permissionText: '接手后继续推进',
     ownershipText: '接手方维护',
     followText: '你到“外发项目”里追踪进展',
@@ -69,7 +70,7 @@ function buildDefaultRuleText(preview, purpose) {
   const canDirectContact = contacts.some((item) => item.phone || item.wechat)
   const scopeName = preview && preview.tag ? preview.tag.name : '默认规则'
   const scopeSummary = canDirectContact ? '包含联系方式' : '隐藏电话微信'
-  return `${purpose.title} 当前按“${scopeName}”默认规则生成，${scopeSummary}，共展示 ${visibleFields.length} 类核心信息。`
+  return `按“${scopeName}”规则展示 ${visibleFields.length} 项信息，${scopeSummary}。`
 }
 
 function hasField(tag, fieldName) {
@@ -92,38 +93,15 @@ function resolveDefaultTagId(tags, mode) {
   return matched ? matched.id : list[0].id
 }
 
-function buildSummaryCards(preview, purpose) {
-  const contacts = Array.isArray(preview && preview.contacts) ? preview.contacts : []
-  const canDirectContact = contacts.some((item) => item.phone || item.wechat)
-
-  return [
-    {
-      label: '发送后会怎样',
-      value: purpose.key === 'outbound' ? '对方接手项目' : '对方只看资料',
-      note: purpose.key === 'outbound' ? '打开后自动进入对方“我的项目”' : '不会进入对方“我的项目”'
-    },
-    {
-      label: '对方能做什么',
-      value: purpose.permissionText,
-      note: canDirectContact ? '按默认规则可直接联系关键联系人' : '默认规则下不展示电话微信'
-    },
-    {
-      label: '谁继续维护',
-      value: purpose.ownershipText,
-      note: purpose.followText
-    }
-  ]
-}
-
 Page({
   data: {
+    appearancePageClass: '',
     projectId: '',
     shareTags: [],
     activeMode: 'info',
     activeTag: 't1',
     shareProject: null,
     preview: null,
-    summaryCards: [],
     purposeTitle: '',
     purposeDesc: '',
     defaultRuleText: '',
@@ -134,6 +112,7 @@ Page({
   },
 
   async onLoad(options) {
+    syncPageAppearance(this)
     const projectId = options.projectId || ''
     const activeMode = normalizeMode(options.mode)
     const requestedTagId = String(options.tagId || '').trim()
@@ -159,10 +138,14 @@ Page({
         isLoading: false
       })
       wx.showToast({
-        title: '暂时无法加载分享流程',
+        title: '当前无法加载分享流程',
         icon: 'none'
       })
     }
+  },
+
+  onShow() {
+    syncPageAppearance(this)
   },
 
   syncPreview() {
@@ -171,7 +154,6 @@ Page({
 
     this.setData({
       preview,
-      summaryCards: buildSummaryCards(preview, purpose),
       purposeTitle: purpose.heroTitle,
       purposeDesc: purpose.heroDesc,
       defaultRuleText: buildDefaultRuleText(preview, purpose),
@@ -204,6 +186,13 @@ Page({
           shareTagFields: activeTag ? activeTag.fields : []
         })
         shareRecordId = result && result.shareRecordId ? result.shareRecordId : ''
+
+        if (result && result.reusedExistingOutbound) {
+          wx.showToast({
+            title: '已沿用当前项目的转交记录',
+            icon: 'none'
+          })
+        }
       }
 
       await resolveNotificationData({
@@ -220,7 +209,7 @@ Page({
         type: 'save_failed',
         scene: 'share_record_create',
         title: '创建分享失败',
-        message: error.message || '暂时无法生成分享卡，请稍后重试',
+        message: error.message || '当前无法生成分享卡，请稍后重试',
         projectId,
         projectName: this.data.preview && this.data.preview.project ? this.data.preview.project.name : '',
         actionUrl: projectId
@@ -230,7 +219,7 @@ Page({
       })
 
       wx.showToast({
-        title: error.message || '暂时无法生成分享卡，请稍后重试',
+        title: error.message || '当前无法生成分享卡，请稍后重试',
         icon: 'none'
       })
     } finally {

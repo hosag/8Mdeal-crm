@@ -1,7 +1,9 @@
 const { loadProjectFormData, saveProjectData, reportSystemFailureData, resolveNotificationData } = require('../../services/data')
+const { syncPageAppearance } = require('../../utils/appearance')
 
 Page({
   data: {
+    appearancePageClass: '',
     projectId: '',
     isEdit: false,
     isLoading: true,
@@ -39,6 +41,7 @@ Page({
 
   async onLoad(options) {
     this.isPageActive = true
+    syncPageAppearance(this)
     const projectId = options.projectId || ''
     try {
       const { data, source } = await loadProjectFormData(projectId)
@@ -55,7 +58,7 @@ Page({
     } catch (error) {
       this.safeSetData({ isLoading: false })
       wx.showToast({
-        title: '暂时无法加载项目信息',
+        title: '当前无法加载项目信息',
         icon: 'none'
       })
     }
@@ -63,6 +66,7 @@ Page({
 
   onShow() {
     this.isPageActive = true
+    syncPageAppearance(this)
   },
 
   onHide() {
@@ -193,7 +197,7 @@ Page({
         type: 'save_failed',
         scene: this.data.isEdit ? 'project_update' : 'project_create',
         title: this.data.isEdit ? '项目更新失败' : '项目创建失败',
-        message: error.message || '暂时无法保存项目，请稍后重试',
+        message: error.message || '当前无法保存项目，请稍后重试',
         projectId: this.data.projectId,
         projectName: payload.projectName,
         actionUrl: this.data.projectId
@@ -203,7 +207,7 @@ Page({
       })
 
       wx.showToast({
-        title: error.message || '暂时无法保存项目，请稍后重试',
+        title: error.message || '当前无法保存项目，请稍后重试',
         icon: 'none'
       })
     } finally {

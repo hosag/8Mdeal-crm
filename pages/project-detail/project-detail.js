@@ -1,6 +1,7 @@
 const { loadProjectDetailData, updateTaskStatusData, markNotificationReadData, resolveNotificationData } = require('../../services/data')
 const { buildProjectDetailEntryContext } = require('../../utils/navigation-context')
 const { touchNotificationSync } = require('../../utils/notification-sync')
+const { syncPageAppearance } = require('../../utils/appearance')
 const {
   buildTaskCompletionFeedback,
   buildTaskStatusFeedback,
@@ -144,7 +145,7 @@ function buildProjectBadges(projectDetail, isReadOnlySharedOut) {
 function buildHeroMetrics(projectDetail, contacts, shareHistory, isReadOnlySharedOut) {
   const detail = projectDetail || {}
   const contactCount = Array.isArray(contacts) ? contacts.length : 0
-  const shareCount = Array.isArray(shareHistory) ? shareHistory.length : 0
+  const infoShareCount = Array.isArray(shareHistory) ? shareHistory.length : 0
 
   return [
     {
@@ -163,9 +164,9 @@ function buildHeroMetrics(projectDetail, contacts, shareHistory, isReadOnlyShare
       note: contactCount ? '已录入关键联系人' : '暂无联系人'
     },
     {
-      label: isReadOnlySharedOut ? '外发状态' : '分享记录',
-      value: isReadOnlySharedOut ? '外发中' : `${shareCount} 次`,
-      note: isReadOnlySharedOut ? '当前页为外发只读视图' : (shareCount ? '已发起外发或分享' : '尚未发起分享')
+      label: isReadOnlySharedOut ? '外发状态' : '资料发送',
+      value: isReadOnlySharedOut ? '外发中' : `${infoShareCount} 次`,
+      note: isReadOnlySharedOut ? '当前页为外发只读视图' : (infoShareCount ? '已发送资料卡' : '尚未发送资料')
     }
   ]
 }
@@ -197,11 +198,11 @@ function buildSummaryHighlights(projectDetail, contacts, shareHistory, isReadOnl
         : '当前未录入联系人'
     },
     {
-      label: '分享状态',
-      value: isReadOnlySharedOut ? '外发只读' : (historyList.length ? `${historyList.length} 次分享` : '未分享'),
+      label: '资料发送',
+      value: isReadOnlySharedOut ? '外发只读' : (historyList.length ? `${historyList.length} 次发送` : '未发送'),
       note: isReadOnlySharedOut
         ? '后续推进改在“外发项目”追踪'
-        : (latestShare ? `最近一次状态：${latestShare.status}` : '当前项目还没有分享记录')
+        : (latestShare ? `最近一次状态：${latestShare.status}` : '当前项目还没有资料发送记录')
     }
   ]
 }
@@ -226,7 +227,7 @@ function buildProjectOverview(projectDetail, contacts, followTimeline, shareHist
     focusText: getStageFocus(detail.stage),
     latestSummary: latestTimelineItem
       ? String(latestTimelineItem.summary || latestTimelineItem.desc || '').trim()
-      : '当前还没有跟进摘要',
+      : '暂无跟进摘要',
     nextFollowUpText: detail.nextFollowUp || '未设置',
     primaryContactText: contactList.length
       ? `${contactList[0].name || '联系人'}${contactList[0].role ? ` / ${contactList[0].role}` : ''}`
@@ -237,14 +238,14 @@ function buildProjectOverview(projectDetail, contacts, followTimeline, shareHist
       : '暂无回填记录',
     shareStatusText: isReadOnlySharedOut
       ? '当前项目已转入外发追踪视图'
-      : (latestShare ? `最近一次分享状态：${latestShare.status}` : '当前项目还没有分享记录')
+      : (latestShare ? `最近一次资料发送状态：${latestShare.status}` : '当前项目还没有资料发送记录')
   }
 }
 
 function buildContactSummary(contacts) {
   const list = Array.isArray(contacts) ? contacts : []
   if (!list.length) {
-    return '当前还没有录入联系人。'
+    return '暂无联系人。'
   }
 
   const first = list[0]
@@ -254,7 +255,7 @@ function buildContactSummary(contacts) {
 function buildTimelineSummary(followTimeline) {
   const total = countTimelineRecords(followTimeline)
   if (!total) {
-    return '当前还没有跟进记录。新增一条后，这里会按时间沉淀完整时间线。'
+    return '暂无跟进记录。新增跟进后会按时间沉淀在这里。'
   }
 
   const latest = getLatestTimelineItem(followTimeline)
@@ -290,10 +291,9 @@ function buildShareHistorySummary(shareHistory) {
   }
 
   const openedCount = list.filter((item) => item.status === '已打开').length
-  const importedCount = list.filter((item) => item.status === '已导入' || item.status === '已跟进').length
-  const followedCount = list.filter((item) => item.status === '已跟进').length
+  const unopenedCount = list.filter((item) => item.status === '未打开').length
 
-  return `共 ${list.length} 次分享 · 已打开 ${openedCount} 次 · 已接手 ${importedCount} 次 · 已新增推进 ${followedCount} 次`
+  return `共 ${list.length} 次资料发送 · 已打开 ${openedCount} 次 · 未打开 ${unopenedCount} 次`
 }
 
 function buildTaskSummary(taskSummary) {
@@ -303,7 +303,7 @@ function buildTaskSummary(taskSummary) {
   const completedCount = Number(summary.completedCount || 0)
 
   if (!Number(summary.total || 0)) {
-    return '当前还没有推进任务。'
+    return '暂无推进任务。'
   }
 
   return `未完成 ${openCount} 条 · 逾期 ${overdueCount} 条 · 已完成 ${completedCount} 条`
@@ -312,16 +312,19 @@ function buildTaskSummary(taskSummary) {
 function normalizeShareHistory(records) {
   return (Array.isArray(records) ? records : []).map((item) => {
     const isOutbound = item.mode === '项目外发'
+    const viewerCount = Number(item.viewerCount || 0)
     let statusSummary = '已发出，等待对方查看'
     let collaborationSummary = isOutbound
       ? '接收方打开后会自动进入对方“我的项目”'
       : '这类分享只用于信息同步，不进入对方“我的项目”'
 
     if (item.status === '已打开') {
-      statusSummary = isOutbound ? '对方已查看，正在等待接手' : '对方已查看卡片'
+      statusSummary = isOutbound
+        ? '对方已查看，正在等待接手'
+        : (viewerCount > 1 ? `已有 ${viewerCount} 人查看资料卡` : '对方已查看卡片')
       collaborationSummary = isOutbound
         ? '如果对方准备继续推进，下一次打开会自动进入对方“我的项目”'
-        : '后续推进仍在你自己的项目里完成'
+        : (viewerCount > 1 ? '这是查看型分享，后续推进仍在你自己的项目里完成' : '后续推进仍在你自己的项目里完成')
     }
 
     if (item.status === '已导入') {
@@ -344,7 +347,9 @@ function normalizeShareHistory(records) {
         ? (item.status === '已跟进'
           ? `已推进 ${Number(item.collaboratorFollowCount || 0)} 条`
           : (item.status === '已导入' ? '已接手' : (item.status === '已打开' ? '已查看，待接手' : '等待查看')))
-        : (item.status === '已打开' ? '信息已查看' : '等待查看'),
+        : (item.status === '已打开'
+          ? (viewerCount > 1 ? `${viewerCount}人已查看` : '信息已查看')
+          : '等待查看'),
       collaborationCountText: isOutbound ? `${Number(item.collaboratorFollowCount || 0)} 条` : '查看型分享',
       statusBadgeClass: item.status === '已跟进'
         ? 'is-success'
@@ -355,6 +360,7 @@ function normalizeShareHistory(records) {
 
 Page({
   data: {
+    appearancePageClass: '',
     projectId: '',
     viewMode: 'default',
     entrySource: '',
@@ -410,6 +416,7 @@ Page({
   },
 
   onLoad(options) {
+    syncPageAppearance(this)
     this.setData({
       projectId: options.projectId || '',
       viewMode: options.view || 'default',
@@ -424,6 +431,7 @@ Page({
   },
 
   onShow() {
+    syncPageAppearance(this)
     this.initTaskCompletionKeyboard()
     if (this.data.projectId && !this.data.isLoading) {
       this.fetchProjectDetail()
@@ -530,7 +538,7 @@ Page({
         isLoading: false
       })
       wx.showToast({
-        title: '暂时无法加载项目详情',
+        title: '当前无法加载项目详情',
         icon: 'none'
       })
     }

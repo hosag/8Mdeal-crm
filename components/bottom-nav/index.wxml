@@ -1,4 +1,4 @@
-<view class="bottom-nav">
+<view class="bottom-nav {{appearancePageClass}}">
   <view
     wx:for="{{items}}"
     wx:key="key"
@@ -8,7 +8,7 @@
     bindtap="onSwitch"
   >
     <view class="bottom-nav__icon">
-      <image class="bottom-nav__icon-image" src="{{current === item.key ? item.activeIcon : item.icon}}" mode="aspectFit"></image>
+      <image class="bottom-nav__icon-image" src="{{current === item.key ? item.activeIcon : item.icon}}" mode="aspectFit" />
     </view>
     <view class="bottom-nav__label">{{item.label}}</view>
   </view>

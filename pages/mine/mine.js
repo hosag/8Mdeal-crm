@@ -1,9 +1,16 @@
 const {
   loadEarningsData,
-  seedInboundProjectData,
   loadUserPreferencesData,
   saveUserPreferencesData
 } = require('../../services/data')
+const {
+  THEME_OPTIONS,
+  THEME_LABELS,
+  getDefaultAppearanceSettings,
+  normalizeAppearanceSettings,
+  getAppearancePageClass,
+  syncPageAppearance
+} = require('../../utils/appearance')
 
 const ADVANCE_OPTIONS = [
   { key: 'same_day', label: '当天提醒' },
@@ -34,48 +41,105 @@ function normalizeReminderSettings(value) {
   }
 }
 
+function buildOverviewMetrics(earnings) {
+  const summary = Array.isArray(earnings && earnings.summary) ? earnings.summary : []
+  return summary.slice(0, 3).map((item) => ({
+    label: String(item.label || '').trim(),
+    value: String(item.value || '').trim()
+  }))
+}
+
+function buildCloudEnvMeta(source) {
+  const currentSource = String(source || '').trim()
+  if (currentSource === 'CloudBase') {
+    return {
+      cloudEnvLabel: '已连接',
+      cloudEnvCaption: '当前已连接真实云环境'
+    }
+  }
+
+  return {
+    cloudEnvLabel: '演示数据',
+    cloudEnvCaption: '当前仍在演示数据模式'
+  }
+}
+
+const FONT_SCALE_OPTIONS = [
+  { key: 'default', label: '默认' },
+  { key: 'large', label: '大字体' },
+  { key: 'readable', label: '易读模式' }
+]
+
+function buildThemeOptions(currentThemeKey, savingKey) {
+  return THEME_OPTIONS.map((item) => ({
+    ...item,
+    isActive: item.key === currentThemeKey,
+    isDisabled: Boolean(savingKey)
+  }))
+}
+
 Page({
   data: {
     earnings: {
       summary: []
     },
+    overviewMetrics: [],
     reminderAdvanceOptions: ADVANCE_OPTIONS,
+    fontScaleOptions: FONT_SCALE_OPTIONS,
+    themeOptions: buildThemeOptions(getDefaultAppearanceSettings().themeKey, ''),
     reminderSettings: getDefaultReminderSettings(),
+    appearanceSettings: getDefaultAppearanceSettings(),
     isLoading: true,
     dataSource: 'Mock Demo',
-    showDevActions: false,
-    isSeeding: false,
+    cloudEnvLabel: '检查中',
+    cloudEnvCaption: '正在确认当前环境',
+    currentThemeLabel: THEME_LABELS.deep_business,
+    appearancePageClass: getAppearancePageClass(getDefaultAppearanceSettings()),
     preferenceSavingKey: ''
   },
 
   async onLoad() {
-    const accountInfo = typeof wx.getAccountInfoSync === 'function' ? wx.getAccountInfoSync() : null
-    const envVersion = accountInfo && accountInfo.miniProgram ? accountInfo.miniProgram.envVersion : 'develop'
+    syncPageAppearance(this)
     try {
       const [earningsResult, preferencesResult] = await Promise.all([
         loadEarningsData(),
         loadUserPreferencesData().catch(() => ({
-          reminderSettings: getDefaultReminderSettings()
+          reminderSettings: getDefaultReminderSettings(),
+          appearanceSettings: getDefaultAppearanceSettings()
         }))
       ])
+      const cloudEnvMeta = buildCloudEnvMeta(earningsResult.source)
+      const appearanceSettings = normalizeAppearanceSettings(preferencesResult && preferencesResult.appearanceSettings)
       this.setData({
         earnings: earningsResult.data,
+        overviewMetrics: buildOverviewMetrics(earningsResult.data),
         reminderSettings: normalizeReminderSettings(preferencesResult && preferencesResult.reminderSettings),
+        appearanceSettings,
+        themeOptions: buildThemeOptions(appearanceSettings.themeKey, ''),
         isLoading: false,
         dataSource: earningsResult.source,
-        showDevActions: envVersion !== 'release'
+        cloudEnvLabel: cloudEnvMeta.cloudEnvLabel,
+        cloudEnvCaption: cloudEnvMeta.cloudEnvCaption,
+        currentThemeLabel: THEME_LABELS[appearanceSettings.themeKey] || THEME_LABELS.deep_business,
+        appearancePageClass: getAppearancePageClass(appearanceSettings)
       })
     } catch (error) {
       this.setData({
         earnings: {
           summary: []
         },
+        overviewMetrics: [],
         reminderSettings: getDefaultReminderSettings(),
+        appearanceSettings: getDefaultAppearanceSettings(),
+        themeOptions: buildThemeOptions(getDefaultAppearanceSettings().themeKey, ''),
         isLoading: false,
-        showDevActions: envVersion !== 'release'
+        cloudEnvLabel: '检查失败',
+        cloudEnvCaption: '当前无法确认云环境状态',
+        currentThemeLabel: THEME_LABELS.deep_business,
+        appearancePageClass: getAppearancePageClass(getDefaultAppearanceSettings())
       })
       wx.showToast({
-        title: '暂时无法同步我的数据',
+        title: '当前无法同步我的数据',
         icon: 'none'
       })
     }
@@ -84,6 +148,10 @@ Page({
   openPage(event) {
     const { url } = event.currentTarget.dataset
     wx.navigateTo({ url })
+  },
+
+  onShow() {
+    syncPageAppearance(this)
   },
 
   async saveReminderSettings(nextSettings, savingKey) {
@@ -115,6 +183,59 @@ Page({
       })
       wx.showToast({
         title: error && error.message ? error.message : '保存提醒偏好失败',
+        icon: 'none'
+      })
+    }
+  },
+
+  async saveAppearanceSettings(nextSettings, savingKey) {
+    const previousSettings = normalizeAppearanceSettings(this.data.appearanceSettings)
+    const normalizedSettings = normalizeAppearanceSettings(nextSettings)
+    const app = getApp()
+
+    if (app && typeof app.applyAppearanceSettings === 'function') {
+      app.applyAppearanceSettings(normalizedSettings)
+    }
+
+    this.setData({
+      appearanceSettings: normalizedSettings,
+      themeOptions: buildThemeOptions(normalizedSettings.themeKey, savingKey || 'appearance'),
+      currentThemeLabel: THEME_LABELS[normalizedSettings.themeKey] || THEME_LABELS.deep_business,
+      appearancePageClass: getAppearancePageClass(normalizedSettings),
+      preferenceSavingKey: savingKey || 'appearance'
+    })
+
+    try {
+      const result = await saveUserPreferencesData({
+        appearanceSettings: normalizedSettings
+      })
+      const savedSettings = normalizeAppearanceSettings(result && result.appearanceSettings)
+
+      if (app && typeof app.applyAppearanceSettings === 'function') {
+        app.applyAppearanceSettings(savedSettings)
+      }
+
+      this.setData({
+        appearanceSettings: savedSettings,
+        themeOptions: buildThemeOptions(savedSettings.themeKey, ''),
+        currentThemeLabel: THEME_LABELS[savedSettings.themeKey] || THEME_LABELS.deep_business,
+        appearancePageClass: getAppearancePageClass(savedSettings),
+        preferenceSavingKey: ''
+      })
+    } catch (error) {
+      if (app && typeof app.applyAppearanceSettings === 'function') {
+        app.applyAppearanceSettings(previousSettings)
+      }
+
+      this.setData({
+        appearanceSettings: previousSettings,
+        themeOptions: buildThemeOptions(previousSettings.themeKey, ''),
+        currentThemeLabel: THEME_LABELS[previousSettings.themeKey] || THEME_LABELS.deep_business,
+        appearancePageClass: getAppearancePageClass(previousSettings),
+        preferenceSavingKey: ''
+      })
+      wx.showToast({
+        title: error && error.message ? error.message : '保存外观偏好失败',
         icon: 'none'
       })
     }
@@ -154,38 +275,27 @@ Page({
     }, field)
   },
 
-  async seedInboundProject() {
-    if (this.data.isSeeding) {
+  onFontScaleModeTap(event) {
+    const mode = event.currentTarget.dataset.mode
+    if (!mode || this.data.preferenceSavingKey || this.data.appearanceSettings.fontScaleMode === mode) {
       return
     }
 
-    this.setData({
-      isSeeding: true
-    })
+    this.saveAppearanceSettings({
+      ...this.data.appearanceSettings,
+      fontScaleMode: mode
+    }, 'fontScaleMode')
+  },
 
-    try {
-      const result = await seedInboundProjectData()
-      wx.showToast({
-        title: '测试项目已生成',
-        icon: 'success'
-      })
-
-      if (result && result.projectId) {
-        setTimeout(() => {
-          wx.navigateTo({
-            url: `/pages/project-detail/project-detail?projectId=${result.projectId}`
-          })
-        }, 280)
-      }
-    } catch (error) {
-      wx.showToast({
-        title: error && error.message ? error.message : '暂时无法生成测试项目，请稍后重试',
-        icon: 'none'
-      })
-    } finally {
-      this.setData({
-        isSeeding: false
-      })
+  onThemeTap(event) {
+    const themeKey = event.currentTarget.dataset.theme
+    if (!themeKey || this.data.preferenceSavingKey || this.data.appearanceSettings.themeKey === themeKey) {
+      return
     }
+
+    this.saveAppearanceSettings({
+      ...this.data.appearanceSettings,
+      themeKey
+    }, 'themeKey')
   }
 })

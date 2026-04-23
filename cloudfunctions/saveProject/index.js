@@ -1,8 +1,39 @@
 const cloud = require('wx-server-sdk')
+const crypto = require('crypto')
 
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 
 const db = cloud.database()
+const CONTACT_CRYPTO_SECRET = process.env.CONTACT_CRYPTO_SECRET || 'deal-crm-contact-v1'
+const CONTACT_CRYPTO_PREFIX = 'enc:v1'
+const CONTACT_CRYPTO_KEY = crypto.createHash('sha256').update(CONTACT_CRYPTO_SECRET).digest()
+
+function isEncryptedValue(value) {
+  return String(value || '').trim().startsWith(`${CONTACT_CRYPTO_PREFIX}:`)
+}
+
+function encryptSensitiveValue(value) {
+  const text = String(value || '').trim()
+  if (!text) {
+    return ''
+  }
+
+  if (isEncryptedValue(text)) {
+    return text
+  }
+
+  const iv = crypto.randomBytes(12)
+  const cipher = crypto.createCipheriv('aes-256-gcm', CONTACT_CRYPTO_KEY, iv)
+  const encrypted = Buffer.concat([cipher.update(text, 'utf8'), cipher.final()])
+  const authTag = cipher.getAuthTag()
+
+  return [
+    CONTACT_CRYPTO_PREFIX,
+    iv.toString('base64'),
+    authTag.toString('base64'),
+    encrypted.toString('base64')
+  ].join(':')
+}
 
 function normalizeNumber(value) {
   const amount = Number(value)
@@ -30,8 +61,8 @@ function normalizeContacts(contacts) {
       contactId: contact.contactId || `contact-${Date.now()}-${index}`,
       name: String(contact.name || '').trim(),
       role: String(contact.role || '').trim(),
-      phone: String(contact.phone || '').trim(),
-      wechat: String(contact.wechat || '').trim(),
+      phone: encryptSensitiveValue(contact.phone),
+      wechat: encryptSensitiveValue(contact.wechat),
       company: String(contact.company || '').trim()
     }))
     .filter((contact) => contact.name)

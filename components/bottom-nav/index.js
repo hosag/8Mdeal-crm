@@ -3,6 +3,10 @@ Component({
     current: {
       type: String,
       value: 'home'
+    },
+    appearancePageClass: {
+      type: String,
+      value: ''
     }
   },
 

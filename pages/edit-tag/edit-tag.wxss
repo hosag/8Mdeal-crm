@@ -1,0 +1,11 @@
+.footer-bar.appearance-font-large .btn-primary,
+.footer-bar.appearance-font-large .btn-ghost {
+  height: 106rpx;
+  font-size: 31rpx;
+}
+
+.footer-bar.appearance-font-readable .btn-primary,
+.footer-bar.appearance-font-readable .btn-ghost {
+  height: 128rpx;
+  font-size: 38rpx;
+}

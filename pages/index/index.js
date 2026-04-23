@@ -9,6 +9,7 @@ const { buildTaskCompletionFeedback, getTaskCompletionToastTitle } = require('..
 const { appendQueryParams } = require('../../utils/navigation-context')
 const { getNotificationPrimaryActionLabel } = require('../../utils/notification-meta')
 const { getNotificationSyncVersion, touchNotificationSync } = require('../../utils/notification-sync')
+const { syncPageAppearance } = require('../../utils/appearance')
 
 const NEXT_TASK_TEMPLATES = [
   { type: 'send_solution', label: '待发方案' },
@@ -257,6 +258,7 @@ function buildNotificationHeadline(notifications, stats) {
 
 Page({
   data: {
+    appearancePageClass: '',
     dashboard: {
       metrics: [],
       taskBoard: {
@@ -313,6 +315,7 @@ Page({
   },
 
   async onLoad() {
+    syncPageAppearance(this)
     this.initTaskCompletionKeyboard()
     this.setData({
       notificationSyncVersion: getNotificationSyncVersion()
@@ -321,6 +324,7 @@ Page({
   },
 
   async onShow() {
+    syncPageAppearance(this)
     this.initTaskCompletionKeyboard()
     const currentSyncVersion = getNotificationSyncVersion()
     if (currentSyncVersion !== this.data.notificationSyncVersion) {
@@ -460,7 +464,7 @@ Page({
         dataSource: dashboardResult.source
       })
     } catch (error) {
-      const message = error && error.message ? error.message : '暂时无法同步首页数据，请稍后重试'
+      const message = error && error.message ? error.message : '当前无法同步云端数据，请稍后重试'
       this.setData({
         dashboard: {
           metrics: [],
@@ -493,7 +497,7 @@ Page({
         loadError: message
       })
       wx.showToast({
-        title: '暂时无法同步首页',
+        title: '当前无法同步首页数据',
         icon: 'none'
       })
     }

@@ -1,7 +1,9 @@
 const { loadEarningsData } = require('../../services/data')
+const { syncPageAppearance } = require('../../utils/appearance')
 
 Page({
   data: {
+    appearancePageClass: '',
     earnings: {
       summary: [],
       deals: []
@@ -11,10 +13,12 @@ Page({
   },
 
   async onLoad() {
+    syncPageAppearance(this)
     await this.fetchEarnings()
   },
 
   async onShow() {
+    syncPageAppearance(this)
     if (!this.data.isLoading) {
       await this.fetchEarnings()
     }
@@ -33,7 +37,7 @@ Page({
         isLoading: false
       })
       wx.showToast({
-        title: '暂时无法同步收益数据',
+        title: '当前无法同步收益数据',
         icon: 'none'
       })
     }

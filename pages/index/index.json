@@ -1,5 +1,5 @@
 {
-  "navigationBarTitleText": "首页",
+  "navigationBarTitleText": "八面成交",
   "usingComponents": {
     "bottom-nav": "/components/bottom-nav/index",
     "loading-panel": "/components/loading-panel/index",

@@ -6,6 +6,7 @@ const {
 const { appendQueryParams } = require('../../utils/navigation-context')
 const { getNotificationCategoryMeta } = require('../../utils/notification-meta')
 const { touchNotificationSync } = require('../../utils/notification-sync')
+const { syncPageAppearance } = require('../../utils/appearance')
 
 const STATUS_FILTERS = [
   { key: 'all', label: '全部消息' },
@@ -320,6 +321,7 @@ function normalizeNotification(item, index) {
 
 Page({
   data: {
+    appearancePageClass: '',
     statusFilters: STATUS_FILTERS,
     typeFilters: TYPE_FILTERS,
     quickFilters: QUICK_FILTERS,
@@ -328,7 +330,7 @@ Page({
     quickFilter: 'all',
     allNotifications: [],
     notifications: [],
-    resultSummaryText: '正在整理消息',
+    resultSummaryText: '正在整理消息数据',
     stats: {
       totalCount: 0,
       unreadCount: 0,
@@ -351,11 +353,13 @@ Page({
 
   async onLoad() {
     this.isPageActive = true
+    syncPageAppearance(this)
     await this.fetchNotifications()
   },
 
   async onShow() {
     this.isPageActive = true
+    syncPageAppearance(this)
     if (!this.data.isLoading) {
       await this.fetchNotifications()
     }
@@ -403,7 +407,7 @@ Page({
       this.safeSetData({
         allNotifications: [],
         notifications: [],
-        resultSummaryText: '当前无法读取消息',
+        resultSummaryText: '当前无法同步消息数据',
         stats: {
           totalCount: 0,
           unreadCount: 0,
@@ -412,11 +416,11 @@ Page({
         },
         isLoading: false,
         isLoadFailed: true,
-        loadError: error && error.message ? error.message : '暂时无法同步消息中心，请稍后重试'
+        loadError: error && error.message ? error.message : '当前无法同步云端数据，请稍后重试'
       })
 
       wx.showToast({
-        title: '暂时无法同步消息中心',
+        title: '当前无法同步消息数据',
         icon: 'none'
       })
     }

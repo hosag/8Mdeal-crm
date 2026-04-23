@@ -22,8 +22,8 @@
   margin-top: 16rpx;
   padding: 22rpx 24rpx;
   border-radius: 24rpx;
-  background: rgba(248, 245, 239, 0.9);
-  box-shadow: 0 10rpx 24rpx rgba(24, 39, 51, 0.05);
+  background: var(--theme-project-card-bg);
+  box-shadow: var(--theme-project-card-shadow);
 }
 
 .project-detail-page .contact-card:first-of-type {
@@ -32,6 +32,55 @@
 
 .project-detail-page .contact-card .chip {
   flex: 0 0 auto;
+}
+
+.project-detail-page .contact-security-headline {
+  margin-top: 6rpx;
+  display: inline-flex;
+  align-items: center;
+  min-height: 38rpx;
+  padding: 0 14rpx;
+  border-radius: 999rpx;
+  background: var(--theme-soft-badge-bg);
+  box-shadow: inset 0 0 0 1rpx var(--theme-divider);
+  font-size: 19rpx;
+  font-weight: 600;
+  letter-spacing: 0.5rpx;
+  color: var(--theme-soft-badge-text);
+}
+
+.project-detail-contact-sheet .contact-sheet-list {
+  margin-top: 2rpx;
+}
+
+.project-detail-contact-sheet .contact-sheet-security-card {
+  display: flex;
+  align-items: center;
+  margin-bottom: 14rpx;
+  padding: 18rpx 26rpx;
+}
+
+.project-detail-contact-sheet .contact-sheet-banner {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 34rpx;
+  padding: 0 12rpx;
+  border-radius: 999rpx;
+  background: var(--theme-soft-badge-bg);
+  box-shadow: inset 0 0 0 1rpx var(--theme-divider);
+  color: var(--theme-soft-badge-text);
+  font-size: 18rpx;
+  font-weight: 600;
+  letter-spacing: 0.5rpx;
+}
+
+.project-detail-contact-sheet .contact-sheet-card {
+  padding: 24rpx 26rpx;
+}
+
+.project-detail-contact-sheet .contact-sheet-card + .contact-sheet-card {
+  margin-top: 14rpx;
 }
 
 .project-detail-page .timeline-header-note,
@@ -48,8 +97,8 @@
   margin-top: 16rpx;
   padding: 22rpx;
   border-radius: 24rpx;
-  background: rgba(248, 245, 239, 0.92);
-  box-shadow: 0 10rpx 24rpx rgba(24, 39, 51, 0.05);
+  background: var(--theme-project-card-bg);
+  box-shadow: var(--theme-project-card-shadow);
 }
 
 .project-detail-page .task-card-head {
@@ -64,7 +113,7 @@
 .project-detail-page .task-card-title {
   font-size: 28rpx;
   font-weight: 700;
-  color: #182730;
+  color: var(--theme-title);
 }
 
 .project-detail-page .task-card-metrics {
@@ -75,7 +124,7 @@
   margin-top: 10rpx;
   font-size: 24rpx;
   line-height: 1.7;
-  color: #51616f;
+  color: var(--theme-text-secondary);
 }
 
 .project-detail-page .task-card-actions {
@@ -83,7 +132,8 @@
 }
 
 .share-entry-sheet {
-  background: rgba(248, 244, 238, 0.985);
+  background: var(--theme-sheet-bg);
+  box-shadow: var(--theme-sheet-shadow);
 }
 
 .share-entry-header {
@@ -94,14 +144,14 @@
 .share-entry-header-title {
   font-size: 29rpx;
   font-weight: 700;
-  color: #182730;
+  color: var(--theme-title);
 }
 
 .share-entry-header-desc {
   margin-top: 6rpx;
   font-size: 22rpx;
   line-height: 1.55;
-  color: #70808c;
+  color: var(--theme-text-soft);
 }
 
 .share-entry-list {
@@ -111,10 +161,8 @@
 .share-entry-card {
   padding: 20rpx 22rpx 18rpx;
   border-radius: 24rpx;
-  background: linear-gradient(180deg, rgba(255, 254, 251, 0.98) 0%, rgba(247, 243, 236, 0.96) 100%);
-  box-shadow:
-    inset 0 0 0 2rpx rgba(24, 39, 51, 0.04),
-    0 12rpx 22rpx rgba(24, 39, 51, 0.055);
+  background: var(--theme-project-card-bg);
+  box-shadow: var(--theme-state-card-shadow);
 }
 
 .share-entry-card + .share-entry-card {
@@ -135,14 +183,14 @@
   margin-top: 2rpx;
   padding: 6rpx 14rpx;
   font-size: 20rpx;
-  color: #5d7282;
-  background: rgba(36, 75, 97, 0.08);
-  box-shadow: inset 0 0 0 2rpx rgba(36, 75, 97, 0.05);
+  color: var(--theme-brand-text);
+  background: var(--theme-brand-bg);
+  box-shadow: inset 0 0 0 2rpx var(--theme-divider);
 }
 
 .task-complete-mask {
   z-index: 21;
-  background: rgba(14, 24, 31, 0.5);
+  background: var(--theme-sheet-mask);
   backdrop-filter: blur(10rpx);
 }
 
@@ -157,7 +205,8 @@
   flex-direction: column;
   overflow: hidden;
   padding-bottom: calc(34rpx + env(safe-area-inset-bottom));
-  background: rgba(249, 246, 240, 0.995);
+  background: var(--theme-sheet-bg);
+  box-shadow: var(--theme-sheet-shadow);
 }
 
 .task-complete-sheet.is-editing {
@@ -188,7 +237,7 @@
 .task-complete-toggle-title {
   font-size: 27rpx;
   font-weight: 700;
-  color: #182730;
+  color: var(--theme-title);
 }
 
 .task-complete-inline-entry {
@@ -204,8 +253,8 @@
   margin-top: 18rpx;
   padding: 20rpx 20rpx 22rpx;
   border-radius: 24rpx;
-  background: rgba(247, 243, 236, 0.92);
-  box-shadow: inset 0 0 0 2rpx rgba(24, 39, 51, 0.04);
+  background: var(--theme-soft-block-bg);
+  box-shadow: inset 0 0 0 2rpx var(--theme-divider);
 }
 
 .task-complete-next-head {
@@ -240,8 +289,8 @@
   margin-top: 16rpx;
   padding-top: 16rpx;
   padding-bottom: 4rpx;
-  border-top: 2rpx solid rgba(24, 39, 51, 0.08);
-  background: rgba(249, 246, 240, 0.98);
+  border-top: 2rpx solid var(--theme-divider);
+  background: var(--theme-sheet-bg);
 }
 
 .task-complete-actions.is-fixed.is-editing {
@@ -267,7 +316,7 @@
   margin-top: 8rpx;
   font-size: 28rpx;
   font-weight: 700;
-  color: #182730;
+  color: var(--theme-title);
 }
 
 .project-detail-page .timeline-meta-line {
@@ -282,8 +331,8 @@
   margin-top: 12rpx;
   padding: 18rpx 18rpx 20rpx;
   border-radius: 22rpx;
-  background: rgba(248, 245, 239, 0.9);
-  box-shadow: inset 0 0 0 2rpx rgba(24, 39, 51, 0.04);
+  background: var(--theme-summary-bg);
+  box-shadow: var(--theme-summary-shadow);
 }
 
 .project-detail-page .timeline-pill-row {
@@ -300,7 +349,7 @@
 .project-detail-page .timeline-section-label {
   font-size: 21rpx;
   font-weight: 700;
-  color: #6b7985;
+  color: var(--theme-text-soft);
   letter-spacing: 0.06em;
 }
 
@@ -308,7 +357,7 @@
   margin-top: 8rpx;
   font-size: 24rpx;
   line-height: 1.7;
-  color: #22333d;
+  color: var(--theme-text-main);
 }
 
 .project-detail-page .timeline-list {
@@ -323,7 +372,7 @@
   padding-left: 18rpx;
   font-size: 24rpx;
   line-height: 1.7;
-  color: #22333d;
+  color: var(--theme-text-main);
 }
 
 .project-detail-page .timeline-list-item::before {
@@ -334,11 +383,11 @@
   width: 8rpx;
   height: 8rpx;
   border-radius: 50%;
-  background: rgba(54, 93, 118, 0.55);
+  background: var(--theme-brand-text);
 }
 
 .project-detail-page .timeline-list-item.is-risk::before {
-  background: rgba(152, 99, 58, 0.68);
+  background: var(--theme-soft-badge-text);
 }
 
 .project-detail-page .share-history-card {
@@ -355,4 +404,88 @@
 
 .project-detail-page .share-history-card .helper-text + .helper-text {
   margin-top: 6rpx;
+}
+
+.footer-bar.appearance-font-large .btn-primary,
+.footer-bar.appearance-font-large .btn-secondary,
+.footer-bar.appearance-font-large .btn-ghost,
+.project-detail-contact-sheet.appearance-font-large .sheet-close,
+.share-entry-sheet.appearance-font-large .sheet-close,
+.task-complete-sheet.appearance-font-large .sheet-close {
+  font-size: 30rpx;
+}
+
+.project-detail-contact-sheet.appearance-font-large .sheet-title,
+.share-entry-sheet.appearance-font-large .sheet-title,
+.task-complete-sheet.appearance-font-large .sheet-title,
+.share-entry-sheet.appearance-font-large .share-entry-header-title,
+.task-complete-sheet.appearance-font-large .task-complete-toggle-title {
+  font-size: 30rpx;
+}
+
+.project-detail-contact-sheet.appearance-font-large .contact-name,
+.share-entry-sheet.appearance-font-large .mode-title,
+.task-complete-sheet.appearance-font-large .field-label {
+  font-size: 28rpx;
+}
+
+.project-detail-contact-sheet.appearance-font-large .sheet-meta,
+.project-detail-contact-sheet.appearance-font-large .contact-sheet-banner,
+.share-entry-sheet.appearance-font-large .share-entry-header-desc,
+.share-entry-sheet.appearance-font-large .mode-desc,
+.task-complete-sheet.appearance-font-large .helper-text {
+  font-size: 26rpx;
+}
+
+.share-entry-sheet.appearance-font-large .status-badge,
+.task-complete-sheet.appearance-font-large .chip {
+  font-size: 24rpx;
+}
+
+.task-complete-sheet.appearance-font-large .input-sim,
+.task-complete-sheet.appearance-font-large .textarea-sim,
+.task-complete-sheet.appearance-font-large .picker-sim {
+  font-size: 30rpx;
+}
+
+.footer-bar.appearance-font-readable .btn-primary,
+.footer-bar.appearance-font-readable .btn-secondary,
+.footer-bar.appearance-font-readable .btn-ghost,
+.project-detail-contact-sheet.appearance-font-readable .sheet-close,
+.share-entry-sheet.appearance-font-readable .sheet-close,
+.task-complete-sheet.appearance-font-readable .sheet-close {
+  font-size: 38rpx;
+}
+
+.project-detail-contact-sheet.appearance-font-readable .sheet-title,
+.share-entry-sheet.appearance-font-readable .sheet-title,
+.task-complete-sheet.appearance-font-readable .sheet-title,
+.share-entry-sheet.appearance-font-readable .share-entry-header-title,
+.task-complete-sheet.appearance-font-readable .task-complete-toggle-title {
+  font-size: 38rpx;
+}
+
+.project-detail-contact-sheet.appearance-font-readable .contact-name,
+.share-entry-sheet.appearance-font-readable .mode-title,
+.task-complete-sheet.appearance-font-readable .field-label {
+  font-size: 34rpx;
+}
+
+.project-detail-contact-sheet.appearance-font-readable .sheet-meta,
+.project-detail-contact-sheet.appearance-font-readable .contact-sheet-banner,
+.share-entry-sheet.appearance-font-readable .share-entry-header-desc,
+.share-entry-sheet.appearance-font-readable .mode-desc,
+.task-complete-sheet.appearance-font-readable .helper-text {
+  font-size: 34rpx;
+}
+
+.share-entry-sheet.appearance-font-readable .status-badge,
+.task-complete-sheet.appearance-font-readable .chip {
+  font-size: 30rpx;
+}
+
+.task-complete-sheet.appearance-font-readable .input-sim,
+.task-complete-sheet.appearance-font-readable .textarea-sim,
+.task-complete-sheet.appearance-font-readable .picker-sim {
+  font-size: 38rpx;
 }

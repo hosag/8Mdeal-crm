@@ -1,6 +1,6 @@
-<view class="page-shell">
+<view class="page-shell {{appearancePageClass}}">
   <view wx:if="{{isLoading}}" class="rise-in">
-    <loading-panel rows="2" />
+    <loading-panel rows="2" appearance-page-class="{{appearancePageClass}}" />
   </view>
 
   <block wx:else>
@@ -31,8 +31,9 @@
     </view>
     <empty-state
       wx:if="{{!privacyTags.length}}"
-      title="当前还没有可用标签"
-      desc="可创建“基础浏览”和“完整外发”等标签，把分享规则沉淀成可复用模板。"
+      appearance-page-class="{{appearancePageClass}}"
+      title="暂无可用标签"
+      desc="新建标签后，可作为资料分享范围模板复用。"
       image="/assets/illustrations/empty-tags.svg"
       actionText="新建标签"
       bind:action="openPage"

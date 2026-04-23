@@ -1,5 +1,9 @@
 Component({
   properties: {
+    appearancePageClass: {
+      type: String,
+      value: ''
+    },
     rows: {
       type: Number,
       value: 3

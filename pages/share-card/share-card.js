@@ -14,6 +14,7 @@ const {
   buildHistoryScopeMeta,
   filterTimelineForHistoryScope
 } = require('../../services/share')
+const { syncPageAppearance } = require('../../utils/appearance')
 
 function countTimelineRecords(followTimeline) {
   return (Array.isArray(followTimeline) ? followTimeline : []).reduce((total, group) => {
@@ -36,7 +37,7 @@ function getLatestTimelineItem(followTimeline) {
 function buildTimelineSummary(followTimeline) {
   const total = countTimelineRecords(followTimeline)
   if (!total) {
-    return '当前暂无历史记录。'
+    return '暂无时间线记录。'
   }
 
   const latest = getLatestTimelineItem(followTimeline)
@@ -96,7 +97,7 @@ function normalizeShareBrief(value) {
     modelName,
     sourceCaption: modelName ? `${providerLabel} · ${modelName}` : providerLabel,
     sourceOriginText: `来自 ${modelName ? `${providerLabel} · ${modelName}` : providerLabel}`,
-    regenerateLabel: sourceType === 'fallback' ? '获取大模型摘要' : '重新生成'
+    regenerateLabel: sourceType === 'fallback' ? 'AI整理' : '重新整理'
   }
 }
 
@@ -304,9 +305,9 @@ function buildSenderState(preview) {
   const mode = preview && preview.mode ? preview.mode.key : 'info'
 
   return {
-    heroEyebrow: '分享配置',
-    heroTitle: mode === 'outbound' ? '交接卡配置' : '资料卡配置',
-    heroSubtitle: '整理摘要与时间线范围，确认后发送。',
+    heroEyebrow: '分享项目',
+    heroTitle: mode === 'outbound' ? '转交项目' : '发送资料',
+    heroSubtitle: '设置摘要与时间线后发送。',
     stateTitle: '',
     stateDesc: '',
     stateTag: '',
@@ -329,17 +330,16 @@ function buildImportedState(preview) {
   return {
     heroEyebrow: '接手成功',
     heroTitle: '项目已进入“我的项目”',
-    heroSubtitle: '你已经接手这个项目。后续跟进、阶段推进和成交登记，都在你的项目里继续完成。',
-    stateTitle: '当前已完成接手',
-    stateDesc: '这条外发项目已经自动写入你的“我的项目”。从现在开始，你就是这个项目的维护方。',
+    heroSubtitle: '项目已写入你的项目列表，后续请直接在项目内继续推进。',
+    stateTitle: '已完成接手',
+    stateDesc: '当前项目已进入你的“我的项目”。',
     stateTag: '已接手',
     ownershipLabel: '已进入我的项目',
     contactPolicy: canDirectContact ? '可直接联系关键联系人' : '当前仅展示基础联系人',
     stateSteps: [
-      '先打开项目详情，确认阶段、联系人和历史跟进。',
-        '后续新增的跟进记录，会继续写入你自己的项目时间线。',
-        '原分享方不再在“我的项目”继续维护，只会在“外发项目”里追踪进展。'
-      ],
+      '打开项目详情，确认阶段、联系人和历史跟进。',
+      '后续新增记录会继续写入你的项目时间线。'
+    ],
     showStateCard: true,
     showVisibleFields: true,
     showImportedActions: true,
@@ -355,18 +355,44 @@ function buildViewerState(preview) {
 
   return {
     heroEyebrow: '查看资料',
-    heroTitle: '这是查看型项目卡片',
-    heroSubtitle: '你可以查看分享方开放的资料范围，但不会自动接管项目，也不会进入你的“我的项目”。',
-    stateTitle: '当前只开放查看',
-    stateDesc: '这次分享只用于资料同步，不用于项目交接。如需正式接手，请让分享方改用“转交项目”发送。',
+    heroTitle: '资料卡',
+    heroSubtitle: '当前仅可查看项目资料。',
+    stateTitle: '仅查看',
+    stateDesc: '这次分享不转移管理权。',
     stateTag: '仅查看',
     ownershipLabel: '仍由分享方维护',
     contactPolicy: canDirectContact ? '按当前范围可直接联系' : '联系方式按当前范围隐藏',
     stateSteps: [
-      '当前页面只展示分享方开放的字段范围。',
-        '关闭页面后，这个项目不会进入你的“我的项目”。',
-        '如需继续推进，请联系分享方重新用“转交项目”方式发送。'
-      ],
+      '当前页面仅展示分享方开放的信息。',
+      '如需接手，请让分享方改用“转交项目”发送。'
+    ],
+    showStateCard: true,
+    showVisibleFields: true,
+    showImportedActions: false,
+    showSenderActions: false,
+    showShareFooter: false,
+    footerShareText: ''
+  }
+}
+
+function buildLockedState(preview, receiverName) {
+  const contacts = Array.isArray(preview && preview.contacts) ? preview.contacts : []
+  const canDirectContact = contacts.some((item) => item.phone || item.wechat)
+  const lockedReceiverName = String(receiverName || '').trim() || '其他接手方'
+
+  return {
+    heroEyebrow: '项目已转交',
+    heroTitle: '这张交接卡已失效',
+    heroSubtitle: `${lockedReceiverName} 已先完成接手。`,
+    stateTitle: '当前已锁定接手人',
+    stateDesc: '转交项目仅允许一位接手方接管。',
+    stateTag: '已锁定',
+    ownershipLabel: `当前由 ${lockedReceiverName} 继续维护`,
+    contactPolicy: canDirectContact ? '当前展示内容仅用于识别项目背景' : '当前仅保留基础项目信息',
+    stateSteps: [
+      '这条交接记录已经完成接手，不会再次进入你的“我的项目”。',
+      '如需参与，请让分享方重新发起新的分享。'
+    ],
     showStateCard: true,
     showVisibleFields: true,
     showImportedActions: false,
@@ -381,6 +407,10 @@ function buildCardState(options = {}) {
     return buildSenderState(options.preview)
   }
 
+  if (options.blocked) {
+    return buildLockedState(options.preview, options.blockedReceiverName)
+  }
+
   if (options.imported) {
     return buildImportedState(options.preview)
   }
@@ -390,6 +420,7 @@ function buildCardState(options = {}) {
 
 Page({
   data: {
+    appearancePageClass: '',
     projectId: '',
     shareRecordId: '',
     activeMode: 'info',
@@ -501,7 +532,10 @@ Page({
   },
 
   async persistShareRecord(payload) {
-    const result = await createShareRecordData(payload)
+    const result = await createShareRecordData({
+      shareRecordId: payload && payload.shareRecordId ? payload.shareRecordId : this.data.shareRecordId,
+      ...payload
+    })
 
     await resolveNotificationData({
       projectId: payload.projectId,
@@ -514,6 +548,7 @@ Page({
 
   async onLoad(options) {
     this.isPageActive = true
+    syncPageAppearance(this)
     const projectId = options.projectId || ''
     const shareRecordId = options.shareRecordId || ''
     const activeMode = options.mode || 'info'
@@ -534,7 +569,9 @@ Page({
         const cardState = buildCardState({
           preview,
           imported: !!result.imported,
-          entry
+          entry,
+          blocked: !!result.blocked,
+          blockedReceiverName: result.blockedReceiverName || ''
         })
         const originalFollowTimeline = result.shareProject && Array.isArray(result.shareProject.followTimeline)
           ? result.shareProject.followTimeline
@@ -602,6 +639,13 @@ Page({
           isLoading: false,
           dataSource: 'CloudBase'
         })
+
+        if (result.blocked && result.blockedMessage) {
+          wx.showToast({
+            title: result.blockedMessage,
+            icon: 'none'
+          })
+        }
         return
       }
 
@@ -634,7 +678,7 @@ Page({
             type: 'save_failed',
             scene: 'share_record_create',
             title: '创建分享失败',
-            message: error.message || '暂时无法生成分享卡，请稍后重试',
+            message: error.message || '当前无法生成分享卡，请稍后重试',
             projectId,
             projectName: preview && preview.project ? preview.project.name : '',
             actionUrl: `/pages/project-detail/project-detail?projectId=${projectId}`,
@@ -697,12 +741,19 @@ Page({
         isLoading: false,
         dataSource: source
       })
+
+      if (createdRecord && createdRecord.reusedExistingOutbound) {
+        wx.showToast({
+          title: '已沿用当前项目的转交记录',
+          icon: 'none'
+        })
+      }
     } catch (error) {
       this.safeSetData({
         isLoading: false
       })
       wx.showToast({
-        title: '暂时无法打开项目卡片',
+        title: '当前无法打开项目卡片',
         icon: 'none'
       })
     }
@@ -710,6 +761,7 @@ Page({
 
   onShow() {
     this.isPageActive = true
+    syncPageAppearance(this)
   },
 
   onHide() {
@@ -828,7 +880,7 @@ Page({
       })
     } catch (error) {
       wx.showToast({
-        title: error.message || 'AI 分享摘要暂时不可用',
+        title: error.message || '当前无法生成 AI 摘要',
         icon: 'none'
       })
     } finally {
@@ -880,7 +932,7 @@ Page({
       })
     } catch (error) {
       wx.showToast({
-        title: error.message || '暂时无法更新历史范围',
+        title: error.message || '当前无法更新历史范围',
         icon: 'none'
       })
     } finally {
@@ -935,7 +987,7 @@ Page({
       })
     } catch (error) {
       wx.showToast({
-        title: error.message || '暂时无法更新摘要方式',
+        title: error.message || '当前无法更新摘要方式',
         icon: 'none'
       })
     }
@@ -985,7 +1037,7 @@ Page({
       })
     } catch (error) {
       wx.showToast({
-        title: error.message || '暂时无法保存摘要',
+        title: error.message || '当前无法保存摘要',
         icon: 'none'
       })
     }

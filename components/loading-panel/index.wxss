@@ -1,4 +1,12 @@
 .loading-panel {
+  --loading-card-bg: rgba(255, 252, 247, 0.86);
+  --loading-card-shadow: 0 18rpx 36rpx rgba(24, 39, 51, 0.06);
+  --loading-hero-bg: rgba(255, 255, 255, 0.72);
+  --loading-badge-bg: rgba(38, 74, 96, 0.08);
+  --loading-badge-text: #456275;
+  --loading-title: #1d2f3b;
+  --loading-desc: #71808c;
+  --loading-line-bg: rgba(31, 56, 72, 0.08);
   display: flex;
   flex-direction: column;
   gap: 18rpx;
@@ -7,8 +15,8 @@
 .loading-shell,
 .loading-card {
   border-radius: 30rpx;
-  background: rgba(255, 252, 247, 0.86);
-  box-shadow: 0 18rpx 36rpx rgba(24, 39, 51, 0.06);
+  background: var(--loading-card-bg);
+  box-shadow: var(--loading-card-shadow);
 }
 
 .loading-shell {
@@ -18,7 +26,7 @@
 .loading-hero {
   height: 220rpx;
   border-radius: 30rpx 30rpx 0 0;
-  background: rgba(255, 255, 255, 0.72);
+  background: var(--loading-hero-bg);
 }
 
 .loading-summary {
@@ -31,8 +39,8 @@
   justify-content: center;
   padding: 8rpx 16rpx;
   border-radius: 999rpx;
-  background: rgba(38, 74, 96, 0.08);
-  color: #456275;
+  background: var(--loading-badge-bg);
+  color: var(--loading-badge-text);
   font-size: 21rpx;
   font-weight: 700;
 }
@@ -41,14 +49,14 @@
   margin-top: 12rpx;
   font-size: 30rpx;
   font-weight: 700;
-  color: #1d2f3b;
+  color: var(--loading-title);
 }
 
 .loading-desc {
   margin-top: 8rpx;
   font-size: 23rpx;
   line-height: 1.7;
-  color: #71808c;
+  color: var(--loading-desc);
 }
 
 .loading-card {
@@ -59,7 +67,7 @@
   height: 22rpx;
   margin-top: 16rpx;
   border-radius: 999rpx;
-  background: rgba(31, 56, 72, 0.08);
+  background: var(--loading-line-bg);
 }
 
 .loading-line.is-long {
@@ -80,5 +88,98 @@
 .loading-pill {
   height: 68rpx;
   border-radius: 22rpx;
-  background: rgba(31, 56, 72, 0.08);
+  background: var(--loading-line-bg);
+}
+
+.loading-panel.appearance-theme-warm_almond {
+  --loading-card-bg: rgba(255, 249, 242, 0.88);
+  --loading-card-shadow: 0 18rpx 36rpx rgba(96, 60, 44, 0.07);
+  --loading-hero-bg: rgba(255, 245, 236, 0.8);
+  --loading-badge-bg: rgba(193, 124, 70, 0.1);
+  --loading-badge-text: #915936;
+  --loading-title: #543325;
+  --loading-desc: #8f725d;
+  --loading-line-bg: rgba(132, 77, 54, 0.08);
+}
+
+.loading-panel.appearance-theme-misty_blossom {
+  --loading-card-bg: rgba(255, 249, 252, 0.9);
+  --loading-card-shadow: 0 18rpx 36rpx rgba(119, 89, 103, 0.06);
+  --loading-hero-bg: rgba(255, 247, 251, 0.8);
+  --loading-badge-bg: rgba(184, 123, 145, 0.1);
+  --loading-badge-text: #8d6178;
+  --loading-title: #543846;
+  --loading-desc: #8e7884;
+  --loading-line-bg: rgba(141, 97, 120, 0.08);
+}
+
+.loading-panel.appearance-theme-festive_crimson {
+  --loading-card-bg: rgba(255, 248, 244, 0.9);
+  --loading-card-shadow: 0 18rpx 36rpx rgba(109, 47, 47, 0.07);
+  --loading-hero-bg: rgba(255, 246, 241, 0.8);
+  --loading-badge-bg: rgba(183, 58, 61, 0.1);
+  --loading-badge-text: #9d3f3d;
+  --loading-title: #5a262c;
+  --loading-desc: #957374;
+  --loading-line-bg: rgba(159, 60, 63, 0.08);
+}
+
+.loading-panel.appearance-theme-cloud_mist {
+  --loading-card-bg: rgba(255, 252, 247, 0.92);
+  --loading-card-shadow: 0 18rpx 36rpx rgba(106, 109, 79, 0.06);
+  --loading-hero-bg: rgba(248, 244, 236, 0.88);
+  --loading-badge-bg: rgba(199, 154, 99, 0.1);
+  --loading-badge-text: #8b6d45;
+  --loading-title: #465141;
+  --loading-desc: #878879;
+  --loading-line-bg: rgba(120, 132, 106, 0.08);
+}
+
+.loading-panel.appearance-theme-ink_readable {
+  --loading-card-bg: rgba(250, 252, 249, 0.94);
+  --loading-card-shadow: 0 18rpx 36rpx rgba(51, 70, 58, 0.06);
+  --loading-hero-bg: rgba(245, 249, 245, 0.84);
+  --loading-badge-bg: rgba(95, 122, 107, 0.1);
+  --loading-badge-text: #4d6758;
+  --loading-title: #2e4036;
+  --loading-desc: #75867d;
+  --loading-line-bg: rgba(95, 122, 107, 0.08);
+}
+
+.loading-panel.appearance-font-large .loading-badge {
+  min-height: 56rpx;
+  font-size: 27rpx;
+}
+
+.loading-panel.appearance-font-large .loading-title {
+  font-size: 38rpx;
+}
+
+.loading-panel.appearance-font-large .loading-desc {
+  font-size: 28rpx;
+  line-height: 1.78;
+}
+
+.loading-panel.appearance-font-large .loading-pill {
+  height: 76rpx;
+}
+
+.loading-panel.appearance-font-readable .loading-badge {
+  min-height: 68rpx;
+  padding-left: 26rpx;
+  padding-right: 26rpx;
+  font-size: 34rpx;
+}
+
+.loading-panel.appearance-font-readable .loading-title {
+  font-size: 48rpx;
+}
+
+.loading-panel.appearance-font-readable .loading-desc {
+  font-size: 38rpx;
+  line-height: 2;
+}
+
+.loading-panel.appearance-font-readable .loading-pill {
+  height: 92rpx;
 }

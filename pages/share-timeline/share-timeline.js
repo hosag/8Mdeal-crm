@@ -6,6 +6,7 @@ const {
   buildHistoryScopeMeta,
   filterTimelineForHistoryScope
 } = require('../../services/share')
+const { syncPageAppearance } = require('../../utils/appearance')
 
 function hasField(tag, fieldName) {
   const fields = Array.isArray(tag && tag.fields) ? tag.fields : []
@@ -48,7 +49,7 @@ function getLatestTimelineItem(followTimeline) {
 function buildTimelineSummary(followTimeline) {
   const total = countTimelineRecords(followTimeline)
   if (!total) {
-    return '当前暂无历史记录。'
+    return '暂无时间线记录。'
   }
 
   const latest = getLatestTimelineItem(followTimeline)
@@ -79,6 +80,7 @@ function buildTimelineSummary(followTimeline) {
 
 Page({
   data: {
+    appearancePageClass: '',
     projectId: '',
     shareRecordId: '',
     activeMode: 'info',
@@ -103,6 +105,7 @@ Page({
 
   async onLoad(options) {
     this.isPageActive = true
+    syncPageAppearance(this)
     const projectId = options.projectId || ''
     const shareRecordId = options.shareRecordId || ''
     const activeMode = options.mode || 'info'
@@ -174,7 +177,7 @@ Page({
         isLoading: false
       })
       wx.showToast({
-        title: '暂时无法加载时间线',
+        title: '当前无法加载时间线',
         icon: 'none'
       })
     }
@@ -182,6 +185,7 @@ Page({
 
   onShow() {
     this.isPageActive = true
+    syncPageAppearance(this)
   },
 
   onHide() {

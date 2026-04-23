@@ -1,6 +1,5 @@
-<view class="empty-state">
-  <view class="empty-state__badge">当前状态</view>
-  <image class="empty-state__image" src="{{image}}" mode="aspectFit"></image>
+<view class="empty-state {{appearancePageClass}}">
+  <image class="empty-state__image" src="{{image}}" mode="aspectFit" />
   <view class="empty-state__title">{{title}}</view>
   <view class="empty-state__desc">{{desc}}</view>
   <view wx:if="{{actionText}}" class="empty-state__action" bindtap="onAction">{{actionText}}</view>

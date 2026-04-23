@@ -514,7 +514,12 @@ async function saveShareTagData(payload) {
 }
 
 async function createShareRecordData(payload) {
-  return callCloudFunction('createShareRecord', payload)
+  const result = await callCloudFunction('createShareRecord', payload)
+  if (result && result.ok === false) {
+    throw new Error(result.message || '暂时无法创建分享')
+  }
+
+  return result
 }
 
 function buildLocalShareBrief(payload = {}, config = {}) {
@@ -592,10 +597,6 @@ async function openSharedProjectData(payload) {
   return callCloudFunction('openSharedProject', payload)
 }
 
-async function seedInboundProjectData() {
-  return callCloudFunction('seedInboundProject')
-}
-
 async function saveDealData(payload) {
   return callCloudFunction('saveDeal', payload)
 }
@@ -643,7 +644,6 @@ module.exports = {
   createShareRecordData,
   requestShareBrief,
   openSharedProjectData,
-  seedInboundProjectData,
   saveDealData,
   loadNotificationsData,
   markNotificationReadData,

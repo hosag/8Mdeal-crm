@@ -11,6 +11,40 @@
   padding: 32rpx;
 }
 
+.share-card-page .brand-lockup-share {
+  display: flex;
+  align-items: center;
+  gap: 18rpx;
+  margin-bottom: 16rpx;
+}
+
+.share-card-page .brand-lockup-image-share {
+  flex: 0 0 auto;
+  width: 104rpx;
+  height: 84rpx;
+  display: block;
+}
+
+.share-card-page .brand-lockup-copy-share {
+  min-width: 0;
+}
+
+.share-card-page .brand-lockup-title-share {
+  font-size: 38rpx;
+  font-weight: 700;
+  line-height: 1.08;
+  letter-spacing: 2rpx;
+  color: var(--theme-preview-text);
+  text-shadow: 0 4rpx 14rpx rgba(14, 25, 36, 0.14);
+}
+
+.share-card-page .brand-lockup-subtitle-share {
+  margin-top: 8rpx;
+  font-size: 21rpx;
+  letter-spacing: 3rpx;
+  color: var(--theme-preview-muted);
+}
+
 .share-card-page .hero-title {
   font-size: 42rpx;
 }
@@ -29,8 +63,8 @@
 
 .share-card-page .share-preview-card {
   padding: 26rpx;
-  background: linear-gradient(180deg, rgba(255, 254, 252, 0.98) 0%, rgba(248, 245, 239, 0.96) 100%);
-  box-shadow: 0 20rpx 42rpx rgba(25, 40, 52, 0.08);
+  background: var(--theme-project-card-bg);
+  box-shadow: var(--theme-project-card-shadow);
 }
 
 .share-card-page .share-config-shell {
@@ -51,28 +85,28 @@
   font-size: 34rpx;
   font-weight: 700;
   line-height: 1.32;
-  color: #1b3140;
+  color: var(--theme-title);
 }
 
 .share-card-page .share-config-project-meta {
-  margin-top: 10rpx;
+  margin-top: 8rpx;
   font-size: 22rpx;
   line-height: 1.6;
-  color: #6b7986;
+  color: var(--theme-text-soft);
 }
 
 .share-card-page .share-config-grid {
-  margin-top: 18rpx;
+  margin-top: 14rpx;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 14rpx;
+  gap: 12rpx;
 }
 
 .share-card-page .share-config-fields {
-  margin-top: 16rpx;
+  margin-top: 14rpx;
   padding: 18rpx 20rpx 20rpx;
   border-radius: 24rpx;
-  background: rgba(248, 245, 239, 0.88);
+  background: var(--theme-soft-block-bg);
 }
 
 .share-card-page .share-config-fields-head {
@@ -84,13 +118,13 @@
 
 .share-card-page .share-config-fields-title {
   font-size: 22rpx;
-  color: #7a8692;
+  color: var(--theme-text-muted);
 }
 
 .share-card-page .share-config-fields-count {
   flex: 0 0 auto;
   font-size: 21rpx;
-  color: #6a7a86;
+  color: var(--theme-text-soft);
 }
 
 .share-card-page .share-config-fields-wall {
@@ -100,7 +134,7 @@
 .share-card-page .shared-detail-value-strong {
   font-size: 28rpx;
   font-weight: 700;
-  color: #1e3240;
+  color: var(--theme-title);
 }
 
 .share-card-page .share-preview-head {
@@ -126,13 +160,13 @@
   margin-top: 16rpx;
   padding: 18rpx 20rpx 20rpx;
   border-radius: 22rpx;
-  background: rgba(248, 245, 239, 0.92);
-  box-shadow: inset 0 0 0 2rpx rgba(24, 39, 51, 0.04);
+  background: var(--theme-summary-bg);
+  box-shadow: var(--theme-summary-shadow);
 }
 
 .share-card-page .share-preview-section .card-subtitle {
   margin-top: 8rpx;
-  color: #425261;
+  color: var(--theme-text-secondary);
   line-height: 1.72;
 }
 
@@ -165,7 +199,7 @@
 .share-card-page .share-brief-source {
   font-size: 22rpx;
   line-height: 1.6;
-  color: #6c7a86;
+  color: var(--theme-text-soft);
 }
 
 .share-card-page .share-brief-btn {
@@ -177,8 +211,8 @@
   height: 72rpx;
   padding: 0 18rpx;
   border-radius: 20rpx;
-  background: linear-gradient(145deg, #b89159 0%, #d1ac71 100%);
-  box-shadow: 0 12rpx 24rpx rgba(177, 139, 86, 0.18);
+  background: var(--theme-button-primary-bg);
+  box-shadow: var(--theme-button-shadow);
 }
 
 .share-card-page .share-brief-btn-spinner {
@@ -186,8 +220,8 @@
   width: 28rpx;
   height: 28rpx;
   border-radius: 999rpx;
-  border: 3rpx solid rgba(255, 248, 238, 0.34);
-  border-top-color: #fff8ee;
+  border: 3rpx solid rgba(255, 255, 255, 0.28);
+  border-top-color: var(--theme-button-primary-text);
   box-sizing: border-box;
   animation: shareBriefSpin 760ms linear infinite;
 }
@@ -196,7 +230,7 @@
   flex: 0 0 auto;
   font-size: 22rpx;
   font-weight: 700;
-  color: #fff8ee;
+  color: var(--theme-button-primary-text);
   text-align: center;
 }
 
@@ -212,7 +246,7 @@
 .share-card-page .share-brief-text {
   font-size: 24rpx;
   line-height: 1.72;
-  color: #233847;
+  color: var(--theme-text-main);
 }
 
 .share-card-page .share-summary-config {
@@ -233,15 +267,15 @@
   min-height: 62rpx;
   padding: 0 18rpx;
   border-radius: 999rpx;
-  background: rgba(243, 240, 234, 0.92);
-  box-shadow: inset 0 0 0 2rpx rgba(24, 39, 51, 0.04);
+  background: var(--theme-chip-bg);
+  box-shadow: inset 0 0 0 2rpx var(--theme-divider);
 }
 
 .share-card-page .summary-mode-chip.is-active {
-  background: linear-gradient(180deg, rgba(255, 254, 251, 0.98) 0%, rgba(247, 243, 236, 0.96) 100%);
+  background: var(--theme-summary-bg);
   box-shadow:
-    inset 0 0 0 2rpx rgba(36, 75, 97, 0.1),
-    0 10rpx 20rpx rgba(24, 39, 51, 0.05);
+    inset 0 0 0 2rpx var(--theme-divider),
+    var(--theme-project-card-shadow);
 }
 
 .share-card-page .summary-mode-chip.is-disabled {
@@ -252,17 +286,17 @@
   width: 16rpx;
   height: 16rpx;
   border-radius: 50%;
-  background: rgba(98, 116, 128, 0.25);
+  background: var(--theme-text-muted);
 }
 
 .share-card-page .summary-mode-chip.is-active .summary-mode-dot {
-  background: #31536b;
+  background: var(--theme-accent-strong);
 }
 
 .share-card-page .summary-mode-label {
   font-size: 23rpx;
   font-weight: 600;
-  color: #2b3f4d;
+  color: var(--theme-text-main);
 }
 
 .share-card-page .share-final-summary-title {
@@ -299,7 +333,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: 10rpx;
-  margin-top: 14rpx;
+  margin-top: 12rpx;
 }
 
 .share-card-page .history-scope-radio {
@@ -309,32 +343,32 @@
   min-height: 58rpx;
   padding: 0 18rpx;
   border-radius: 999rpx;
-  background: rgba(243, 240, 234, 0.92);
-  box-shadow: inset 0 0 0 2rpx rgba(24, 39, 51, 0.04);
+  background: var(--theme-chip-bg);
+  box-shadow: inset 0 0 0 2rpx var(--theme-divider);
 }
 
 .share-card-page .history-scope-radio.is-active {
-  background: linear-gradient(180deg, rgba(255, 254, 251, 0.98) 0%, rgba(247, 243, 236, 0.96) 100%);
+  background: var(--theme-summary-bg);
   box-shadow:
-    inset 0 0 0 2rpx rgba(36, 75, 97, 0.1),
-    0 10rpx 20rpx rgba(24, 39, 51, 0.05);
+    inset 0 0 0 2rpx var(--theme-divider),
+    var(--theme-project-card-shadow);
 }
 
 .share-card-page .history-scope-radio-dot {
   width: 16rpx;
   height: 16rpx;
   border-radius: 50%;
-  background: rgba(98, 116, 128, 0.25);
+  background: var(--theme-text-muted);
 }
 
 .share-card-page .history-scope-radio.is-active .history-scope-radio-dot {
-  background: #31536b;
+  background: var(--theme-accent-strong);
 }
 
 .share-card-page .history-scope-radio-label {
   font-size: 23rpx;
   font-weight: 600;
-  color: #2b3f4d;
+  color: var(--theme-text-main);
 }
 
 .share-card-page .share-timeline-entry {
@@ -347,8 +381,8 @@
 }
 
 .share-card-page .share-timeline-entry .field-pill {
-  background: #f3f0ea;
-  color: #506472;
+  background: var(--theme-field-pill-bg);
+  color: var(--theme-field-pill-text);
 }
 
 .share-card-page .share-history-note {
@@ -360,14 +394,14 @@
 }
 
 .share-card-page .visible-fields-card .field-pill {
-  background: #f3f0ea;
-  color: #4d6170;
+  background: var(--theme-field-pill-bg);
+  color: var(--theme-field-pill-text);
 }
 
 .share-card-page .share-footer {
   grid-template-columns: 1fr 1fr;
-  background: rgba(247, 243, 236, 0.96);
-  box-shadow: 0 -14rpx 28rpx rgba(20, 34, 45, 0.08);
+  background: var(--theme-bottom-nav-bg);
+  box-shadow: var(--theme-bottom-nav-shadow);
 }
 
 .share-card-page .share-preview-trigger,
@@ -384,9 +418,49 @@
   border: 0;
   line-height: 88rpx;
   border-radius: 24rpx;
-  box-shadow: 0 14rpx 26rpx rgba(24, 56, 76, 0.16);
+  box-shadow: var(--theme-button-shadow);
 }
 
 .share-card-page .share-action::after {
   border: 0;
+}
+
+.share-footer.appearance-font-large .btn-primary,
+.share-footer.appearance-font-large .btn-ghost,
+.share-preview-sheet.appearance-font-large .sheet-title,
+.share-preview-sheet.appearance-font-large .sheet-close {
+  font-size: 30rpx;
+}
+
+.share-preview-sheet.appearance-font-large .project-name,
+.share-preview-sheet.appearance-font-large .card-title,
+.share-preview-sheet.appearance-font-large .form-card-title {
+  font-size: 28rpx;
+}
+
+.share-preview-sheet.appearance-font-large .project-meta,
+.share-preview-sheet.appearance-font-large .card-subtitle,
+.share-preview-sheet.appearance-font-large .form-card-desc,
+.share-preview-sheet.appearance-font-large .section-link {
+  font-size: 26rpx;
+}
+
+.share-footer.appearance-font-readable .btn-primary,
+.share-footer.appearance-font-readable .btn-ghost,
+.share-preview-sheet.appearance-font-readable .sheet-title,
+.share-preview-sheet.appearance-font-readable .sheet-close {
+  font-size: 38rpx;
+}
+
+.share-preview-sheet.appearance-font-readable .project-name,
+.share-preview-sheet.appearance-font-readable .card-title,
+.share-preview-sheet.appearance-font-readable .form-card-title {
+  font-size: 34rpx;
+}
+
+.share-preview-sheet.appearance-font-readable .project-meta,
+.share-preview-sheet.appearance-font-readable .card-subtitle,
+.share-preview-sheet.appearance-font-readable .form-card-desc,
+.share-preview-sheet.appearance-font-readable .section-link {
+  font-size: 34rpx;
 }

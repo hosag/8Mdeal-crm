@@ -1,4 +1,5 @@
 const { loadTagEditorData, saveShareTagData } = require('../../services/data')
+const { syncPageAppearance } = require('../../utils/appearance')
 
 function buildVisibleFieldOptions(visibleFields, selected) {
   const selectedFields = Array.isArray(selected) ? selected : []
@@ -11,6 +12,7 @@ function buildVisibleFieldOptions(visibleFields, selected) {
 
 Page({
   data: {
+    appearancePageClass: '',
     tagId: '',
     tagName: '',
     tagDesc: '',
@@ -23,6 +25,7 @@ Page({
   },
 
   async onLoad(options) {
+    syncPageAppearance(this)
     try {
       const { data, source } = await loadTagEditorData(options.tagId || '')
       this.setData({
@@ -40,10 +43,14 @@ Page({
         isLoading: false
       })
       wx.showToast({
-        title: '暂时无法加载标签设置',
+        title: '当前无法加载标签设置',
         icon: 'none'
       })
     }
+  },
+
+  onShow() {
+    syncPageAppearance(this)
   },
 
   toggleField(event) {
@@ -124,7 +131,7 @@ Page({
       }, 320)
     } catch (error) {
       wx.showToast({
-        title: error.message || '暂时无法保存标签，请稍后重试',
+        title: error.message || '当前无法保存标签，请稍后重试',
         icon: 'none'
       })
     } finally {
