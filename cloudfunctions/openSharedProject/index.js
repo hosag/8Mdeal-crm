@@ -932,7 +932,7 @@ exports.main = async (event) => {
             sourceOpenid: receiverOpenid,
             sourceName: receiverName,
             actionUrl: `/pages/project-detail/project-detail?projectId=${sourceProject._id}&view=shared-out`,
-            actionLabel: '查看外发进展',
+            actionLabel: '进入外发项目',
             bizDate: formatBizDate(now),
             dedupeKey: `shared_imported_${shareRecordId}`,
             extra: {

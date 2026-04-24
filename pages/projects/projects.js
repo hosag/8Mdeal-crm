@@ -21,6 +21,22 @@ const SORT_OPTIONS = [
   { key: 'task', label: '动作优先' },
   { key: 'amount', label: '金额优先' }
 ]
+const SHARE_ACTION_OPTIONS = [
+  {
+    key: 'info',
+    title: '发送资料',
+    desc: '对方查看资料，你继续维护。',
+    badge: '资料卡',
+    note: '项目仍留在我的项目'
+  },
+  {
+    key: 'outbound',
+    title: '转交项目',
+    desc: '对方接手项目，你在外发项目查看进展。',
+    badge: '交接卡',
+    note: '后续在外发项目查看'
+  }
+]
 const HIGH_VALUE_THRESHOLD = 500000
 
 function normalizeQuickFilter(value) {
@@ -637,6 +653,11 @@ Page({
       title: '',
       detail: ''
     },
+    showShareSheet: false,
+    shareActionOptions: SHARE_ACTION_OPTIONS,
+    selectedShareProjectId: '',
+    selectedShareProjectName: '',
+    selectedShareProjectMeta: null,
     taskActionId: '',
     isLoading: true,
     isLoadFailed: false,
@@ -988,6 +1009,56 @@ Page({
     })
   },
 
+  openProjectShareQuick(event) {
+    const projectId = String(event.currentTarget.dataset.projectId || '').trim()
+    if (!projectId) {
+      return
+    }
+    const currentProject = (this.data.projectCards || []).find((item) => item.id === projectId)
+
+    this.setData({
+      showShareSheet: true,
+      selectedShareProjectId: projectId,
+      selectedShareProjectName: currentProject && currentProject.name ? currentProject.name : '',
+      selectedShareProjectMeta: currentProject
+        ? {
+            client: currentProject.client || '',
+            stage: currentProject.stage || '',
+            amount: currentProject.amount || '',
+            nextDisplay: currentProject.nextDisplay || ''
+          }
+        : null
+    })
+  },
+
+  closeShareSheet() {
+    this.setData({
+      showShareSheet: false,
+      selectedShareProjectId: '',
+      selectedShareProjectName: '',
+      selectedShareProjectMeta: null
+    })
+  },
+
+  openShareFlow(event) {
+    const projectId = String(this.data.selectedShareProjectId || '').trim()
+    const mode = String(event.currentTarget.dataset.mode || 'info').trim() || 'info'
+    if (!projectId) {
+      return
+    }
+
+    this.setData({
+      showShareSheet: false,
+      selectedShareProjectId: '',
+      selectedShareProjectName: '',
+      selectedShareProjectMeta: null
+    })
+
+    wx.navigateTo({
+      url: `/pages/share-config/share-config?projectId=${projectId}&mode=${mode}`
+    })
+  },
+
   buildDefaultNextTaskDraft() {
     const base = new Date()
     base.setDate(base.getDate() + 1)
@@ -1260,6 +1331,12 @@ Page({
   },
 
   noop() {},
+
+  handleQuickEntryTap() {
+    wx.reLaunch({
+      url: '/pages/index/index?openQuickEntry=1'
+    })
+  },
 
   openPage(event) {
     const { url } = event.currentTarget.dataset

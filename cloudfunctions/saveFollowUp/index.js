@@ -371,7 +371,7 @@ exports.main = async (event) => {
         sourceOpenid: wxContext.OPENID,
         sourceName: actorName,
         actionUrl: `/pages/project-detail/project-detail?projectId=${sourceProjectId}&view=shared-out`,
-        actionLabel: '查看外发进展',
+        actionLabel: '进入外发项目',
         bizDate,
         dedupeKey: `shared_followed_${sourceShareRecordId}_${bizDate}`,
         extra: {

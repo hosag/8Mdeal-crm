@@ -173,7 +173,7 @@ function getSummaryModeOptions(hasAiSummary) {
     {
       key: 'system',
       label: '系统摘要',
-      desc: '直接使用系统摘要基底',
+      desc: '直接使用当前系统摘要',
       disabled: false
     },
     {
@@ -305,9 +305,9 @@ function buildSenderState(preview) {
   const mode = preview && preview.mode ? preview.mode.key : 'info'
 
   return {
-    heroEyebrow: '分享项目',
+    heroEyebrow: '分享设置',
     heroTitle: mode === 'outbound' ? '转交项目' : '发送资料',
-    heroSubtitle: '设置摘要与时间线后发送。',
+    heroSubtitle: '确认当前内容后发送。',
     stateTitle: '',
     stateDesc: '',
     stateTag: '',
@@ -330,16 +330,13 @@ function buildImportedState(preview) {
   return {
     heroEyebrow: '接手成功',
     heroTitle: '项目已进入“我的项目”',
-    heroSubtitle: '项目已写入你的项目列表，后续请直接在项目内继续推进。',
+    heroSubtitle: '项目已写入你的项目列表，后续直接在项目内推进。',
     stateTitle: '已完成接手',
-    stateDesc: '当前项目已进入你的“我的项目”。',
+    stateDesc: '当前项目已进入“我的项目”。',
     stateTag: '已接手',
     ownershipLabel: '已进入我的项目',
     contactPolicy: canDirectContact ? '可直接联系关键联系人' : '当前仅展示基础联系人',
-    stateSteps: [
-      '打开项目详情，确认阶段、联系人和历史跟进。',
-      '后续新增记录会继续写入你的项目时间线。'
-    ],
+    stateSteps: [],
     showStateCard: true,
     showVisibleFields: true,
     showImportedActions: true,
@@ -358,14 +355,11 @@ function buildViewerState(preview) {
     heroTitle: '资料卡',
     heroSubtitle: '当前仅可查看项目资料。',
     stateTitle: '仅查看',
-    stateDesc: '这次分享不转移管理权。',
+    stateDesc: '本次分享不转移管理权。',
     stateTag: '仅查看',
     ownershipLabel: '仍由分享方维护',
     contactPolicy: canDirectContact ? '按当前范围可直接联系' : '联系方式按当前范围隐藏',
-    stateSteps: [
-      '当前页面仅展示分享方开放的信息。',
-      '如需接手，请让分享方改用“转交项目”发送。'
-    ],
+    stateSteps: [],
     showStateCard: true,
     showVisibleFields: true,
     showImportedActions: false,
@@ -385,14 +379,11 @@ function buildLockedState(preview, receiverName) {
     heroTitle: '这张交接卡已失效',
     heroSubtitle: `${lockedReceiverName} 已先完成接手。`,
     stateTitle: '当前已锁定接手人',
-    stateDesc: '转交项目仅允许一位接手方接管。',
+    stateDesc: '该交接卡已被其他接手方使用。',
     stateTag: '已锁定',
     ownershipLabel: `当前由 ${lockedReceiverName} 继续维护`,
     contactPolicy: canDirectContact ? '当前展示内容仅用于识别项目背景' : '当前仅保留基础项目信息',
-    stateSteps: [
-      '这条交接记录已经完成接手，不会再次进入你的“我的项目”。',
-      '如需参与，请让分享方重新发起新的分享。'
-    ],
+    stateSteps: [],
     showStateCard: true,
     showVisibleFields: true,
     showImportedActions: false,

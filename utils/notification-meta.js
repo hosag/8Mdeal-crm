@@ -42,9 +42,9 @@ function getNotificationCategoryMeta(type) {
       key: 'shared',
       label: currentType === 'project_taken_over' ? '接手项目' : '外发动态',
       hintText: currentType === 'project_taken_over'
-        ? '进入后直接查看接手项目，完成首条跟进后这类提醒会自动收口。'
-        : '进入后直接看外发追踪与最新进展，查看后这条动态会自动收口。',
-      fallbackActionLabel: currentType === 'project_taken_over' ? '查看项目' : '查看外发进展',
+        ? '进入后直接继续推进项目，补第一条跟进后这类提醒会自动收口。'
+        : '进入后直接查看外发项目与最新进展，查看后这条动态会自动收口。',
+      fallbackActionLabel: currentType === 'project_taken_over' ? '进入我的项目' : '进入外发项目',
       autoResolveOnOpen: currentType !== 'project_taken_over'
     }
   }

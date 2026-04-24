@@ -4,67 +4,85 @@
   </view>
 
   <block wx:else>
-    <view class="hero rise-in">
+    <view class="hero rise-in share-config-hero">
       <view class="eyebrow-row">
-        <view class="eyebrow">分享项目</view>
+        <view class="eyebrow">分享设置</view>
         <view class="source-badge">{{dataSource}}</view>
       </view>
       <view class="hero-title">{{purposeTitle}}</view>
       <view class="hero-subtitle">{{purposeDesc}}</view>
     </view>
 
-    <view class="form-card section rise-in stagger-1">
-      <view class="line-between">
-        <view>
-          <view class="form-card-title">发送方式</view>
-          <view class="form-card-desc">{{activeMode === 'outbound' ? '转交后由接手方继续维护。' : '发送后仍由你继续维护。'}}</view>
-        </view>
+    <view class="form-card section rise-in stagger-1 share-config-shell">
+      <view class="section-header share-config-head">
+        <view class="section-title">卡片设置</view>
         <view class="status-badge is-brand">{{activeMode === 'outbound' ? '转交项目' : '发送资料'}}</view>
       </view>
-      <view class="compact-inline-metrics share-config-metrics">
-        <view class="compact-inline-item">{{activeMode === 'outbound' ? '接手推进' : '查看资料'}}</view>
-        <view class="compact-inline-item">{{activeMode === 'outbound' ? '接手方维护' : '仍由我维护'}}</view>
-        <view class="compact-inline-item">{{activeMode === 'outbound' ? '外发项目追踪' : '当前项目继续推进'}}</view>
+      <view class="share-config-overview">
+        <view class="share-config-project-name">{{preview.project.name}}</view>
+        <view class="compact-inline-metrics share-config-meta-pills">
+          <view wx:if="{{preview.showClient}}" class="compact-inline-item">客户 {{preview.project.client}}</view>
+          <view wx:if="{{preview.showStage}}" class="compact-inline-item">阶段 {{preview.project.stage}}</view>
+          <view wx:if="{{preview.showEstimatedAmount}}" class="compact-inline-item">预计 {{preview.project.estimatedAmount}}</view>
+          <view class="compact-inline-item">{{defaultRuleText}}</view>
+        </view>
+      </view>
+      <view class="share-config-fields">
+        <view class="section-header share-config-fields-head">
+          <view class="section-title share-config-fields-section-title">显示字段</view>
+          <view class="share-config-fields-count">{{visibleFields.length}} 项</view>
+        </view>
+        <view class="pill-row share-config-field-pills">
+          <view class="field-pill" wx:for="{{visibleFields}}" wx:key="*this">{{item}}</view>
+        </view>
       </view>
     </view>
 
-    <view class="form-card section rise-in stagger-2">
-      <view class="section-header">
-        <view class="section-title">默认规则</view>
+    <view class="form-card section rise-in stagger-2 share-config-range-card">
+      <view class="section-header share-config-range-head">
+        <view class="section-title">显示范围</view>
         <view class="section-link" bindtap="openScopeSettings">统一管理</view>
       </view>
-      <view class="form-card-desc">{{defaultRuleText}}</view>
+      <view class="compact-inline-metrics share-config-range-pills">
+        <view class="compact-inline-item">{{activeMode === 'outbound' ? '接手方查看并推进' : '对方仅查看资料'}}</view>
+        <view class="compact-inline-item">{{activeMode === 'outbound' ? '你在外发项目查看' : '项目仍由你维护'}}</view>
+      </view>
     </view>
 
     <view class="preview-card section rise-in stagger-3">
-      <view class="eyebrow">卡片预览</view>
-      <view class="preview-title">{{preview.project.name}}</view>
-      <view class="preview-meta">
-        <text wx:if="{{preview.showClient}}">客户：{{preview.project.client}}</text>
-        <text wx:if="{{preview.showStage}}">{{preview.showClient ? ' · ' : ''}}当前阶段：{{preview.project.stage}}</text>
-        <text wx:if="{{preview.showEstimatedAmount}}">{{preview.showClient || preview.showStage ? ' · ' : ''}}预计金额：{{preview.project.estimatedAmount}}</text>
+      <view class="section-header preview-section-header">
+        <view class="section-title">发送预览</view>
+        <view class="helper-text">卡片将按当前设置展示</view>
       </view>
-      <view wx:if="{{preview.showDescription}}" class="preview-block">
-        <view class="preview-block-title">项目信息</view>
-        <view class="preview-block-text">{{preview.project.description}}</view>
+      <view class="preview-overview">
+        <view class="preview-title">{{preview.project.name}}</view>
+        <view class="compact-inline-metrics preview-meta-pills">
+          <view wx:if="{{preview.showClient}}" class="compact-inline-item">客户 {{preview.project.client}}</view>
+          <view wx:if="{{preview.showStage}}" class="compact-inline-item">阶段 {{preview.project.stage}}</view>
+          <view wx:if="{{preview.showEstimatedAmount}}" class="compact-inline-item">预计 {{preview.project.estimatedAmount}}</view>
+        </view>
       </view>
-      <view wx:if="{{preview.showSummary}}" class="preview-block">
-        <view class="preview-block-title">项目摘要</view>
+      <view wx:if="{{preview.showSummary}}" class="preview-block preview-summary-block">
+        <view class="preview-block-title">卡片摘要</view>
         <view class="preview-block-text">{{preview.project.summary}}</view>
+      </view>
+      <view wx:if="{{preview.showDescription && !preview.showSummary}}" class="preview-block preview-summary-block">
+        <view class="preview-block-title">卡片摘要</view>
+        <view class="preview-block-text">{{preview.project.description}}</view>
       </view>
       <view wx:if="{{preview.showNextFollowUp}}" class="preview-block">
         <view class="preview-block-title">下一步动作</view>
         <view class="preview-block-text">{{preview.project.nextFollowUp}}</view>
       </view>
       <view class="preview-contacts">
-        <view class="preview-block-title">联系人</view>
+        <view class="preview-block-title">显示联系人</view>
         <view wx:if="{{preview.contacts.length}}" class="contact-summary" wx:for="{{preview.contacts}}" wx:key="id">
           <view class="contact-name">{{item.name}}</view>
           <view class="contact-role">{{item.role}} · {{item.contactHint}}</view>
           <view class="sheet-meta" wx:if="{{item.phone}}">电话 {{item.phone}}</view>
           <view class="sheet-meta" wx:if="{{item.wechat}}">微信 {{item.wechat}}</view>
         </view>
-        <view wx:if="{{!preview.contacts.length}}" class="card-subtitle">当前范围下不展示联系人，或项目尚未录入联系人。</view>
+        <view wx:if="{{!preview.contacts.length}}" class="card-subtitle">当前范围不展示联系人。</view>
       </view>
     </view>
 

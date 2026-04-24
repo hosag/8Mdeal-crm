@@ -297,5 +297,11 @@ Page({
       ...this.data.appearanceSettings,
       themeKey
     }, 'themeKey')
+  },
+
+  handleQuickEntryTap() {
+    wx.reLaunch({
+      url: '/pages/index/index?openQuickEntry=1'
+    })
   }
 })

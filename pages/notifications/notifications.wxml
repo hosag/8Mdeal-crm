@@ -66,29 +66,33 @@
     </view>
 
     <view class="section rise-in stagger-2">
-      <view class="notification-card {{item.cardClassName}}" wx:for="{{notifications}}" wx:key="id" data-id="{{item.id}}" data-type="{{item.type}}" data-url="{{item.actionUrl}}" data-auto-resolve="{{item.autoResolveOnOpen ? 1 : ''}}" bindtap="openNotification">
+      <view class="notification-card {{item.cardClassName}} {{item.isSharedCard ? 'is-shared-card' : ''}}" wx:for="{{notifications}}" wx:key="id" data-id="{{item.id}}" data-type="{{item.type}}" data-url="{{item.actionUrl}}" data-auto-resolve="{{item.autoResolveOnOpen ? 1 : ''}}" bindtap="openNotification">
         <view class="notification-top">
           <view class="notification-main">
             <view class="notification-title-row">
               <view wx:if="{{item.toneText}}" class="notification-tone-pill {{item.toneClassName}}">{{item.toneText}}</view>
               <view class="notification-title">{{item.title}}</view>
-              <view class="status-badge {{item.levelClassName}}">{{item.levelText}}</view>
+              <view wx:if="{{item.showLevelBadge}}" class="status-badge {{item.levelClassName}}">{{item.levelText}}</view>
             </view>
             <view class="notification-project">{{item.projectName}} · {{item.createdAtText}}</view>
           </view>
           <view class="notification-side">
             <view class="field-pill {{item.statusClassName}}">{{item.statusText}}</view>
-            <view wx:if="{{item.cardActionText}}" class="notification-card-action-text">{{item.cardActionText}}</view>
+            <view wx:if="{{item.cardActionText && !item.isSharedCard}}" class="notification-card-action-text">{{item.cardActionText}}</view>
           </view>
         </view>
 
         <view class="pill-row notification-pill-row">
           <view class="soft-badge notification-category-badge">{{item.categoryLabel}}</view>
-          <view wx:if="{{item.sourceName}}" class="field-pill notification-source-pill">来自 {{item.sourceName}}</view>
+          <view wx:if="{{item.sourceName}}" class="field-pill notification-source-pill">{{item.sourcePrefixText}} {{item.sourceName}}</view>
         </view>
 
         <view class="notification-summary">{{item.summary}}</view>
-        <view class="helper-text notification-hint">{{item.hintText}}</view>
+        <view wx:if="{{!item.isSharedCard}}" class="helper-text notification-hint">{{item.hintText}}</view>
+        <view wx:if="{{item.isSharedCard}}" class="notification-shared-footer">
+          <view class="helper-text notification-hint is-shared">{{item.hintText}}</view>
+          <view wx:if="{{item.cardActionText}}" class="notification-shared-entry">{{item.cardActionText}}</view>
+        </view>
 
         <view wx:if="{{item.hasSecondaryActions}}" class="inline-actions compact-inline-actions notification-actions">
           <view
@@ -109,7 +113,7 @@
         wx:if="{{!notifications.length}}"
         appearance-page-class="{{appearancePageClass}}"
         title="当前筛选下暂无消息"
-        desc="待办、提醒和业务动态会自动显示在这里。"
+        desc="待办、提醒和外发动态会自动显示在这里。"
         image="/assets/illustrations/empty-projects.svg"
         actionText="重新加载"
         bind:action="fetchNotifications"

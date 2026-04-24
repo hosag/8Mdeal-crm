@@ -6,22 +6,22 @@ const SHARE_PURPOSES = {
   info: {
     key: 'info',
     title: '发送资料',
-    heroTitle: '把资料发出去，不转走项目',
-    heroDesc: '适合资料同步与授权查看。对方只看你开放的内容，不接管项目。',
+    heroTitle: '发送资料',
+    heroDesc: '你继续维护项目。',
     permissionText: '查看资料',
     ownershipText: '仍由我维护',
     followText: '后续仍在当前项目里推进',
-    actionText: '生成资料卡并转发'
+    actionText: '进入分享卡设置'
   },
   outbound: {
     key: 'outbound',
     title: '转交项目',
-    heroTitle: '把项目正式转给接手方',
-    heroDesc: '适合正式交接。对方打开后接手项目，你在“外发项目”里查看后续。',
+    heroTitle: '转交项目',
+    heroDesc: '后续在“外发项目”查看。',
     permissionText: '接手后继续推进',
     ownershipText: '接手方维护',
-    followText: '你到“外发项目”里追踪进展',
-    actionText: '生成交接卡并转发'
+    followText: '后续在“外发项目”查看进展',
+    actionText: '进入分享卡设置'
   }
 }
 
@@ -64,13 +64,13 @@ function buildVisibleFields(preview) {
   return fields
 }
 
-function buildDefaultRuleText(preview, purpose) {
+function buildDefaultRuleText(preview) {
   const visibleFields = buildVisibleFields(preview)
   const contacts = Array.isArray(preview && preview.contacts) ? preview.contacts : []
   const canDirectContact = contacts.some((item) => item.phone || item.wechat)
   const scopeName = preview && preview.tag ? preview.tag.name : '默认规则'
   const scopeSummary = canDirectContact ? '包含联系方式' : '隐藏电话微信'
-  return `按“${scopeName}”规则展示 ${visibleFields.length} 项信息，${scopeSummary}。`
+  return `${scopeName} · ${visibleFields.length} 项字段 · ${scopeSummary}`
 }
 
 function hasField(tag, fieldName) {
@@ -102,6 +102,7 @@ Page({
     activeTag: 't1',
     shareProject: null,
     preview: null,
+    visibleFields: [],
     purposeTitle: '',
     purposeDesc: '',
     defaultRuleText: '',
@@ -151,12 +152,14 @@ Page({
   syncPreview() {
     const preview = buildSharePreview(this.data.shareProject, this.data.activeMode, this.data.activeTag, this.data.shareTags)
     const purpose = SHARE_PURPOSES[this.data.activeMode] || SHARE_PURPOSES.info
+    const visibleFields = buildVisibleFields(preview)
 
     this.setData({
       preview,
+      visibleFields,
       purposeTitle: purpose.heroTitle,
       purposeDesc: purpose.heroDesc,
-      defaultRuleText: buildDefaultRuleText(preview, purpose),
+      defaultRuleText: buildDefaultRuleText(preview),
       actionText: purpose.actionText
     })
   },

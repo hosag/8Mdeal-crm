@@ -1,4 +1,4 @@
-const { loadProjectDetailData, updateTaskStatusData, markNotificationReadData, resolveNotificationData } = require('../../services/data')
+const { loadProjectDetailData, updateTaskStatusData, markNotificationReadData, resolveNotificationData, saveProjectData } = require('../../services/data')
 const { buildProjectDetailEntryContext } = require('../../utils/navigation-context')
 const { touchNotificationSync } = require('../../utils/notification-sync')
 const { syncPageAppearance } = require('../../utils/appearance')
@@ -22,14 +22,16 @@ const SHARE_ACTION_OPTIONS = [
   {
     key: 'info',
     title: '发送资料',
-    desc: '发资料给对方查看，不转移项目。',
-    badge: '仅查看'
+    desc: '对方查看资料，你继续维护。',
+    badge: '资料卡',
+    note: '项目仍留在我的项目'
   },
   {
     key: 'outbound',
     title: '转交项目',
-    desc: '把项目交给对方，后续由对方推进。',
-    badge: '接手管理权'
+    desc: '对方接手项目，你在外发项目查看进展。',
+    badge: '交接卡',
+    note: '后续在外发项目查看'
   }
 ]
 
@@ -151,58 +153,22 @@ function buildHeroMetrics(projectDetail, contacts, shareHistory, isReadOnlyShare
     {
       label: '预计金额',
       value: detail.estimatedAmount || '0',
-      note: '当前项目体量'
+      note: '项目体量'
     },
     {
       label: '已签金额',
       value: detail.actualAmount || '0',
-      note: '已确认成交'
+      note: '已成交'
     },
     {
       label: '联系人',
       value: `${contactCount} 位`,
-      note: contactCount ? '已录入关键联系人' : '暂无联系人'
+      note: contactCount ? '已录入' : '待补录'
     },
     {
       label: isReadOnlySharedOut ? '外发状态' : '资料发送',
       value: isReadOnlySharedOut ? '外发中' : `${infoShareCount} 次`,
-      note: isReadOnlySharedOut ? '当前页为外发只读视图' : (infoShareCount ? '已发送资料卡' : '尚未发送资料')
-    }
-  ]
-}
-
-function buildSummaryHighlights(projectDetail, contacts, shareHistory, isReadOnlySharedOut) {
-  const detail = projectDetail || {}
-  const contactsList = Array.isArray(contacts) ? contacts : []
-  const historyList = Array.isArray(shareHistory) ? shareHistory : []
-  const latestShare = historyList[0] || null
-
-  return [
-    {
-      label: '当前阶段',
-      value: detail.stage || '线索',
-      note: getStageFocus(detail.stage)
-    },
-    {
-      label: '下次跟进',
-      value: detail.nextFollowUp || '未设置',
-      note: detail.nextFollowUp && detail.nextFollowUp !== '待设置'
-        ? '按约定时间继续推进'
-        : '首页会自动汇总待办'
-    },
-    {
-      label: '联系人',
-      value: contactsList.length ? `${contactsList.length} 位` : '未录入',
-      note: contactsList.length
-        ? `当前主要对接 ${contactsList[0].name || '联系人'}`
-        : '当前未录入联系人'
-    },
-    {
-      label: '资料发送',
-      value: isReadOnlySharedOut ? '外发只读' : (historyList.length ? `${historyList.length} 次发送` : '未发送'),
-      note: isReadOnlySharedOut
-        ? '后续推进改在“外发项目”追踪'
-        : (latestShare ? `最近一次状态：${latestShare.status}` : '当前项目还没有资料发送记录')
+      note: isReadOnlySharedOut ? '只读追踪' : (infoShareCount ? '资料记录' : '未发送')
     }
   ]
 }
@@ -234,30 +200,42 @@ function buildProjectOverview(projectDetail, contacts, followTimeline, shareHist
       : '暂无联系人',
     recordCountText: totalRecords ? `${totalRecords} 条` : '暂无记录',
     latestFollowText: latestTimelineItem
-      ? `${latestTimelineItem.time || '--:--'} · ${(latestTimelineItem.actorName || '当前用户')}回填`
-      : '暂无回填记录',
+      ? `${latestTimelineItem.time || '--:--'} · ${(latestTimelineItem.actorName || '当前用户')}`
+      : '暂无记录',
     shareStatusText: isReadOnlySharedOut
-      ? '当前项目已转入外发追踪视图'
-      : (latestShare ? `最近一次资料发送状态：${latestShare.status}` : '当前项目还没有资料发送记录')
+      ? '外发追踪中'
+      : (latestShare ? `最近发送 ${latestShare.status}` : '暂无资料发送')
   }
 }
 
-function buildContactSummary(contacts) {
+function buildContactMeta(contacts) {
   const list = Array.isArray(contacts) ? contacts : []
   if (!list.length) {
-    return '暂无联系人。'
+    return {
+      countText: '',
+      primaryText: ''
+    }
   }
 
   const first = list[0]
-  return `已录入 ${list.length} 位联系人，当前主要对接 ${first.name || '联系人'}${first.role ? `（${first.role}）` : ''}。`
+  return {
+    countText: `已录入 ${list.length} 位`,
+    primaryText: `主要对接 ${first.name || '联系人'}${first.role ? ` / ${first.role}` : ''}`
+  }
 }
 
-function buildTimelineSummary(followTimeline) {
-  const total = countTimelineRecords(followTimeline)
-  if (!total) {
-    return '暂无跟进记录。新增跟进后会按时间沉淀在这里。'
+function buildEmptyContactDraft(projectDetail = {}) {
+  return {
+    name: '',
+    role: '',
+    phone: '',
+    wechat: '',
+    company: String(projectDetail.client || '').trim()
   }
+}
 
+function buildTimelineMeta(followTimeline) {
+  const total = countTimelineRecords(followTimeline)
   const latest = getLatestTimelineItem(followTimeline)
   let collaboratorCount = 0
   let taskDoneCount = 0
@@ -268,45 +246,39 @@ function buildTimelineSummary(followTimeline) {
     taskDoneCount += items.filter((item) => item && item.typeKey === 'task_done').length
   })
 
-  const parts = [
-    `共 ${total} 条记录`,
-    `最新一条由 ${(latest && latest.actorName) || '当前用户'} 在 ${(latest && latest.time) || '--:--'} 录入`
-  ]
-
-  if (taskDoneCount) {
-    parts.push(`任务完成 ${taskDoneCount} 条`)
+  return {
+    totalText: total ? `共 ${total} 条记录` : '暂无跟进记录',
+    latestText: latest
+      ? `最近 ${(latest.time || '--:--')} · ${(latest.actorName || '当前用户')}`
+      : '等待首条记录',
+    extraText: taskDoneCount
+      ? `任务完成 ${taskDoneCount} 条`
+      : (collaboratorCount ? `接手方推进 ${collaboratorCount} 条` : '')
   }
-
-  if (collaboratorCount) {
-    parts.push(`接手方推进 ${collaboratorCount} 条`)
-  }
-
-  return parts.join(' · ')
 }
 
-function buildShareHistorySummary(shareHistory) {
+function buildShareHistoryMeta(shareHistory) {
   const list = Array.isArray(shareHistory) ? shareHistory : []
   if (!list.length) {
-    return ''
+    return {
+      totalText: '暂无资料发送',
+      openedText: '等待首次发送',
+      unopenedText: ''
+    }
   }
 
   const openedCount = list.filter((item) => item.status === '已打开').length
   const unopenedCount = list.filter((item) => item.status === '未打开').length
 
-  return `共 ${list.length} 次资料发送 · 已打开 ${openedCount} 次 · 未打开 ${unopenedCount} 次`
+  return {
+    totalText: `共 ${list.length} 次发送`,
+    openedText: `已打开 ${openedCount} 次`,
+    unopenedText: `未打开 ${unopenedCount} 次`
+  }
 }
 
-function buildTaskSummary(taskSummary) {
-  const summary = taskSummary || {}
-  const openCount = Number(summary.openCount || 0)
-  const overdueCount = Number(summary.overdueCount || 0)
-  const completedCount = Number(summary.completedCount || 0)
-
-  if (!Number(summary.total || 0)) {
-    return '暂无推进任务。'
-  }
-
-  return `未完成 ${openCount} 条 · 逾期 ${overdueCount} 条 · 已完成 ${completedCount} 条`
+function normalizeShareModeLabel(mode) {
+  return String(mode || '').trim() === '发送资料' ? '发送资料' : '转交项目'
 }
 
 function normalizeShareHistory(records) {
@@ -315,40 +287,50 @@ function normalizeShareHistory(records) {
     const viewerCount = Number(item.viewerCount || 0)
     let statusSummary = '已发出，等待对方查看'
     let collaborationSummary = isOutbound
-      ? '接收方打开后会自动进入对方“我的项目”'
-      : '这类分享只用于信息同步，不进入对方“我的项目”'
+      ? '当前还在等待对方打开交接卡。'
+      : '本次分享仍由你继续维护。'
 
     if (item.status === '已打开') {
       statusSummary = isOutbound
-        ? '对方已查看，正在等待接手'
-        : (viewerCount > 1 ? `已有 ${viewerCount} 人查看资料卡` : '对方已查看卡片')
+        ? '对方已查看，等待接手'
+        : (viewerCount > 1 ? `已有 ${viewerCount} 人查看资料` : '对方已查看资料')
       collaborationSummary = isOutbound
-        ? '如果对方准备继续推进，下一次打开会自动进入对方“我的项目”'
-        : (viewerCount > 1 ? '这是查看型分享，后续推进仍在你自己的项目里完成' : '后续推进仍在你自己的项目里完成')
+        ? `${item.receiverName || item.receiverOpenidMasked || '对方'} 已查看交接卡，暂未接手项目。`
+        : `${item.receiverName || item.receiverOpenidMasked || '对方'} 已查看资料卡，本次分享仍由你继续维护。`
     }
 
     if (item.status === '已导入') {
       statusSummary = '对方已接手项目'
-      collaborationSummary = '项目已进入对方“我的项目”，等待对方补第一条推进记录'
+      collaborationSummary = '项目已进入对方“我的项目”，等待首条推进记录。'
     }
 
     if (item.status === '已跟进') {
-      statusSummary = `对方已新增推进记录 ${Number(item.collaboratorFollowCount || 0)} 条`
+      statusSummary = `对方已继续跟进 ${Number(item.collaboratorFollowCount || 0)} 条`
       collaborationSummary = item.collaboratorLatestFollowAt
-        ? `最近一次推进记录：${item.collaboratorLatestFollowAt}`
-        : '可以去“外发项目”查看推进时间线'
+        ? `${item.receiverName || item.receiverOpenidMasked || '对方'} 最近更新 ${item.collaboratorLatestFollowAt}`
+        : '可在“外发项目”查看完整时间线'
     }
 
     return {
       ...item,
+      mode: normalizeShareModeLabel(item.mode),
+      displayStatus: item.statusText || item.status || '未打开',
+      receiverLabel: item.receiverName || item.receiverOpenidMasked || '暂未识别',
       statusSummary,
       collaborationSummary,
+      receiverSummary: isOutbound
+        ? (item.status === '已跟进' || item.status === '已导入'
+          ? `${item.receiverName || item.receiverOpenidMasked || '对方'} 已接手项目`
+          : (item.status === '已打开'
+            ? `${item.receiverName || item.receiverOpenidMasked || '对方'} 已查看交接卡`
+            : '等待接手方打开交接卡'))
+        : `${item.receiverName || item.receiverOpenidMasked || '对方'}${item.status === '已打开' ? ' 已查看资料卡' : ' 尚未查看资料卡'}`,
       progressText: isOutbound
         ? (item.status === '已跟进'
           ? `已推进 ${Number(item.collaboratorFollowCount || 0)} 条`
           : (item.status === '已导入' ? '已接手' : (item.status === '已打开' ? '已查看，待接手' : '等待查看')))
         : (item.status === '已打开'
-          ? (viewerCount > 1 ? `${viewerCount}人已查看` : '信息已查看')
+          ? (viewerCount > 1 ? `${viewerCount}人已查看` : '资料已查看')
           : '等待查看'),
       collaborationCountText: isOutbound ? `${Number(item.collaboratorFollowCount || 0)} 条` : '查看型分享',
       statusBadgeClass: item.status === '已跟进'
@@ -374,6 +356,9 @@ Page({
     followTimeline: [],
     shareHistory: [],
     showContacts: false,
+    showAddContactSheet: false,
+    isSavingContact: false,
+    contactDraft: buildEmptyContactDraft(),
     showShareSheet: false,
     shareActionOptions: SHARE_ACTION_OPTIONS,
     showTaskCompleteSheet: false,
@@ -399,12 +384,21 @@ Page({
     nextTaskTemplates: NEXT_TASK_TEMPLATES,
     projectBadges: [],
     heroMetrics: [],
-    summaryHighlights: [],
-    contactSummaryText: '',
-    taskSummaryText: '',
-    timelineSummaryText: '',
-    shareHistorySummaryText: '',
     projectOverview: {},
+    contactMeta: {
+      countText: '',
+      primaryText: ''
+    },
+    timelineMeta: {
+      totalText: '',
+      latestText: '',
+      extraText: ''
+    },
+    shareHistoryMeta: {
+      totalText: '',
+      openedText: '',
+      unopenedText: ''
+    },
     entryContextText: '',
     isShareLoading: false,
     isSharing: false,
@@ -507,7 +501,6 @@ Page({
         shareHistory: normalizedShareHistory,
         projectBadges: buildProjectBadges(data.projectDetail, isReadOnlySharedOut),
         heroMetrics: buildHeroMetrics(data.projectDetail, data.contacts, normalizedShareHistory, isReadOnlySharedOut),
-        summaryHighlights: buildSummaryHighlights(data.projectDetail, data.contacts, normalizedShareHistory, isReadOnlySharedOut),
         projectOverview: buildProjectOverview(
           data.projectDetail,
           data.contacts,
@@ -515,10 +508,9 @@ Page({
           normalizedShareHistory,
           isReadOnlySharedOut
         ),
-        contactSummaryText: buildContactSummary(data.contacts),
-        taskSummaryText: buildTaskSummary(data.taskSummary),
-        timelineSummaryText: buildTimelineSummary(data.followTimeline),
-        shareHistorySummaryText: buildShareHistorySummary(normalizedShareHistory),
+        contactMeta: buildContactMeta(data.contacts),
+        timelineMeta: buildTimelineMeta(data.followTimeline),
+        shareHistoryMeta: buildShareHistoryMeta(normalizedShareHistory),
         entryContextText: buildProjectDetailEntryContext(
           this.data.viewMode,
           this.data.entrySource,
@@ -622,6 +614,119 @@ Page({
     this.setData({
       showContacts: !this.data.showContacts
     })
+  },
+
+  openAddContactSheet() {
+    if (!this.data.projectId || this.data.isReadOnlySharedOut || this.data.isSavingContact) {
+      return
+    }
+
+    this.setData({
+      showAddContactSheet: true,
+      contactDraft: buildEmptyContactDraft(this.data.projectDetail)
+    })
+  },
+
+  closeAddContactSheet() {
+    if (this.data.isSavingContact) {
+      return
+    }
+
+    this.setData({
+      showAddContactSheet: false,
+      contactDraft: buildEmptyContactDraft(this.data.projectDetail)
+    })
+  },
+
+  onAddContactInput(event) {
+    const field = event.currentTarget.dataset.field
+    if (!field) {
+      return
+    }
+
+    this.setData({
+      [`contactDraft.${field}`]: String(event.detail.value || '')
+    })
+  },
+
+  async saveContactDraft() {
+    if (!this.data.projectId || this.data.isSavingContact || this.data.isReadOnlySharedOut) {
+      return
+    }
+
+    const draft = this.data.contactDraft || {}
+    const nextContact = {
+      name: String(draft.name || '').trim(),
+      role: String(draft.role || '').trim(),
+      phone: String(draft.phone || '').trim(),
+      wechat: String(draft.wechat || '').trim(),
+      company: String(draft.company || '').trim()
+    }
+
+    if (!nextContact.name) {
+      wx.showToast({
+        title: '请先填写联系人姓名',
+        icon: 'none'
+      })
+      return
+    }
+
+    const currentContacts = Array.isArray(this.data.contacts) ? this.data.contacts : []
+    const contactsPayload = currentContacts
+      .map((item) => ({
+        contactId: item.id || '',
+        name: String(item.name || '').trim(),
+        role: String(item.role || '').trim(),
+        phone: String(item.phone || '').trim(),
+        wechat: String(item.wechat || '').trim(),
+        company: String(item.company || '').trim()
+      }))
+      .concat(nextContact)
+
+    const detail = this.data.projectDetail || {}
+
+    this.setData({
+      isSavingContact: true
+    })
+
+    try {
+      const result = await saveProjectData({
+        projectId: this.data.projectId,
+        projectName: String(detail.name || '').trim(),
+        clientName: String(detail.client || '').trim(),
+        stage: String(detail.stage || '线索').trim(),
+        estimatedAmount: detail.estimatedAmountValue || 0,
+        expectedCommission: detail.expectedCommissionValue || 0,
+        tagsText: Array.isArray(detail.tags) ? detail.tags.join(' / ') : '',
+        description: String(detail.description || '').trim(),
+        contacts: contactsPayload
+      })
+
+      if (!result || !result.ok) {
+        throw new Error(result && result.message ? result.message : '联系人保存失败')
+      }
+
+      wx.showToast({
+        title: '联系人已添加',
+        icon: 'success'
+      })
+
+      this.setData({
+        showAddContactSheet: false,
+        contactDraft: buildEmptyContactDraft(this.data.projectDetail)
+      })
+
+      await this.fetchProjectDetail()
+    } catch (error) {
+      wx.showToast({
+        title: error && error.message ? error.message : '联系人保存失败',
+        icon: 'none'
+      })
+    } finally {
+      this.setData({
+        isSavingContact: false
+      })
+    }
   },
 
   goEditProject() {

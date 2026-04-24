@@ -421,6 +421,17 @@
   font-size: 16rpx;
 }
 
+.home-page .section-header {
+  margin-bottom: 12rpx;
+}
+
+.home-page .section-title {
+  font-size: 22rpx;
+  font-weight: 600;
+  letter-spacing: 1rpx;
+  color: var(--theme-text-muted);
+}
+
 .home-page .practical-todo-card {
   padding: 22rpx;
   border-radius: 28rpx;
@@ -511,6 +522,383 @@
   padding: 0 16rpx;
   border-radius: 18rpx;
   font-size: 22rpx;
+}
+
+.page-shell.home-page.appearance-font-large .section-title {
+  font-size: 26rpx;
+}
+
+.page-shell.home-page.appearance-font-readable .section-title {
+  font-size: 34rpx;
+}
+
+.quick-entry-mask {
+  z-index: 21;
+}
+
+.quick-entry-sheet {
+  z-index: 22;
+  top: 36vh;
+  bottom: 0;
+  height: auto;
+  max-height: none;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding-bottom: calc(26rpx + env(safe-area-inset-bottom));
+}
+
+.quick-entry-sheet.is-editing {
+  top: 16vh;
+}
+
+.quick-entry-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12rpx;
+}
+
+.quick-entry-head-main {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.quick-entry-head .card-title {
+  line-height: 1.18;
+}
+
+.quick-entry-head .card-subtitle {
+  margin-top: 4rpx;
+  line-height: 1.45;
+}
+
+.quick-entry-source {
+  flex: 0 0 auto;
+  min-height: 38rpx;
+  padding: 0 12rpx;
+  font-size: 18rpx;
+}
+
+.quick-entry-mode-wall {
+  margin-top: 12rpx;
+  gap: 8rpx;
+}
+
+.quick-entry-mode-chip,
+.quick-entry-stage-chip,
+.quick-entry-method-chip,
+.quick-entry-task-chip {
+  min-height: 44rpx;
+  padding: 0 16rpx;
+  font-size: 19rpx;
+}
+
+.quick-entry-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 4rpx;
+  padding-bottom: 148rpx;
+}
+
+.quick-entry-body .quick-entry-field-group {
+  margin-top: 14rpx;
+}
+
+.quick-entry-body .field-label {
+  margin-bottom: 8rpx;
+}
+
+.quick-entry-sheet .input-sim,
+.quick-entry-sheet .textarea-sim,
+.quick-entry-sheet .picker-sim {
+  min-height: 82rpx;
+  padding: 18rpx 20rpx;
+  border-radius: 20rpx;
+}
+
+.quick-entry-sheet .input-native {
+  height: 40rpx;
+  min-height: 40rpx;
+  line-height: 40rpx;
+}
+
+.quick-entry-sheet .picker-value {
+  font-size: 25rpx;
+}
+
+.quick-entry-project-card {
+  margin-top: 14rpx;
+  padding: 16rpx 18rpx 18rpx;
+  border-radius: 22rpx;
+  background: var(--theme-soft-block-bg);
+  box-shadow: inset 0 0 0 2rpx var(--theme-divider);
+}
+
+.quick-entry-project-head {
+  align-items: flex-start;
+  gap: 12rpx;
+}
+
+.quick-entry-project-summary {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.quick-entry-project-head-actions {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8rpx;
+}
+
+.quick-entry-inline-label {
+  margin-bottom: 2rpx;
+}
+
+.quick-entry-selected-project {
+  font-size: 26rpx;
+  font-weight: 700;
+  color: var(--theme-title);
+  line-height: 1.3;
+}
+
+.quick-entry-selected-project.is-placeholder {
+  color: var(--theme-placeholder);
+}
+
+.quick-entry-project-stage {
+  flex: 0 0 auto;
+}
+
+.quick-entry-project-link {
+  font-size: 21rpx;
+  line-height: 1.2;
+}
+
+.quick-entry-project-meta {
+  margin-top: 6rpx;
+}
+
+.quick-entry-project-suggest-wall {
+  gap: 8rpx;
+  margin-top: 12rpx;
+}
+
+.quick-entry-project-suggest-chip {
+  min-height: 42rpx;
+  padding: 0 14rpx;
+  font-size: 18rpx;
+}
+
+.quick-entry-project-search {
+  margin-top: 10rpx;
+}
+
+.quick-entry-project-search .projects-search-input {
+  padding-right: 96rpx;
+  background: var(--theme-glass-bg);
+}
+
+.quick-entry-project-list {
+  margin-top: 10rpx;
+}
+
+.quick-entry-project-option {
+  padding: 14rpx 16rpx;
+  border-radius: 20rpx;
+  background: var(--theme-glass-bg);
+  box-shadow: inset 0 0 0 2rpx var(--theme-divider);
+}
+
+.quick-entry-project-option + .quick-entry-project-option {
+  margin-top: 8rpx;
+}
+
+.quick-entry-project-option.is-active {
+  background: var(--theme-summary-bg);
+  box-shadow: inset 0 0 0 2rpx var(--theme-brand-bg);
+}
+
+.quick-entry-project-option-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12rpx;
+}
+
+.quick-entry-project-option-name {
+  min-width: 0;
+  flex: 1 1 auto;
+  font-size: 24rpx;
+  font-weight: 700;
+  color: var(--theme-title);
+  line-height: 1.35;
+}
+
+.quick-entry-project-option-pill {
+  flex: 0 0 auto;
+  min-height: 38rpx;
+  padding: 0 12rpx;
+  font-size: 18rpx;
+}
+
+.quick-entry-project-option-meta {
+  margin-top: 4rpx;
+}
+
+.quick-entry-project-option-brief {
+  margin-top: 6rpx;
+  font-size: 21rpx;
+  line-height: 1.5;
+  color: var(--theme-text-soft);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.quick-entry-empty {
+  margin-top: 8rpx;
+}
+
+.quick-entry-stage-wall,
+.quick-entry-method-wall,
+.quick-entry-task-wall {
+  gap: 8rpx;
+  margin-top: 8rpx;
+}
+
+.quick-entry-time-row {
+  gap: 10rpx;
+}
+
+.quick-entry-time-row .picker-block {
+  flex: 1 1 0;
+}
+
+.quick-entry-textarea {
+  min-height: 136rpx;
+  line-height: 1.64;
+}
+
+.quick-entry-textarea.is-compact {
+  min-height: 88rpx;
+}
+
+.quick-entry-textarea.is-small {
+  min-height: 92rpx;
+}
+
+.quick-entry-success-card {
+  margin-top: 8rpx;
+  padding: 24rpx 22rpx 22rpx;
+  border-radius: 26rpx;
+  background: linear-gradient(180deg, rgba(255, 252, 247, 0.98) 0%, rgba(246, 241, 233, 0.96) 100%);
+  box-shadow:
+    inset 0 0 0 2rpx var(--theme-divider),
+    0 18rpx 34rpx rgba(24, 39, 51, 0.06);
+}
+
+.quick-entry-success-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40rpx;
+  padding: 0 14rpx;
+  border-radius: 999rpx;
+  background: var(--theme-success-bg);
+  color: var(--theme-success-text);
+  font-size: 18rpx;
+  font-weight: 700;
+}
+
+.quick-entry-success-title {
+  margin-top: 14rpx;
+  font-size: 34rpx;
+  font-weight: 700;
+  line-height: 1.22;
+  color: var(--theme-title);
+}
+
+.quick-entry-success-detail {
+  margin-top: 8rpx;
+  font-size: 24rpx;
+  line-height: 1.62;
+  color: var(--theme-text-secondary);
+}
+
+.quick-entry-success-project {
+  margin-top: 12rpx;
+  padding-top: 12rpx;
+  border-top: 1rpx solid var(--theme-divider);
+  font-size: 22rpx;
+  font-weight: 700;
+  line-height: 1.5;
+  color: var(--theme-accent-strong);
+}
+
+.quick-entry-actions.is-fixed {
+  flex: 0 0 auto;
+  margin-top: 12rpx;
+  gap: 12rpx;
+  padding-top: 14rpx;
+  padding-bottom: 2rpx;
+  border-top: 2rpx solid var(--theme-divider);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0) 0%, var(--theme-sheet-bg) 22%, var(--theme-sheet-bg) 100%);
+  backdrop-filter: blur(16rpx);
+}
+
+.quick-entry-actions.is-fixed.is-editing {
+  margin-top: 10rpx;
+}
+
+.quick-entry-actions .btn-primary,
+.quick-entry-actions .btn-ghost {
+  height: 82rpx;
+  border-radius: 22rpx;
+}
+
+.quick-entry-cancel-btn {
+  flex: 0 0 160rpx;
+}
+
+.quick-entry-submit-btn {
+  flex: 1 1 auto;
+  box-shadow: var(--theme-button-shadow);
+}
+
+.quick-entry-success-actions {
+  flex: 0 0 auto;
+  margin-top: 10rpx;
+  padding-top: 12rpx;
+  padding-bottom: 2rpx;
+  border-top: 2rpx solid var(--theme-divider);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0) 0%, var(--theme-sheet-bg) 22%, var(--theme-sheet-bg) 100%);
+  backdrop-filter: blur(16rpx);
+}
+
+.quick-entry-success-primary {
+  width: 100%;
+  height: 84rpx;
+  border-radius: 22rpx;
+  box-shadow: var(--theme-button-shadow);
+}
+
+.quick-entry-success-secondary-row {
+  gap: 12rpx;
+  margin-top: 10rpx;
+}
+
+.quick-entry-success-secondary {
+  flex: 1 1 0;
+  height: 78rpx;
+  border-radius: 20rpx;
 }
 
 .task-complete-mask {
@@ -618,6 +1006,41 @@
   font-size: 30rpx;
 }
 
+.quick-entry-sheet.appearance-font-large .sheet-title,
+.quick-entry-sheet.appearance-font-large .card-title {
+  font-size: 30rpx;
+}
+
+.quick-entry-sheet.appearance-font-large .card-subtitle,
+.quick-entry-sheet.appearance-font-large .sheet-close,
+.quick-entry-sheet.appearance-font-large .field-label,
+.quick-entry-sheet.appearance-font-large .helper-text {
+  font-size: 26rpx;
+}
+
+.quick-entry-sheet.appearance-font-large .chip,
+.quick-entry-sheet.appearance-font-large .field-pill,
+.quick-entry-sheet.appearance-font-large .status-badge {
+  font-size: 24rpx;
+}
+
+.quick-entry-sheet.appearance-font-large .input-sim,
+.quick-entry-sheet.appearance-font-large .textarea-sim,
+.quick-entry-sheet.appearance-font-large .picker-sim,
+.quick-entry-sheet.appearance-font-large .btn-primary,
+.quick-entry-sheet.appearance-font-large .btn-ghost {
+  font-size: 30rpx;
+}
+
+.quick-entry-sheet.appearance-font-large .quick-entry-success-title {
+  font-size: 38rpx;
+}
+
+.quick-entry-sheet.appearance-font-large .quick-entry-success-detail,
+.quick-entry-sheet.appearance-font-large .quick-entry-success-project {
+  font-size: 28rpx;
+}
+
 .task-complete-sheet.appearance-font-large .sheet-close,
 .task-complete-sheet.appearance-font-large .field-label,
 .task-complete-sheet.appearance-font-large .helper-text {
@@ -640,6 +1063,41 @@
 .task-complete-sheet.appearance-font-readable .sheet-title,
 .task-complete-sheet.appearance-font-readable .task-complete-toggle-title {
   font-size: 38rpx;
+}
+
+.quick-entry-sheet.appearance-font-readable .sheet-title,
+.quick-entry-sheet.appearance-font-readable .card-title {
+  font-size: 38rpx;
+}
+
+.quick-entry-sheet.appearance-font-readable .card-subtitle,
+.quick-entry-sheet.appearance-font-readable .sheet-close,
+.quick-entry-sheet.appearance-font-readable .field-label,
+.quick-entry-sheet.appearance-font-readable .helper-text {
+  font-size: 34rpx;
+}
+
+.quick-entry-sheet.appearance-font-readable .chip,
+.quick-entry-sheet.appearance-font-readable .field-pill,
+.quick-entry-sheet.appearance-font-readable .status-badge {
+  font-size: 30rpx;
+}
+
+.quick-entry-sheet.appearance-font-readable .input-sim,
+.quick-entry-sheet.appearance-font-readable .textarea-sim,
+.quick-entry-sheet.appearance-font-readable .picker-sim,
+.quick-entry-sheet.appearance-font-readable .btn-primary,
+.quick-entry-sheet.appearance-font-readable .btn-ghost {
+  font-size: 38rpx;
+}
+
+.quick-entry-sheet.appearance-font-readable .quick-entry-success-title {
+  font-size: 44rpx;
+}
+
+.quick-entry-sheet.appearance-font-readable .quick-entry-success-detail,
+.quick-entry-sheet.appearance-font-readable .quick-entry-success-project {
+  font-size: 34rpx;
 }
 
 .task-complete-sheet.appearance-font-readable .sheet-close,

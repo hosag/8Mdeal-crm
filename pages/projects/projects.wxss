@@ -22,11 +22,31 @@
 
 .projects-page .hero-actions .btn-secondary,
 .projects-page .hero-actions .btn-ghost {
-  min-width: 172rpx;
+  min-width: 176rpx;
   height: 68rpx;
-  padding: 0 24rpx;
+  padding: 0 26rpx;
   border-radius: 20rpx;
   font-size: 22rpx;
+}
+
+.projects-page .hero-actions .hero-primary-btn {
+  background: var(--theme-hero-primary-bg);
+  color: var(--theme-hero-primary-text);
+  border: 1rpx solid var(--theme-hero-primary-border);
+  box-shadow: var(--theme-hero-primary-shadow);
+}
+
+.projects-page .hero-actions .hero-secondary-btn {
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 247, 238, 0.94);
+  border: 1rpx solid rgba(255, 255, 255, 0.14);
+  backdrop-filter: blur(12rpx);
+}
+
+.page-shell.projects-page.appearance-theme-cloud_mist .hero-actions .hero-secondary-btn {
+  background: rgba(255, 248, 238, 0.12);
+  color: rgba(255, 244, 228, 0.96);
+  border-color: rgba(255, 236, 209, 0.16);
 }
 
 .projects-page .search-panel {
@@ -176,6 +196,7 @@
 }
 
 .projects-page .practical-project-card {
+  position: relative;
   padding: 22rpx;
 }
 
@@ -246,6 +267,131 @@
 
 .projects-page .compact-inline-actions {
   gap: 8rpx;
+  padding-right: 72rpx;
+}
+
+.projects-page .project-share-entry {
+  position: absolute;
+  right: 18rpx;
+  bottom: 18rpx;
+  width: 52rpx;
+  height: 52rpx;
+  border-radius: 999rpx;
+  background: rgba(255, 255, 255, 0.74);
+  border: 1rpx solid rgba(109, 123, 136, 0.12);
+  box-shadow: 0 10rpx 20rpx rgba(19, 31, 40, 0.08);
+  backdrop-filter: blur(10rpx);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.projects-page .project-share-entry-icon {
+  width: 28rpx;
+  height: 28rpx;
+  display: block;
+}
+
+.share-entry-sheet {
+  z-index: 22;
+  background: var(--theme-sheet-bg);
+  box-shadow: var(--theme-sheet-shadow);
+}
+
+.projects-page .sheet-mask {
+  z-index: 21;
+  background: var(--theme-sheet-mask);
+  backdrop-filter: blur(10rpx);
+}
+
+.share-entry-list {
+  margin-top: 0;
+}
+
+.share-entry-sheet {
+  top: 42vh;
+  padding-top: 20rpx;
+  padding-bottom: calc(24rpx + env(safe-area-inset-bottom));
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+
+.share-entry-sheet .sheet-header {
+  margin-bottom: 10rpx;
+}
+
+.share-entry-project-card {
+  margin-bottom: 12rpx;
+  padding: 16rpx 18rpx;
+  border-radius: 24rpx;
+  background: var(--theme-soft-block-bg);
+  box-shadow: inset 0 0 0 1rpx var(--theme-divider);
+}
+
+.share-entry-project-name {
+  font-size: 28rpx;
+  font-weight: 700;
+  line-height: 1.4;
+  color: var(--theme-title);
+}
+
+.share-entry-project-pills {
+  margin-top: 8rpx;
+  gap: 6rpx;
+}
+
+.share-entry-project-pills .compact-inline-item {
+  padding: 6rpx 10rpx;
+  font-size: 20rpx;
+}
+
+.share-entry-card {
+  padding: 14rpx 16rpx 16rpx;
+  border-radius: 22rpx;
+  background: var(--theme-project-card-bg);
+  box-shadow: var(--theme-state-card-shadow);
+}
+
+.share-entry-card + .share-entry-card {
+  margin-top: 10rpx;
+}
+
+.share-entry-head {
+  align-items: flex-start;
+}
+
+.share-entry-head .mode-title {
+  font-size: 30rpx;
+}
+
+.share-entry-head .mode-desc {
+  margin-top: 4rpx;
+  font-size: 23rpx;
+  line-height: 1.5;
+  color: var(--theme-text-secondary);
+}
+
+.share-entry-option-pills {
+  margin-top: 8rpx;
+  gap: 6rpx;
+}
+
+.share-entry-option-pills .field-pill {
+  min-height: 40rpx;
+  padding: 0 12rpx;
+  font-size: 19rpx;
+}
+
+.share-entry-head .status-badge {
+  flex: 0 0 auto;
+  margin-top: 2rpx;
+  min-height: 40rpx;
+  padding: 0 12rpx;
+  font-size: 19rpx;
+  color: var(--theme-text-secondary);
+  background: rgba(255, 255, 255, 0.58);
+  box-shadow: inset 0 0 0 1rpx var(--theme-divider);
 }
 
 .page-shell.projects-page.appearance-font-large .hero {
@@ -265,6 +411,41 @@
 .page-shell.projects-page.appearance-font-large .practical-project-card,
 .page-shell.projects-page.appearance-font-large .project-search-locator {
   border-radius: 24rpx;
+}
+
+.page-shell.projects-page.appearance-font-large .share-entry-sheet .sheet-title,
+.page-shell.projects-page.appearance-font-large .task-complete-sheet .sheet-title,
+.page-shell.projects-page.appearance-font-large .task-complete-toggle-title {
+  font-size: 30rpx;
+}
+
+.page-shell.projects-page.appearance-font-large .share-entry-sheet .mode-title,
+.page-shell.projects-page.appearance-font-large .task-complete-sheet .field-label {
+  font-size: 28rpx;
+}
+
+.page-shell.projects-page.appearance-font-large .share-entry-sheet .mode-desc,
+.page-shell.projects-page.appearance-font-large .share-entry-sheet .status-badge {
+  font-size: 26rpx;
+}
+
+.page-shell.projects-page.appearance-font-large .share-entry-project-name {
+  font-size: 32rpx;
+}
+
+.page-shell.projects-page.appearance-font-large .share-entry-sheet {
+  top: 38vh;
+}
+
+.page-shell.projects-page.appearance-font-large .share-entry-project-pills .compact-inline-item,
+.page-shell.projects-page.appearance-font-large .share-entry-option-pills .field-pill {
+  min-height: 48rpx;
+  font-size: 23rpx;
+}
+
+.page-shell.projects-page.appearance-font-large .share-entry-head .status-badge {
+  min-height: 48rpx;
+  font-size: 23rpx;
 }
 
 .page-shell.projects-page.appearance-font-readable .hero {
@@ -291,6 +472,41 @@
 .page-shell.projects-page.appearance-font-readable .practical-project-card,
 .page-shell.projects-page.appearance-font-readable .project-search-locator {
   border-radius: 26rpx;
+}
+
+.page-shell.projects-page.appearance-font-readable .share-entry-sheet .sheet-title,
+.page-shell.projects-page.appearance-font-readable .task-complete-sheet .sheet-title,
+.page-shell.projects-page.appearance-font-readable .task-complete-toggle-title {
+  font-size: 38rpx;
+}
+
+.page-shell.projects-page.appearance-font-readable .share-entry-sheet .mode-title,
+.page-shell.projects-page.appearance-font-readable .task-complete-sheet .field-label {
+  font-size: 34rpx;
+}
+
+.page-shell.projects-page.appearance-font-readable .share-entry-sheet .mode-desc,
+.page-shell.projects-page.appearance-font-readable .share-entry-sheet .status-badge {
+  font-size: 34rpx;
+}
+
+.page-shell.projects-page.appearance-font-readable .share-entry-project-name {
+  font-size: 38rpx;
+}
+
+.page-shell.projects-page.appearance-font-readable .share-entry-sheet {
+  top: 30vh;
+}
+
+.page-shell.projects-page.appearance-font-readable .share-entry-project-pills .compact-inline-item,
+.page-shell.projects-page.appearance-font-readable .share-entry-option-pills .field-pill {
+  min-height: 56rpx;
+  font-size: 28rpx;
+}
+
+.page-shell.projects-page.appearance-font-readable .share-entry-head .status-badge {
+  min-height: 56rpx;
+  font-size: 28rpx;
 }
 
 .task-complete-mask {

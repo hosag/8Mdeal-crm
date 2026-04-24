@@ -10,7 +10,7 @@
         <view class="source-badge">{{dataSource}}</view>
       </view>
       <view class="hero-title">账户与偏好</view>
-      <view class="hero-subtitle">收益、标签和偏好集中管理。</view>
+      <view class="hero-subtitle">收益、关键联系人、标签和偏好集中管理。</view>
     </view>
 
     <view class="surface-card section mine-overview-card rise-in stagger-1">
@@ -34,6 +34,16 @@
           <view class="mine-entry-main">
             <view class="card-title">收益统计</view>
             <view class="card-subtitle">查看成交与回款。</view>
+          </view>
+          <view class="section-link">进入</view>
+        </view>
+      </view>
+
+      <view class="nav-card mine-entry-card" data-url="/pages/contacts/contacts" bindtap="openPage">
+        <view class="line-between mine-entry-head">
+          <view class="mine-entry-main">
+            <view class="card-title">关键联系人</view>
+            <view class="card-subtitle">从关键人切入看最近沟通与关联项目。</view>
           </view>
           <view class="section-link">进入</view>
         </view>
@@ -190,4 +200,4 @@
   </block>
 </view>
 
-<bottom-nav current="mine" appearance-page-class="{{appearancePageClass}}" />
+<bottom-nav current="mine" appearance-page-class="{{appearancePageClass}}" bind:quickentry="handleQuickEntryTap" />

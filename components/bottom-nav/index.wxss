@@ -11,9 +11,9 @@
   right: 24rpx;
   bottom: calc(24rpx + env(safe-area-inset-bottom));
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 10rpx;
-  padding: 14rpx;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8rpx;
+  padding: 14rpx 12rpx 12rpx;
   border-radius: 32rpx;
   background: var(--nav-bg);
   backdrop-filter: blur(18rpx);
@@ -57,6 +57,46 @@
 
 .bottom-nav__label {
   font-size: 20rpx;
+}
+
+.bottom-nav__action-wrap {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+}
+
+.bottom-nav__action {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8rpx;
+  transform: translateY(-34rpx);
+}
+
+.bottom-nav__action-icon {
+  position: relative;
+  width: 92rpx;
+  height: 92rpx;
+  border-radius: 50%;
+  background: var(--nav-active-bg);
+  box-shadow:
+    0 18rpx 32rpx rgba(23, 40, 52, 0.2),
+    inset 0 0 0 2rpx rgba(255, 255, 255, 0.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.bottom-nav__action-image {
+  width: 38rpx;
+  height: 38rpx;
+}
+
+.bottom-nav__action-label {
+  margin-top: -2rpx;
+  font-size: 20rpx;
+  font-weight: 700;
+  color: var(--nav-active-text);
 }
 
 .bottom-nav.appearance-theme-warm_almond {
@@ -128,6 +168,24 @@
   font-size: 24rpx;
 }
 
+.bottom-nav.appearance-font-large .bottom-nav__action {
+  transform: translateY(-36rpx);
+}
+
+.bottom-nav.appearance-font-large .bottom-nav__action-icon {
+  width: 100rpx;
+  height: 100rpx;
+}
+
+.bottom-nav.appearance-font-large .bottom-nav__action-image {
+  width: 42rpx;
+  height: 42rpx;
+}
+
+.bottom-nav.appearance-font-large .bottom-nav__action-label {
+  font-size: 24rpx;
+}
+
 .bottom-nav.appearance-font-readable {
   padding: 18rpx;
 }
@@ -149,5 +207,23 @@
 }
 
 .bottom-nav.appearance-font-readable .bottom-nav__label {
+  font-size: 30rpx;
+}
+
+.bottom-nav.appearance-font-readable .bottom-nav__action {
+  transform: translateY(-42rpx);
+}
+
+.bottom-nav.appearance-font-readable .bottom-nav__action-icon {
+  width: 112rpx;
+  height: 112rpx;
+}
+
+.bottom-nav.appearance-font-readable .bottom-nav__action-image {
+  width: 48rpx;
+  height: 48rpx;
+}
+
+.bottom-nav.appearance-font-readable .bottom-nav__action-label {
   font-size: 30rpx;
 }

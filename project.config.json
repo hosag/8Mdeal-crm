@@ -37,12 +37,12 @@
   "packOptions": {
     "ignore": [
       {
-        "type": "folder",
-        "value": "图片"
+        "value": "图片",
+        "type": "folder"
       },
       {
-        "type": "file",
-        "value": "八面成交CRM.rar"
+        "value": "八面成交CRM.rar",
+        "type": "file"
       }
     ],
     "include": []

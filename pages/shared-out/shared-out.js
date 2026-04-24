@@ -13,6 +13,10 @@ const SORT_OPTIONS = [
   { key: 'viewed', label: '浏览优先' }
 ]
 
+function normalizeShareModeLabel(mode) {
+  return String(mode || '').trim() === '发送资料' ? '发送资料' : '转交项目'
+}
+
 function parseDateTime(value) {
   if (!value) {
     return null
@@ -54,21 +58,22 @@ function normalizeRecord(record, index) {
   const statusText = record.statusText || '未打开'
   const receiverName = record.receiverName || record.receiverOpenidMasked || '暂未识别'
   const isOutbound = (record.mode || '项目外发') === '项目外发'
+  const modeLabel = normalizeShareModeLabel(record.mode)
   let statusSummary = '已发出，等待对方查看'
-  let trackingSummary = '已发出，当前还在等待对方打开交接卡。'
+  let trackingSummary = '当前还在等待对方打开交接卡。'
 
   if (statusText === '已打开') {
     statusSummary = isOutbound
-      ? '对方已查看，正在等待正式接手'
-      : '对方已查看，这次分享主要用于信息同步'
+      ? '对方已查看，等待接手'
+      : '对方已查看资料'
     trackingSummary = isOutbound
       ? `${receiverName} 已查看交接卡，暂未接手项目。`
       : `${receiverName} 已查看资料卡，本次分享仍由你继续维护。`
   }
 
   if (statusText === '已导入') {
-    statusSummary = '对方已接手项目，正在等待首条推进记录'
-    trackingSummary = `${receiverName} 已接手项目，暂未新增推进记录。`
+    statusSummary = '对方已接手项目'
+    trackingSummary = `${receiverName} 已接手项目，等待首条推进记录。`
   }
 
   if (statusText === '已跟进') {
@@ -85,13 +90,17 @@ function normalizeRecord(record, index) {
     receiverSummary = `${receiverName} 已接手项目`
   }
 
+  const firstTouchText = record.firstOpenedAt || '尚未打开'
+  const takeoverText = record.importedAt || '尚未接手'
+  const latestTrackingText = record.collaboratorLatestFollowAt || record.lastViewedAt || '暂无更新'
+
   return {
     id: record.id || `share-record-${index}`,
     projectId: record.projectId || '',
     importedProjectId: record.importedProjectId || '',
     name: record.name || '未命名项目',
     partner: record.partner || '未命名标签',
-    mode: record.mode || '项目外发',
+    mode: modeLabel,
     viewed: record.viewed || `预览 ${Number(record.viewCount || 0)} 次`,
     viewCount: Number(record.viewCount || 0),
     receiverName,
@@ -106,11 +115,14 @@ function normalizeRecord(record, index) {
     statusSummary,
     trackingSummary,
     receiverSummary,
+    firstTouchText,
+    takeoverText,
+    latestTrackingText,
     syncSummary: statusText === '已跟进'
       ? `对方已新增推进记录 ${Number(record.collaboratorFollowCount || 0)} 条`
       : (statusText === '已导入'
         ? '项目已进入对方“我的项目”'
-        : (statusText === '已打开' ? '对方已查看，待决定是否接手' : '当前还在等待对方查看')),
+        : (statusText === '已打开' ? '对方已查看，等待接手' : '当前还在等待对方查看')),
     stage: record.stage || '线索',
     updatedAt,
     searchText: [
@@ -164,7 +176,7 @@ Page({
     summaryCards: [],
     resultSummaryText: '正在整理外发数据',
     emptyTitle: '当前筛选下暂无外发记录',
-    emptyDesc: '你可以切回全部外发项目，或先发起一次项目外发。',
+    emptyDesc: '你可以切回全部外发项目，或先发起一次项目转交。',
     emptyActionText: '查看我的项目',
     isLoading: true,
     isLoadFailed: false,
@@ -335,7 +347,7 @@ Page({
       emptyTitle: keyword ? '没有找到匹配记录' : '当前筛选下暂无外发记录',
       emptyDesc: keyword
         ? '可以换项目名、接收方或标签再试一次。'
-        : '你可以切回全部外发项目，或先发起一次项目外发。',
+        : '你可以切回全部外发项目，或先发起一次项目转交。',
       emptyActionText: hasCustomFilter ? '重置筛选' : '查看我的项目'
     })
   },
@@ -388,6 +400,12 @@ Page({
           projectId
         }
       }
+    })
+  },
+
+  handleQuickEntryTap() {
+    wx.reLaunch({
+      url: '/pages/index/index?openQuickEntry=1'
     })
   }
 })

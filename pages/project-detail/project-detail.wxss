@@ -1,5 +1,14 @@
 .project-detail-page .hero-summary-grid {
-  margin-top: 20rpx;
+  margin-top: 16rpx;
+}
+
+.project-detail-page .hero-subtitle {
+  margin-top: 10rpx;
+}
+
+.project-detail-page .hero-summary-grid .detail-box-note {
+  margin-top: 6rpx;
+  font-size: 20rpx;
 }
 
 .project-detail-page .detail-section-card {
@@ -10,24 +19,63 @@
   margin-top: 18rpx;
 }
 
-.project-detail-page .detail-overview-footer {
-  margin-top: 12rpx;
-}
-
-.project-detail-page .detail-overview-footer .helper-text + .helper-text {
+.project-detail-page .detail-overview-desc {
   margin-top: 4rpx;
 }
 
+.project-detail-page .detail-overview-focus {
+  display: flex;
+  align-items: flex-start;
+  gap: 12rpx;
+}
+
+.project-detail-page .detail-overview-focus .project-summary-label {
+  flex: 0 0 auto;
+  margin-top: 2rpx;
+}
+
+.project-detail-page .detail-overview-focus-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 23rpx;
+  line-height: 1.55;
+  color: var(--theme-text-main);
+}
+
+.project-detail-page .detail-overview-summary {
+  margin-top: 12rpx;
+  font-size: 24rpx;
+  line-height: 1.72;
+  color: var(--theme-text-secondary);
+  word-break: break-word;
+}
+
+.project-detail-page .detail-overview-metrics {
+  margin-top: 14rpx;
+}
+
+.project-detail-page .detail-section-meta {
+  margin-top: 14rpx;
+}
+
+.project-detail-page .detail-section-meta .compact-inline-item {
+  max-width: 100%;
+}
+
+.project-detail-page .compact-empty-text {
+  margin-top: 14rpx;
+}
+
 .project-detail-page .contact-card {
-  margin-top: 16rpx;
-  padding: 22rpx 24rpx;
+  margin-top: 14rpx;
+  padding: 20rpx 22rpx;
   border-radius: 24rpx;
   background: var(--theme-project-card-bg);
   box-shadow: var(--theme-project-card-shadow);
 }
 
 .project-detail-page .contact-card:first-of-type {
-  margin-top: 18rpx;
+  margin-top: 14rpx;
 }
 
 .project-detail-page .contact-card .chip {
@@ -55,12 +103,28 @@
 
 .project-detail-contact-sheet .contact-sheet-security-card {
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  align-items: flex-start;
   margin-bottom: 14rpx;
   padding: 18rpx 26rpx;
 }
 
-.project-detail-contact-sheet .contact-sheet-banner {
+.project-detail-add-contact-sheet .contact-sheet-security-card {
+  display: flex;
+  align-items: center;
+  margin-bottom: 12rpx;
+  padding: 16rpx 22rpx;
+}
+
+.project-detail-contact-sheet .contact-sheet-intro-card,
+.project-detail-add-contact-sheet .contact-sheet-intro-card {
+  border-radius: 24rpx;
+  background: var(--theme-soft-block-bg);
+  box-shadow: inset 0 0 0 2rpx var(--theme-divider);
+}
+
+.project-detail-contact-sheet .contact-sheet-banner,
+.project-detail-add-contact-sheet .contact-sheet-banner {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -75,6 +139,11 @@
   letter-spacing: 0.5rpx;
 }
 
+.project-detail-contact-sheet .contact-sheet-intro-text,
+.project-detail-add-contact-sheet .contact-sheet-intro-text {
+  margin-top: 10rpx;
+}
+
 .project-detail-contact-sheet .contact-sheet-card {
   padding: 24rpx 26rpx;
 }
@@ -83,10 +152,60 @@
   margin-top: 14rpx;
 }
 
-.project-detail-page .timeline-header-note,
-.project-detail-page .share-header-note,
-.project-detail-page .task-header-note {
+.project-detail-contact-sheet .contact-sheet-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12rpx;
+  margin-top: 16rpx;
+}
+
+.project-detail-contact-sheet .contact-sheet-item {
+  padding: 16rpx 18rpx;
+  border-radius: 20rpx;
+  background: var(--theme-soft-block-bg);
+  box-shadow: inset 0 0 0 1rpx var(--theme-divider);
+}
+
+.project-detail-contact-sheet .contact-sheet-label {
+  font-size: 19rpx;
+  color: var(--theme-text-muted);
+}
+
+.project-detail-contact-sheet .contact-sheet-value {
+  margin-top: 6rpx;
+  font-size: 24rpx;
+  line-height: 1.55;
+  color: var(--theme-text-main);
+  word-break: break-all;
+}
+
+.project-detail-add-contact-sheet {
+  background: var(--theme-sheet-bg);
+  box-shadow: var(--theme-sheet-shadow);
+}
+
+.project-detail-add-contact-sheet .add-contact-form-card {
+  margin-top: 0;
+  padding: 22rpx 24rpx 24rpx;
+  border-radius: 24rpx;
+  background: var(--theme-project-card-bg);
+  box-shadow: var(--theme-state-card-shadow);
+}
+
+.project-detail-add-contact-sheet .add-contact-field {
   margin-top: 10rpx;
+}
+
+.project-detail-add-contact-sheet .add-contact-first-field {
+  margin-top: 0;
+}
+
+.project-detail-add-contact-sheet .add-contact-split-row {
+  gap: 14rpx;
+}
+
+.project-detail-add-contact-sheet .add-contact-actions {
+  margin-top: 18rpx;
 }
 
 .project-detail-page .task-latest-done {
@@ -134,58 +253,93 @@
 .share-entry-sheet {
   background: var(--theme-sheet-bg);
   box-shadow: var(--theme-sheet-shadow);
+  top: 42vh;
+  padding-top: 20rpx;
+  padding-bottom: calc(24rpx + env(safe-area-inset-bottom));
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
 }
 
-.share-entry-header {
-  margin-top: 2rpx;
-  padding: 2rpx 4rpx 0;
+.share-entry-sheet .sheet-header {
+  margin-bottom: 10rpx;
 }
 
-.share-entry-header-title {
-  font-size: 29rpx;
+.share-entry-project-card {
+  margin-bottom: 12rpx;
+  padding: 16rpx 18rpx;
+  border-radius: 24rpx;
+  background: var(--theme-soft-block-bg);
+  box-shadow: inset 0 0 0 1rpx var(--theme-divider);
+}
+
+.share-entry-project-name {
+  font-size: 28rpx;
   font-weight: 700;
+  line-height: 1.4;
   color: var(--theme-title);
 }
 
-.share-entry-header-desc {
-  margin-top: 6rpx;
-  font-size: 22rpx;
-  line-height: 1.55;
-  color: var(--theme-text-soft);
+.share-entry-project-pills {
+  margin-top: 8rpx;
+  gap: 6rpx;
+}
+
+.share-entry-project-pills .compact-inline-item {
+  padding: 6rpx 10rpx;
+  font-size: 20rpx;
 }
 
 .share-entry-list {
-  margin-top: 14rpx;
+  margin-top: 0;
 }
 
 .share-entry-card {
-  padding: 20rpx 22rpx 18rpx;
-  border-radius: 24rpx;
+  padding: 14rpx 16rpx 16rpx;
+  border-radius: 22rpx;
   background: var(--theme-project-card-bg);
   box-shadow: var(--theme-state-card-shadow);
 }
 
 .share-entry-card + .share-entry-card {
-  margin-top: 12rpx;
+  margin-top: 10rpx;
 }
 
 .share-entry-head {
   align-items: flex-start;
 }
 
+.share-entry-head .mode-title {
+  font-size: 30rpx;
+}
+
 .share-entry-head .mode-desc {
+  margin-top: 4rpx;
+  font-size: 23rpx;
+  line-height: 1.5;
+  color: var(--theme-text-secondary);
+}
+
+.share-entry-option-pills {
   margin-top: 8rpx;
-  line-height: 1.62;
+  gap: 6rpx;
+}
+
+.share-entry-option-pills .field-pill {
+  min-height: 40rpx;
+  padding: 0 12rpx;
+  font-size: 19rpx;
 }
 
 .share-entry-head .status-badge {
   flex: 0 0 auto;
   margin-top: 2rpx;
-  padding: 6rpx 14rpx;
-  font-size: 20rpx;
-  color: var(--theme-brand-text);
-  background: var(--theme-brand-bg);
-  box-shadow: inset 0 0 0 2rpx var(--theme-divider);
+  min-height: 40rpx;
+  padding: 0 12rpx;
+  font-size: 19rpx;
+  color: var(--theme-text-secondary);
+  background: rgba(255, 255, 255, 0.58);
+  box-shadow: inset 0 0 0 1rpx var(--theme-divider);
 }
 
 .task-complete-mask {
@@ -339,22 +493,22 @@
   display: flex;
   flex-wrap: wrap;
   gap: 10rpx;
-  margin-bottom: 10rpx;
+  margin-bottom: 12rpx;
 }
 
 .project-detail-page .timeline-section + .timeline-section {
-  margin-top: 14rpx;
+  margin-top: 12rpx;
 }
 
 .project-detail-page .timeline-section-label {
-  font-size: 21rpx;
+  font-size: 20rpx;
   font-weight: 700;
   color: var(--theme-text-soft);
   letter-spacing: 0.06em;
 }
 
 .project-detail-page .timeline-section-text {
-  margin-top: 8rpx;
+  margin-top: 6rpx;
   font-size: 24rpx;
   line-height: 1.7;
   color: var(--theme-text-main);
@@ -390,20 +544,89 @@
   background: var(--theme-soft-badge-text);
 }
 
+.project-detail-page .timeline-section-raw {
+  padding-top: 12rpx;
+  border-top: 1rpx solid var(--theme-divider);
+}
+
+.project-detail-page .timeline-raw-text {
+  color: var(--theme-text-secondary);
+}
+
 .project-detail-page .share-history-card {
-  padding: 24rpx;
+  padding: 22rpx;
 }
 
-.project-detail-page .share-history-card .project-summary-compact {
-  margin-top: 16rpx;
+.project-detail-page .share-history-top {
+  align-items: flex-start;
 }
 
-.project-detail-page .share-history-card .compact-inline-metrics {
-  margin-top: 14rpx;
+.project-detail-page .share-history-top .tag-title {
+  line-height: 1.32;
 }
 
-.project-detail-page .share-history-card .helper-text + .helper-text {
+.project-detail-page .share-history-top .status-badge {
+  min-height: 44rpx;
+  padding: 0 12rpx;
+  font-size: 19rpx;
+}
+
+.project-detail-page .share-history-meta {
   margin-top: 6rpx;
+}
+
+.project-detail-page .share-history-receiver {
+  margin-top: 4rpx;
+}
+
+.project-detail-page .share-history-pill-row {
+  margin-top: 8rpx;
+  gap: 6rpx;
+}
+
+.project-detail-page .share-history-summary-card {
+  margin-top: 10rpx;
+}
+
+.project-detail-page .share-history-metrics {
+  margin-top: 10rpx;
+  gap: 6rpx;
+}
+
+.project-detail-page .share-history-metrics .compact-inline-item {
+  padding: 6rpx 10rpx;
+}
+
+.footer-bar.footer-bar-detail {
+  grid-template-columns: 1.18fr 0.92fr 0.9fr;
+  gap: 12rpx;
+  padding: 12rpx;
+}
+
+.footer-bar.footer-bar-detail .footer-primary-action {
+  height: 92rpx;
+  border-radius: 24rpx;
+  box-shadow: 0 10rpx 24rpx rgba(20, 33, 40, 0.12);
+}
+
+.footer-bar.footer-bar-detail .footer-secondary-action,
+.footer-bar.footer-bar-detail .footer-tertiary-action {
+  height: 82rpx;
+  border-radius: 22rpx;
+  font-weight: 600;
+}
+
+.footer-bar.footer-bar-detail .footer-secondary-action {
+  box-shadow: inset 0 0 0 1rpx rgba(255, 255, 255, 0.18);
+}
+
+.footer-bar.footer-bar-detail .footer-tertiary-action {
+  background: transparent;
+  box-shadow: inset 0 0 0 1rpx var(--theme-divider);
+}
+
+.footer-bar.footer-bar-detail .footer-tertiary-action.is-disabled {
+  opacity: 0.72;
 }
 
 .footer-bar.appearance-font-large .btn-primary,
@@ -416,25 +639,50 @@
 }
 
 .project-detail-contact-sheet.appearance-font-large .sheet-title,
+.project-detail-add-contact-sheet.appearance-font-large .sheet-title,
 .share-entry-sheet.appearance-font-large .sheet-title,
 .task-complete-sheet.appearance-font-large .sheet-title,
-.share-entry-sheet.appearance-font-large .share-entry-header-title,
 .task-complete-sheet.appearance-font-large .task-complete-toggle-title {
   font-size: 30rpx;
 }
 
 .project-detail-contact-sheet.appearance-font-large .contact-name,
+.project-detail-add-contact-sheet.appearance-font-large .field-label,
 .share-entry-sheet.appearance-font-large .mode-title,
 .task-complete-sheet.appearance-font-large .field-label {
   font-size: 28rpx;
 }
 
 .project-detail-contact-sheet.appearance-font-large .sheet-meta,
+.project-detail-contact-sheet.appearance-font-large .contact-sheet-label,
 .project-detail-contact-sheet.appearance-font-large .contact-sheet-banner,
-.share-entry-sheet.appearance-font-large .share-entry-header-desc,
+.project-detail-add-contact-sheet.appearance-font-large .contact-sheet-banner,
 .share-entry-sheet.appearance-font-large .mode-desc,
 .task-complete-sheet.appearance-font-large .helper-text {
   font-size: 26rpx;
+}
+
+.share-entry-sheet.appearance-font-large .share-entry-project-name {
+  font-size: 32rpx;
+}
+
+.share-entry-sheet.appearance-font-large {
+  top: 38vh;
+}
+
+.share-entry-sheet.appearance-font-large .share-entry-project-pills .compact-inline-item,
+.share-entry-sheet.appearance-font-large .share-entry-option-pills .field-pill {
+  min-height: 48rpx;
+  font-size: 23rpx;
+}
+
+.project-detail-page.appearance-font-large .share-history-top .status-badge {
+  min-height: 48rpx;
+  font-size: 23rpx;
+}
+
+.project-detail-contact-sheet.appearance-font-large .contact-sheet-value {
+  font-size: 30rpx;
 }
 
 .share-entry-sheet.appearance-font-large .status-badge,
@@ -458,25 +706,50 @@
 }
 
 .project-detail-contact-sheet.appearance-font-readable .sheet-title,
+.project-detail-add-contact-sheet.appearance-font-readable .sheet-title,
 .share-entry-sheet.appearance-font-readable .sheet-title,
 .task-complete-sheet.appearance-font-readable .sheet-title,
-.share-entry-sheet.appearance-font-readable .share-entry-header-title,
 .task-complete-sheet.appearance-font-readable .task-complete-toggle-title {
   font-size: 38rpx;
 }
 
 .project-detail-contact-sheet.appearance-font-readable .contact-name,
+.project-detail-add-contact-sheet.appearance-font-readable .field-label,
 .share-entry-sheet.appearance-font-readable .mode-title,
 .task-complete-sheet.appearance-font-readable .field-label {
   font-size: 34rpx;
 }
 
 .project-detail-contact-sheet.appearance-font-readable .sheet-meta,
+.project-detail-contact-sheet.appearance-font-readable .contact-sheet-label,
 .project-detail-contact-sheet.appearance-font-readable .contact-sheet-banner,
-.share-entry-sheet.appearance-font-readable .share-entry-header-desc,
+.project-detail-add-contact-sheet.appearance-font-readable .contact-sheet-banner,
 .share-entry-sheet.appearance-font-readable .mode-desc,
 .task-complete-sheet.appearance-font-readable .helper-text {
   font-size: 34rpx;
+}
+
+.share-entry-sheet.appearance-font-readable .share-entry-project-name {
+  font-size: 38rpx;
+}
+
+.share-entry-sheet.appearance-font-readable {
+  top: 30vh;
+}
+
+.share-entry-sheet.appearance-font-readable .share-entry-project-pills .compact-inline-item,
+.share-entry-sheet.appearance-font-readable .share-entry-option-pills .field-pill {
+  min-height: 56rpx;
+  font-size: 28rpx;
+}
+
+.project-detail-page.appearance-font-readable .share-history-top .status-badge {
+  min-height: 56rpx;
+  font-size: 28rpx;
+}
+
+.project-detail-contact-sheet.appearance-font-readable .contact-sheet-value {
+  font-size: 38rpx;
 }
 
 .share-entry-sheet.appearance-font-readable .status-badge,

@@ -11,8 +11,8 @@
 
 .shared-page .hero-subtitle {
   margin-top: 10rpx;
-  font-size: 24rpx;
-  line-height: 1.55;
+  font-size: 22rpx;
+  line-height: 1.5;
 }
 
 .shared-page .search-panel {
@@ -102,7 +102,7 @@
 .shared-page .summary-grid {
   display: grid;
   gap: 10rpx;
-  margin-top: 14rpx;
+  margin-top: 12rpx;
 }
 
 .shared-page .shared-summary-strip {
@@ -110,7 +110,7 @@
 }
 
 .shared-page .summary-card {
-  padding: 16rpx 14rpx 14rpx;
+  padding: 15rpx 14rpx 13rpx;
   border-radius: 22rpx;
   background: var(--theme-project-card-bg);
   box-shadow: var(--theme-project-card-shadow);
@@ -142,7 +142,7 @@
 }
 
 .shared-page .result-bar {
-  margin-top: 14rpx;
+  margin-top: 12rpx;
   background: var(--theme-glass-bg);
   box-shadow: var(--theme-surface-shadow);
 }
@@ -162,7 +162,7 @@
 }
 
 .shared-page .practical-project-card {
-  padding: 22rpx;
+  padding: 20rpx;
 }
 
 .shared-page .project-main {
@@ -170,11 +170,20 @@
   min-width: 0;
 }
 
+.shared-page .project-top .project-meta {
+  margin-top: 4rpx;
+}
+
+.shared-page .shared-record-meta {
+  margin-top: 4rpx;
+}
+
 .shared-page .shared-status-badge {
   flex: 0 0 auto;
   max-width: 220rpx;
-  padding: 9rpx 14rpx;
-  font-size: 20rpx;
+  min-height: 44rpx;
+  padding: 0 12rpx;
+  font-size: 19rpx;
   line-height: 1.2;
   white-space: nowrap;
   overflow: hidden;
@@ -182,32 +191,56 @@
 }
 
 .shared-page .project-pill-row {
-  gap: 8rpx;
+  gap: 6rpx;
 }
 
-.shared-page .shared-summary-card {
-  margin-top: 12rpx;
-}
-
-.shared-page .compact-inline-metrics {
-  margin-top: 10rpx;
-}
-
-.shared-page .compact-project-footer {
+.shared-page .shared-top-pills {
   margin-top: 8rpx;
 }
 
-.shared-page .compact-project-footer .helper-text + .helper-text {
-  margin-top: 4rpx;
+.shared-page .shared-summary-card {
+  margin-top: 10rpx;
+}
+
+.shared-page .shared-card-metrics {
+  margin-top: 8rpx;
+  gap: 6rpx;
+}
+
+.shared-page .shared-card-metrics .compact-inline-item {
+  padding: 6rpx 10rpx;
 }
 
 .shared-page .compact-inline-actions {
-  margin-top: 12rpx;
+  margin-top: 8rpx;
   gap: 8rpx;
 }
 
 .shared-page .compact-inline-actions .btn-primary {
   min-width: 220rpx;
+  height: 72rpx;
+  font-size: 24rpx;
+  border-radius: 20rpx;
+}
+
+.page-shell.shared-page.appearance-font-large .shared-card-metrics .compact-inline-item {
+  min-height: 48rpx;
+  font-size: 23rpx;
+}
+
+.page-shell.shared-page.appearance-font-large .compact-inline-actions .btn-primary {
+  height: 82rpx;
+  font-size: 27rpx;
+}
+
+.page-shell.shared-page.appearance-font-readable .shared-card-metrics .compact-inline-item {
+  min-height: 56rpx;
+  font-size: 28rpx;
+}
+
+.page-shell.shared-page.appearance-font-readable .compact-inline-actions .btn-primary {
+  height: 94rpx;
+  font-size: 32rpx;
 }
 
 .page-shell.shared-page.appearance-font-large .hero {

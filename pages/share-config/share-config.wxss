@@ -1,41 +1,157 @@
-.share-config-page .share-purpose-note {
+.share-config-page .share-config-hero {
+  padding: 24rpx 28rpx 26rpx;
+}
+
+.share-config-page .share-config-hero .eyebrow,
+.share-config-page .share-config-hero .source-badge {
+  padding-top: 6rpx;
+  padding-bottom: 6rpx;
+  font-size: 19rpx;
+}
+
+.share-config-page .share-config-hero .hero-title {
+  margin-top: 14rpx;
+  font-size: 38rpx;
+}
+
+.share-config-page .share-config-hero .hero-subtitle {
+  margin-top: 8rpx;
+  max-width: 88%;
+  font-size: 22rpx;
+  line-height: 1.52;
+}
+
+.share-config-page .share-config-hero + .section {
+  margin-top: 20rpx;
+}
+
+.share-config-page .share-config-shell,
+.share-config-page .share-config-range-card,
+.share-config-page .preview-card {
+  padding: 20rpx 22rpx 22rpx;
+}
+
+.share-config-page .share-config-head,
+.share-config-page .share-config-range-head,
+.share-config-page .preview-section-header {
+  align-items: flex-start;
+}
+
+.share-config-page .share-config-head {
+  margin-bottom: 12rpx;
+}
+
+.share-config-page .share-config-overview {
+  padding: 16rpx 18rpx 18rpx;
+  border-radius: 22rpx;
+  background: var(--theme-soft-block-bg);
+}
+
+.share-config-page .share-config-project-name,
+.share-config-page .preview-title {
+  font-size: 32rpx;
+  font-weight: 700;
+  line-height: 1.32;
+  color: var(--theme-title);
+}
+
+.share-config-page .share-config-meta-pills,
+.share-config-page .preview-meta-pills {
+  margin-top: 10rpx;
+  gap: 6rpx;
+}
+
+.share-config-page .share-config-fields {
+  margin-top: 10rpx;
+  padding: 14rpx 16rpx 16rpx;
+  border-radius: 20rpx;
+  background: rgba(255, 255, 255, 0.44);
+  box-shadow: inset 0 0 0 1rpx var(--theme-divider);
+}
+
+.share-config-page .share-config-fields-head {
+  margin-bottom: 0;
+}
+
+.share-config-page .share-config-fields-section-title {
+  font-size: 21rpx;
+}
+
+.share-config-page .share-config-fields-count {
+  flex: 0 0 auto;
+  font-size: 20rpx;
+  color: var(--theme-text-soft);
+}
+
+.share-config-page .share-config-field-pills {
+  margin-top: 8rpx;
+  gap: 8rpx;
+}
+
+.share-config-page .share-config-range-card {
+  background: var(--theme-soft-block-bg);
+  box-shadow: none;
+}
+
+.share-config-page .share-config-range-head {
+  margin-bottom: 10rpx;
+}
+
+.share-config-page .share-config-range-pills {
+  margin-top: 0;
+  gap: 8rpx;
+}
+
+.share-config-page .preview-overview {
+  padding: 14rpx 16rpx 16rpx;
+  border-radius: 20rpx;
+  background: var(--theme-soft-block-bg);
+}
+
+.share-config-page .preview-summary-block,
+.share-config-page .preview-block + .preview-block,
+.share-config-page .preview-contacts {
   margin-top: 12rpx;
 }
 
-.share-config-page .preview-card {
-  padding: 30rpx;
-}
-
-.share-config-page .preview-block + .preview-block,
-.share-config-page .preview-contacts {
-  margin-top: 18rpx;
+.share-config-page .preview-block {
+  padding: 14rpx 16rpx 16rpx;
+  border-radius: 20rpx;
+  background: rgba(255, 255, 255, 0.44);
+  box-shadow: inset 0 0 0 1rpx var(--theme-divider);
 }
 
 .share-config-page .preview-block-title {
-  font-size: 24rpx;
-  font-weight: 700;
-  color: var(--theme-text-soft);
+  font-size: 21rpx;
+  font-weight: 600;
+  color: var(--theme-text-muted);
 }
 
 .share-config-page .preview-block-text {
   margin-top: 8rpx;
-  font-size: 25rpx;
-  line-height: 1.72;
+  font-size: 23rpx;
+  line-height: 1.68;
   color: var(--theme-title);
 }
 
-.share-config-page .share-config-metrics {
-  margin-top: 16rpx;
-  gap: 10rpx;
+.share-config-page .preview-contacts .contact-summary + .contact-summary {
+  margin-top: 10rpx;
 }
 
-.share-config-page .share-config-metrics .compact-inline-item {
-  background: var(--theme-inline-bg);
-  color: var(--theme-inline-text);
+.share-config-page .preview-contacts .contact-summary {
+  padding: 12rpx 14rpx;
+  border-radius: 18rpx;
+  background: rgba(255, 255, 255, 0.34);
 }
 
 .share-config-page .footer-bar {
   grid-template-columns: 1fr;
+  padding: 12rpx;
+  border-radius: 28rpx;
+}
+
+.share-config-page .footer-bar .btn-primary {
+  border-radius: 22rpx;
 }
 
 .footer-bar.appearance-font-large .btn-primary {

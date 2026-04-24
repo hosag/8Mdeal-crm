@@ -111,7 +111,7 @@ function buildProjectDetailEntryContext(viewMode, source, notificationType) {
     }
 
     if (currentType === 'shared_opened' || currentType === 'shared_imported' || currentType === 'shared_followed' || currentType === 'project_taken_over') {
-      return `${sourcePrefix}：这里展示这条业务动态背后的完整项目上下文。`
+      return `${sourcePrefix}：这里展示这条外发动态背后的完整项目上下文。`
     }
 
     return `${sourcePrefix}：这里展示这条提醒对应的完整项目上下文。`

@@ -17,7 +17,7 @@ const STATUS_FILTERS = [
 const TYPE_FILTERS = [
   { key: 'all', label: '全部类型' },
   { key: 'todo', label: '待办提醒' },
-  { key: 'shared', label: '外发与接手' },
+  { key: 'shared', label: '外发动态' },
   { key: 'system', label: '系统异常' }
 ]
 const QUICK_FILTERS = [
@@ -116,7 +116,7 @@ function getNotificationToneMeta(type, status) {
     return {
       cardClass: 'is-update',
       toneClass: 'is-update',
-      toneText: '业务动态'
+      toneText: currentType === 'project_taken_over' ? '接手动态' : '外发动态'
     }
   }
 
@@ -132,6 +132,67 @@ function getNotificationToneMeta(type, status) {
     cardClass: '',
     toneClass: '',
     toneText: ''
+  }
+}
+
+function isSharedNotificationType(type) {
+  const currentType = String(type || '').trim()
+  return currentType === 'shared_opened'
+    || currentType === 'shared_imported'
+    || currentType === 'shared_followed'
+    || currentType === 'project_taken_over'
+}
+
+function buildSharedNotificationPresentation(item) {
+  const type = String(item && item.type || '').trim()
+  const projectName = String(item && item.projectName || '').trim() || '当前项目'
+  const actorName = String(item && item.sourceName || '').trim()
+  const titleMap = {
+    shared_opened: '对方已查看资料',
+    shared_imported: '对方已接手项目',
+    shared_followed: '对方已继续推进',
+    project_taken_over: '已接手到我的项目'
+  }
+  const summaryMap = {
+    shared_opened: `${actorName || '对方'}已查看 ${projectName}，当前等待接手。`,
+    shared_imported: `${actorName || '对方'}已接手 ${projectName}，后续会在对方“我的项目”继续推进。`,
+    shared_followed: `${actorName || '对方'}已更新 ${projectName} 的推进记录，可查看最新时间线。`,
+    project_taken_over: `${projectName} 已进入“我的项目”，现在可以直接继续推进。`
+  }
+  const hintMap = {
+    shared_opened: '可查看当前状态与后续接手进展。',
+    shared_imported: '可查看接手状态与后续推进时间线。',
+    shared_followed: '可查看最新推进记录与后续动态。',
+    project_taken_over: '建议先补第一条跟进，后续继续在“我的项目”维护。'
+  }
+  const actionTextMap = {
+    shared_opened: '进入外发项目',
+    shared_imported: '进入外发项目',
+    shared_followed: '进入外发项目',
+    project_taken_over: '进入我的项目'
+  }
+  const sourceFallbackMap = {
+    shared_opened: '',
+    shared_imported: '',
+    shared_followed: '',
+    project_taken_over: ''
+  }
+  const sourcePrefixMap = {
+    shared_opened: '接收方',
+    shared_imported: '接收方',
+    shared_followed: '接收方',
+    project_taken_over: actorName ? '分享方' : '来源'
+  }
+
+  const summaryText = summaryMap[type] || ''
+
+  return {
+    title: titleMap[type] || '',
+    summary: summaryText,
+    hintText: hintMap[type] || '',
+    cardActionText: actionTextMap[type] || '',
+    sourceName: actorName || sourceFallbackMap[type] || '',
+    sourcePrefixText: sourcePrefixMap[type] || '来自'
   }
 }
 
@@ -280,6 +341,9 @@ function normalizeNotification(item, index) {
   const actions = buildNotificationActions(item, categoryMeta, actionUrl)
   const toneMeta = getNotificationToneMeta(item.type, item.status)
   const actionMeta = splitNotificationActions(actions)
+  const sharedPresentation = isSharedNotificationType(item.type)
+    ? buildSharedNotificationPresentation(item)
+    : null
 
   return {
     id: item.id || `notification-${index}`,
@@ -290,8 +354,12 @@ function normalizeNotification(item, index) {
     status: item.status || 'unread',
     statusText: getNotificationStatusText(item.status),
     statusClassName: item.statusClassName || '',
-    title: item.title || '系统提醒',
-    summary: item.summary || '暂无摘要',
+    title: sharedPresentation && sharedPresentation.title
+      ? sharedPresentation.title
+      : (item.title || '系统提醒'),
+    summary: sharedPresentation && sharedPresentation.summary
+      ? sharedPresentation.summary
+      : (item.summary || '暂无摘要'),
     projectId: item.projectId || '',
     projectName: item.projectName || '未命名项目',
     taskId: item.taskId || '',
@@ -300,21 +368,32 @@ function normalizeNotification(item, index) {
     canMarkRead: !!item.canMarkRead,
     canResolve: !!item.canResolve,
     createdAtText: item.createdAtText || '刚刚',
-    sourceName: item.sourceName || '',
+    sourceName: sharedPresentation && sharedPresentation.sourceName
+      ? sharedPresentation.sourceName
+      : (item.sourceName || ''),
+    sourcePrefixText: sharedPresentation && sharedPresentation.sourcePrefixText
+      ? sharedPresentation.sourcePrefixText
+      : '来自',
     categoryKey: categoryMeta.key,
     categoryLabel: categoryMeta.label,
     cardClassName: toneMeta.cardClass,
     toneClassName: toneMeta.toneClass,
     toneText: toneMeta.toneText,
+    isSharedCard: !!sharedPresentation,
+    showLevelBadge: !sharedPresentation,
     quickFilterKey: getQuickFilterKey(item),
-    hintText: categoryMeta.hintText,
+    hintText: sharedPresentation && sharedPresentation.hintText
+      ? sharedPresentation.hintText
+      : categoryMeta.hintText,
     autoResolveOnOpen: !!categoryMeta.autoResolveOnOpen,
     actions,
     primaryAction: actionMeta.primaryAction,
     secondaryActions: actionMeta.secondaryActions,
-    cardActionText: actionMeta.primaryAction
-      ? (actionMeta.primaryAction.label || '点击处理')
-      : '',
+    cardActionText: sharedPresentation && sharedPresentation.cardActionText
+      ? sharedPresentation.cardActionText
+      : (actionMeta.primaryAction
+        ? (actionMeta.primaryAction.label || '点击处理')
+        : ''),
     hasSecondaryActions: actionMeta.secondaryActions.length > 0
   }
 }

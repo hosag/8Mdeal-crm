@@ -1,0 +1,169 @@
+.contacts-page {
+  padding-bottom: 84rpx;
+}
+
+.contacts-page .hero {
+  padding: 26rpx 28rpx 28rpx;
+  border-radius: 32rpx;
+  box-shadow: var(--theme-hero-shadow);
+}
+
+.contacts-page .hero-title {
+  margin-top: 18rpx;
+  font-size: 40rpx;
+}
+
+.contacts-page .hero-subtitle {
+  margin-top: 10rpx;
+  font-size: 22rpx;
+  line-height: 1.5;
+}
+
+.contacts-page .contacts-filter-card,
+.contacts-page .result-bar,
+.contacts-page .state-card {
+  padding: 16rpx 20rpx;
+}
+
+.contacts-page .search-panel {
+  position: relative;
+}
+
+.contacts-page .contacts-search-input {
+  padding-right: 110rpx;
+  background: var(--theme-glass-bg);
+}
+
+.contacts-page .search-clear {
+  position: absolute;
+  right: 24rpx;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 22rpx;
+  color: var(--theme-text-soft);
+}
+
+.contacts-page .contacts-summary-strip {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10rpx;
+  margin-top: 14rpx;
+}
+
+.contacts-page .summary-card {
+  padding: 16rpx 14rpx 14rpx;
+  border-radius: 22rpx;
+  background: var(--theme-project-card-bg);
+  box-shadow: var(--theme-project-card-shadow);
+  text-align: center;
+}
+
+.contacts-page .summary-card-label {
+  font-size: 19rpx;
+  color: var(--theme-text-soft);
+}
+
+.contacts-page .summary-card-value {
+  margin-top: 6rpx;
+  font-size: 32rpx;
+  font-weight: 700;
+  color: var(--theme-title);
+}
+
+.contacts-page .summary-card-note {
+  margin-top: 4rpx;
+  font-size: 18rpx;
+  line-height: 1.45;
+  color: var(--theme-text-muted);
+}
+
+.contacts-page .result-bar {
+  margin-top: 14rpx;
+  background: var(--theme-glass-bg);
+  box-shadow: var(--theme-surface-shadow);
+}
+
+.contacts-page .result-bar-text {
+  font-size: 21rpx;
+  line-height: 1.6;
+  color: var(--theme-text-soft);
+}
+
+.contacts-page .state-actions {
+  margin-top: 18rpx;
+}
+
+.contacts-page .state-btn {
+  min-width: 220rpx;
+}
+
+.contacts-page .contact-card {
+  padding: 20rpx 22rpx 22rpx;
+}
+
+.contacts-page .contact-card-top {
+  align-items: flex-start;
+}
+
+.contacts-page .contact-card .project-meta {
+  margin-top: 8rpx;
+}
+
+.contacts-page .contact-pill-row {
+  margin-top: 12rpx;
+  gap: 8rpx;
+}
+
+.contacts-page .contact-summary-card {
+  margin-top: 12rpx;
+}
+
+.contacts-page .contact-inline-metrics {
+  margin-top: 12rpx;
+}
+
+.page-shell.contacts-page.appearance-font-large .hero {
+  padding: 30rpx;
+}
+
+.page-shell.contacts-page.appearance-font-large .hero-title {
+  font-size: 50rpx;
+}
+
+.page-shell.contacts-page.appearance-font-large .hero-subtitle {
+  font-size: 28rpx;
+  line-height: 1.68;
+}
+
+.page-shell.contacts-page.appearance-font-large .contacts-filter-card,
+.page-shell.contacts-page.appearance-font-large .result-bar,
+.page-shell.contacts-page.appearance-font-large .state-card,
+.page-shell.contacts-page.appearance-font-large .summary-card,
+.page-shell.contacts-page.appearance-font-large .contact-card {
+  border-radius: 24rpx;
+}
+
+.page-shell.contacts-page.appearance-font-readable .hero {
+  padding: 34rpx;
+}
+
+.page-shell.contacts-page.appearance-font-readable .hero-title {
+  font-size: 60rpx;
+  line-height: 1.34;
+}
+
+.page-shell.contacts-page.appearance-font-readable .hero-subtitle {
+  font-size: 36rpx;
+  line-height: 1.76;
+}
+
+.page-shell.contacts-page.appearance-font-readable .contacts-filter-card,
+.page-shell.contacts-page.appearance-font-readable .result-bar,
+.page-shell.contacts-page.appearance-font-readable .state-card {
+  padding: 22rpx 24rpx;
+}
+
+.page-shell.contacts-page.appearance-font-readable .summary-card,
+.page-shell.contacts-page.appearance-font-readable .contact-card {
+  border-radius: 26rpx;
+}

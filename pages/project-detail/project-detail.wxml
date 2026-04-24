@@ -10,7 +10,7 @@
       <view class="source-badge">{{dataSource}}</view>
     </view>
     <view class="hero-title">{{projectDetail.name}}</view>
-    <view class="hero-subtitle">{{projectDetail.client}} · 下次跟进 {{projectDetail.nextFollowUp}}</view>
+    <view class="hero-subtitle">{{projectDetail.client || '未填写客户'}}</view>
     <view class="pill-row">
       <view wx:for="{{projectBadges}}" wx:key="text" class="{{item.className}}">{{item.text}}</view>
     </view>
@@ -22,7 +22,7 @@
       </view>
     </view>
     <view wx:if="{{entryContextText}}" class="source-banner section">{{entryContextText}}</view>
-    <view wx:if="{{isReadOnlySharedOut}}" class="source-banner section">该项目已外发给 {{projectDetail.handoverToName || '接收方'}}，分享方侧改为只读追踪视图。后续推进请在“外发项目”中查看。</view>
+    <view wx:if="{{isReadOnlySharedOut}}" class="source-banner section">该项目已转交给 {{projectDetail.handoverToName || '接收方'}}，当前页仅保留只读追踪。后续进展请在“外发项目”查看。</view>
   </view>
 
   <view class="section surface-card rise-in stagger-1 detail-section-card">
@@ -31,33 +31,21 @@
       <view wx:if="{{!isReadOnlySharedOut}}" class="section-link {{!projectId ? 'is-muted' : ''}}" bindtap="goEditProject">编辑项目</view>
       <view wx:if="{{isReadOnlySharedOut}}" class="section-link is-muted">已外发只读</view>
     </view>
-    <view class="card-subtitle">{{projectDetail.description}}</view>
+    <view wx:if="{{projectDetail.description}}" class="helper-text detail-overview-desc">{{projectDetail.description}}</view>
     <view class="project-summary-compact detail-overview-card">
-      <view class="project-summary-row">
-        <view class="project-summary-label">重点</view>
-        <view class="project-summary-text">{{projectOverview.focusText}}</view>
+      <view class="detail-overview-focus">
+        <view class="project-summary-label">当前重点</view>
+        <view class="detail-overview-focus-text">{{projectOverview.focusText}}</view>
       </view>
-      <view class="project-summary-row">
-        <view class="project-summary-label">摘要</view>
-        <view class="project-summary-text">{{projectOverview.latestSummary}}</view>
-      </view>
+      <view class="detail-overview-summary">{{projectOverview.latestSummary}}</view>
     </view>
-    <view class="compact-inline-metrics">
+    <view class="compact-inline-metrics detail-overview-metrics">
       <view class="compact-inline-item">下次跟进 {{projectOverview.nextFollowUpText}}</view>
       <view class="compact-inline-item">主要联系人 {{projectOverview.primaryContactText}}</view>
       <view class="compact-inline-item">跟进记录 {{projectOverview.recordCountText}}</view>
-    </view>
-    <view class="project-footer compact-project-footer detail-overview-footer">
-      <view class="helper-text">推进归属：{{projectOverview.ownerLabel}}</view>
-      <view class="helper-text">最近回填：{{projectOverview.latestFollowText}}</view>
-      <view class="helper-text">分享状态：{{projectOverview.shareStatusText}}</view>
-    </view>
-    <view class="detail-grid detail-grid-compact section">
-      <view class="detail-box" wx:for="{{summaryHighlights}}" wx:key="label">
-        <view class="detail-box-label">{{item.label}}</view>
-        <view class="detail-box-value">{{item.value}}</view>
-        <view class="detail-box-note">{{item.note}}</view>
-      </view>
+      <view class="compact-inline-item">推进归属 {{projectOverview.ownerLabel}}</view>
+      <view class="compact-inline-item">最近回填 {{projectOverview.latestFollowText}}</view>
+      <view class="compact-inline-item">分享状态 {{projectOverview.shareStatusText}}</view>
     </view>
     <view class="pill-row" wx:if="{{projectDetail.tags && projectDetail.tags.length}}">
       <view class="field-pill" wx:for="{{projectDetail.tags}}" wx:key="*this">{{item}}</view>
@@ -70,9 +58,14 @@
         <view class="section-title">联系人</view>
         <view class="helper-text contact-security-headline">联系方式加密存储</view>
       </view>
-      <view class="section-link" bindtap="toggleContacts">查看完整信息</view>
+      <view wx:if="{{!isReadOnlySharedOut}}" class="section-link" bindtap="openAddContactSheet">新增联系人</view>
+      <view wx:if="{{isReadOnlySharedOut}}" class="section-link is-muted">外发后只读</view>
     </view>
-    <view class="form-card-desc">{{contactSummaryText}}</view>
+    <view class="compact-inline-metrics detail-section-meta" wx:if="{{contactMeta.countText}}">
+      <view class="compact-inline-item">{{contactMeta.countText}}</view>
+      <view class="compact-inline-item">{{contactMeta.primaryText}}</view>
+    </view>
+    <view wx:if="{{!contacts.length}}" class="card-subtitle compact-empty-text">还没有联系人，先补关键决策人即可。</view>
     <view class="contact-summary contact-card" wx:for="{{contacts}}" wx:key="id" bindtap="toggleContacts">
       <view class="line-between">
         <view>
@@ -90,7 +83,6 @@
       <view wx:if="{{!isReadOnlySharedOut}}" class="section-link" bindtap="openFollowUp">新增任务</view>
       <view wx:if="{{isReadOnlySharedOut}}" class="section-link is-muted">外发后只读</view>
     </view>
-    <view class="form-card-desc task-header-note">{{taskSummaryText}}</view>
     <view wx:if="{{taskFeedback.title}}" class="task-feedback-banner">
       <view class="task-feedback-main">
         <view class="task-feedback-title">{{taskFeedback.title}}</view>
@@ -104,7 +96,7 @@
       <view class="compact-inline-item">已完成 {{taskSummary.completedCount || 0}} 条</view>
     </view>
     <view wx:if="{{taskSummary.latestDoneText}}" class="helper-text task-latest-done">最近完成：{{taskSummary.latestDoneText}}</view>
-    <view wx:if="{{!tasks.length}}" class="card-subtitle">暂无推进任务。录入跟进时补上任务后，会显示在这里。</view>
+    <view wx:if="{{!tasks.length}}" class="card-subtitle compact-empty-text">暂无推进任务。</view>
     <view class="task-card" wx:for="{{tasks}}" wx:key="id">
       <view class="line-between task-card-head">
         <view class="task-card-main">
@@ -133,8 +125,12 @@
       <view wx:if="{{!isReadOnlySharedOut}}" class="section-link" bindtap="openFollowUp">新增跟进</view>
       <view wx:if="{{isReadOnlySharedOut}}" class="section-link is-muted">接手方继续跟进</view>
     </view>
-    <view class="form-card-desc timeline-header-note">{{timelineSummaryText}}</view>
-    <view wx:if="{{!followTimeline.length}}" class="card-subtitle">暂无跟进记录。新增跟进后，会按时间显示在这里。</view>
+    <view class="compact-inline-metrics detail-section-meta">
+      <view class="compact-inline-item">{{timelineMeta.totalText}}</view>
+      <view class="compact-inline-item">{{timelineMeta.latestText}}</view>
+      <view wx:if="{{timelineMeta.extraText}}" class="compact-inline-item">{{timelineMeta.extraText}}</view>
+    </view>
+    <view wx:if="{{!followTimeline.length}}" class="card-subtitle compact-empty-text">暂无跟进记录。</view>
     <view class="timeline-group" wx:for="{{followTimeline}}" wx:key="date">
       <view class="timeline-group-title">{{item.date}}</view>
       <view class="timeline-item" wx:for="{{item.items}}" wx:key="timelineKey">
@@ -151,12 +147,13 @@
           <view class="timeline-meta-line">
             <view class="helper-text">记录人：{{item.actorName || '当前用户'}}</view>
             <view class="helper-text" wx:if="{{item.methodLabel && item.typeKey !== 'task_done'}}">方式：{{item.methodLabel}}</view>
+            <view class="helper-text" wx:if="{{item.collaborationLabel}}">{{item.collaborationLabel}}</view>
           </view>
-          <view class="helper-text" wx:if="{{item.collaborationLabel}}">{{item.collaborationLabel}}</view>
           <view class="timeline-card">
-            <view class="timeline-pill-row" wx:if="{{item.stageChange || item.nextFollowUpText}}">
+            <view class="timeline-pill-row" wx:if="{{item.stageChange || item.nextFollowUpText || (item.recommendedStage && item.recommendedStage !== item.stageChange)}}">
               <view wx:if="{{item.stageChange}}" class="soft-badge">阶段 {{item.stageChange}}</view>
               <view wx:if="{{item.nextFollowUpText}}" class="field-pill">下次 {{item.nextFollowUpText}}</view>
+              <view wx:if="{{item.recommendedStage && item.recommendedStage !== item.stageChange}}" class="chip">建议 {{item.recommendedStage}}</view>
             </view>
             <view class="timeline-section" wx:if="{{item.summary}}">
               <view class="timeline-section-label">{{item.summaryLabel || 'AI 摘要'}}</view>
@@ -168,34 +165,25 @@
                 <view class="timeline-list-item" wx:for="{{item.highlights}}" wx:key="*this">{{item}}</view>
               </view>
             </view>
-            <view class="timeline-section" wx:if="{{item.stageChange}}">
-              <view class="timeline-section-label">实际阶段变更</view>
-              <view class="timeline-section-text">{{item.stageChange}}</view>
-            </view>
-            <view class="timeline-section" wx:if="{{item.nextFollowUpText}}">
-              <view class="timeline-section-label">下次跟进</view>
-              <view class="timeline-section-text">{{item.nextFollowUpText}}</view>
-            </view>
             <view class="timeline-section" wx:if="{{item.risks && item.risks.length}}">
-              <view class="timeline-section-label">风险提示</view>
+              <view class="timeline-section-label">风险</view>
               <view class="timeline-list">
                 <view class="timeline-list-item is-risk" wx:for="{{item.risks}}" wx:key="*this">{{item}}</view>
               </view>
             </view>
-            <view class="timeline-section" wx:if="{{item.recommendedStage}}">
-              <view class="timeline-section-label">建议阶段</view>
-              <view class="timeline-section-text">{{item.recommendedStage}}</view>
-              <view class="helper-text" wx:if="{{item.stageChangeReason}}">{{item.stageChangeReason}}</view>
+            <view class="timeline-section" wx:if="{{item.stageChangeReason}}">
+              <view class="timeline-section-label">阶段说明</view>
+              <view class="timeline-section-text">{{item.stageChangeReason}}</view>
             </view>
             <view class="timeline-section" wx:if="{{item.missingInfo && item.missingInfo.length}}">
-              <view class="timeline-section-label">仍缺少的信息</view>
+              <view class="timeline-section-label">待补信息</view>
               <view class="timeline-list">
                 <view class="timeline-list-item" wx:for="{{item.missingInfo}}" wx:key="*this">{{item}}</view>
               </view>
             </view>
-            <view class="timeline-section" wx:if="{{item.desc}}">
+            <view class="timeline-section timeline-section-raw" wx:if="{{item.desc && item.desc !== item.summary}}">
               <view class="timeline-section-label">{{item.rawLabel || '原始记录'}}</view>
-              <view class="timeline-section-text">{{item.desc}}</view>
+              <view class="timeline-section-text timeline-raw-text">{{item.desc}}</view>
             </view>
           </view>
         </view>
@@ -206,38 +194,42 @@
   <view class="section surface-card rise-in stagger-5 detail-section-card">
     <view class="section-header">
       <view class="section-title">资料分享历史</view>
-      <view class="section-link" bindtap="openSharedOutPage">查看外发项目</view>
+      <view class="section-link" bindtap="openSharedOutPage">外发项目</view>
     </view>
-    <view wx:if="{{shareHistorySummaryText}}" class="form-card-desc share-header-note">{{shareHistorySummaryText}}</view>
-    <view wx:if="{{!shareHistory.length}}" class="card-subtitle">暂无资料发送记录，发送资料后会记录在这里。</view>
+    <view class="compact-inline-metrics detail-section-meta">
+      <view class="compact-inline-item">{{shareHistoryMeta.totalText}}</view>
+      <view class="compact-inline-item">{{shareHistoryMeta.openedText}}</view>
+      <view wx:if="{{shareHistoryMeta.unopenedText}}" class="compact-inline-item">{{shareHistoryMeta.unopenedText}}</view>
+    </view>
+    <view wx:if="{{!shareHistory.length}}" class="card-subtitle compact-empty-text">暂无资料发送记录。</view>
     <view wx:for="{{shareHistory}}" wx:key="id" class="tag-card share-history-card">
-      <view class="line-between">
+      <view class="line-between share-history-top">
         <view>
-          <view class="tag-title">{{item.mode}}</view>
-          <view class="tag-desc">对象标签：{{item.tagName}} · 创建时间：{{item.createdAt}}</view>
+          <view class="tag-title">{{item.receiverLabel}}</view>
+          <view class="tag-desc share-history-meta">{{item.mode}} · {{item.tagName}} · {{item.createdAt}}</view>
+          <view class="project-meta share-history-receiver">{{item.receiverSummary}}</view>
         </view>
-        <view class="status-badge {{item.statusBadgeClass}}">{{item.status}}</view>
+        <view class="status-badge {{item.statusBadgeClass}}">{{item.displayStatus}}</view>
       </view>
-      <view class="pill-row">
-        <view class="chip">{{item.receiverName || item.receiverOpenidMasked || '暂未识别'}}</view>
+      <view class="pill-row share-history-pill-row">
+        <view class="chip">标签 {{item.tagName}}</view>
         <view class="soft-badge">查看 {{item.viewed}} 次</view>
         <view class="field-pill">{{item.progressText}}</view>
       </view>
-      <view class="project-summary-compact">
+      <view class="project-summary-compact share-history-summary-card">
+        <view class="project-summary-row">
+          <view class="project-summary-label">进展</view>
+          <view class="project-summary-text">{{item.collaborationSummary}}</view>
+        </view>
         <view class="project-summary-row">
           <view class="project-summary-label">状态</view>
           <view class="project-summary-text">{{item.statusSummary}}</view>
         </view>
-        <view class="project-summary-row">
-          <view class="project-summary-label">协作</view>
-          <view class="project-summary-text">{{item.collaborationSummary}}</view>
-        </view>
       </view>
-      <view class="compact-inline-metrics">
-        <view class="compact-inline-item">首次打开 {{item.firstOpenedAt || '尚未打开'}}</view>
-        <view class="compact-inline-item">最近查看 {{item.lastViewedAt || '暂无更新'}}</view>
-        <view class="compact-inline-item">查看次数 {{item.viewed}} 次</view>
-        <view class="compact-inline-item">资料状态 {{item.progressText}}</view>
+      <view class="compact-inline-metrics share-history-metrics">
+        <view class="compact-inline-item">首次 {{item.firstOpenedAt || '尚未打开'}}</view>
+        <view class="compact-inline-item">最近 {{item.lastViewedAt || '暂无更新'}}</view>
+        <view wx:if="{{item.displayStatus === '已导入' || item.displayStatus === '已跟进'}}" class="compact-inline-item">接手 {{item.importedAt || '尚未接手'}}</view>
       </view>
     </view>
   </view>
@@ -246,11 +238,11 @@
   </block>
 </view>
 
-<view wx:if="{{!isLoading && !isReadOnlySharedOut}}" class="footer-bar is-three {{appearancePageClass}}">
-  <view class="btn-primary" bindtap="openFollowUp">新增跟进</view>
-  <view class="btn-secondary" bindtap="openShareSheet">分享</view>
-  <view wx:if="{{canMarkDeal}}" class="btn-ghost" bindtap="openDealPage">登记成交</view>
-  <view wx:else class="btn-ghost">已成交</view>
+<view wx:if="{{!isLoading && !isReadOnlySharedOut}}" class="footer-bar footer-bar-detail is-three {{appearancePageClass}}">
+  <view class="btn-primary footer-primary-action" bindtap="openFollowUp">新增跟进</view>
+  <view class="btn-secondary footer-secondary-action" bindtap="openShareSheet">分享</view>
+  <view wx:if="{{canMarkDeal}}" class="btn-ghost footer-tertiary-action" bindtap="openDealPage">登记成交</view>
+  <view wx:else class="btn-ghost footer-tertiary-action is-disabled">已成交</view>
 </view>
 
 <view wx:if="{{showContacts}}">
@@ -262,15 +254,66 @@
       <view class="sheet-close" bindtap="toggleContacts">关闭</view>
     </view>
     <view class="sheet-list contact-sheet-list">
-      <view class="sheet-card contact-sheet-security-card">
+      <view class="sheet-card contact-sheet-security-card contact-sheet-intro-card">
         <view class="contact-sheet-banner">已加密存储</view>
+        <view class="sheet-meta contact-sheet-intro-text">电话与微信仅在你本人查看时展示。</view>
       </view>
       <view class="sheet-card contact-sheet-card" wx:for="{{contacts}}" wx:key="id">
         <view class="contact-name">{{item.name}}</view>
         <view class="sheet-meta">{{item.role}} · {{item.company}}</view>
-        <view class="sheet-meta">电话 {{item.phone}}</view>
-        <view class="sheet-meta">微信 {{item.wechat}}</view>
+        <view class="contact-sheet-grid">
+          <view class="contact-sheet-item">
+            <view class="contact-sheet-label">电话</view>
+            <view class="contact-sheet-value">{{item.phone}}</view>
+          </view>
+          <view class="contact-sheet-item">
+            <view class="contact-sheet-label">微信</view>
+            <view class="contact-sheet-value">{{item.wechat}}</view>
+          </view>
+        </view>
       </view>
+    </view>
+  </view>
+</view>
+
+<view wx:if="{{showAddContactSheet}}">
+  <view class="sheet-mask" bindtap="closeAddContactSheet"></view>
+  <view class="sheet-panel project-detail-add-contact-sheet {{appearancePageClass}}">
+    <view class="sheet-handle"></view>
+    <view class="sheet-header">
+      <view class="sheet-title">新增联系人</view>
+      <view class="sheet-close" bindtap="closeAddContactSheet">关闭</view>
+    </view>
+    <view class="sheet-card contact-sheet-security-card contact-sheet-intro-card">
+      <view class="contact-sheet-banner">保存后即加密</view>
+    </view>
+    <view class="sheet-card add-contact-form-card">
+      <view class="field-group add-contact-field add-contact-first-field">
+        <view class="field-label">姓名</view>
+        <input class="input-sim input-native" value="{{contactDraft.name}}" data-field="name" bindinput="onAddContactInput" placeholder="请输入姓名" placeholder-class="input-placeholder" />
+      </view>
+      <view class="field-group add-contact-field">
+        <view class="field-label">角色</view>
+        <input class="input-sim input-native" value="{{contactDraft.role}}" data-field="role" bindinput="onAddContactInput" placeholder="决策人 / 技术对接" placeholder-class="input-placeholder" />
+      </view>
+      <view class="split-row add-contact-split-row">
+        <view class="field-group add-contact-field">
+          <view class="field-label">电话</view>
+          <input class="input-sim input-native" value="{{contactDraft.phone}}" data-field="phone" bindinput="onAddContactInput" placeholder="请输入电话" placeholder-class="input-placeholder" />
+        </view>
+        <view class="field-group add-contact-field">
+          <view class="field-label">微信</view>
+          <input class="input-sim input-native" value="{{contactDraft.wechat}}" data-field="wechat" bindinput="onAddContactInput" placeholder="请输入微信" placeholder-class="input-placeholder" />
+        </view>
+      </view>
+      <view class="field-group add-contact-field">
+        <view class="field-label">所属公司</view>
+        <input class="input-sim input-native" value="{{contactDraft.company}}" data-field="company" bindinput="onAddContactInput" placeholder="请输入所属公司" placeholder-class="input-placeholder" />
+      </view>
+    </view>
+    <view class="inline-actions add-contact-actions">
+      <view class="btn-ghost" bindtap="closeAddContactSheet">取消</view>
+      <view class="btn-primary" bindtap="saveContactDraft">{{isSavingContact ? '保存中...' : '保存联系人'}}</view>
     </view>
   </view>
 </view>
@@ -280,13 +323,18 @@
   <view class="sheet-panel share-entry-sheet {{appearancePageClass}}">
     <view class="sheet-handle"></view>
     <view class="sheet-header">
-      <view class="sheet-title">分享项目</view>
+      <view class="sheet-title">分享设置</view>
       <view class="sheet-close" bindtap="closeShareSheet">关闭</view>
     </view>
 
-    <view class="share-entry-header">
-      <view class="share-entry-header-title">选择分享方式</view>
-      <view class="share-entry-header-desc">选择后直接预览卡片。</view>
+    <view class="share-entry-project-card">
+      <view class="share-entry-project-name">{{projectDetail.name}}</view>
+      <view class="compact-inline-metrics share-entry-project-pills">
+        <view wx:if="{{projectDetail.client}}" class="compact-inline-item">客户 {{projectDetail.client}}</view>
+        <view wx:if="{{projectDetail.stage}}" class="compact-inline-item">阶段 {{projectDetail.stage}}</view>
+        <view wx:if="{{projectDetail.estimatedAmount}}" class="compact-inline-item">预计 {{projectDetail.estimatedAmount}}</view>
+        <view wx:if="{{projectDetail.nextFollowUp}}" class="compact-inline-item">跟进 {{projectDetail.nextFollowUp}}</view>
+      </view>
     </view>
 
     <view class="share-entry-list">
@@ -303,6 +351,9 @@
             <view class="mode-desc">{{item.desc}}</view>
           </view>
           <view class="status-badge is-brand">{{item.badge}}</view>
+        </view>
+        <view class="pill-row share-entry-option-pills">
+          <view class="field-pill">{{item.note}}</view>
         </view>
       </view>
     </view>

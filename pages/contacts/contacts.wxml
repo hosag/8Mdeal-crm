@@ -1,0 +1,93 @@
+<view class="page-shell contacts-page {{appearancePageClass}}">
+  <view wx:if="{{isLoading}}" class="rise-in">
+    <loading-panel rows="3" appearance-page-class="{{appearancePageClass}}" />
+  </view>
+
+  <block wx:else>
+    <view class="hero rise-in">
+      <view class="eyebrow-row">
+        <view class="eyebrow">联系人</view>
+        <view class="source-badge">{{dataSource}}</view>
+      </view>
+      <view class="hero-title">把关键人收成一页私有线索图</view>
+      <view class="hero-subtitle">先看关键人，再回到对应项目，判断会更直接。</view>
+    </view>
+
+    <view wx:if="{{isLoadFailed}}" class="form-card section state-card rise-in stagger-1">
+      <view class="form-card-title">当前无法同步云端数据</view>
+      <view class="form-card-desc">{{loadError}}</view>
+      <view class="hero-actions state-actions">
+        <view class="btn-primary state-btn" bindtap="retryFetch">重新加载</view>
+      </view>
+    </view>
+
+    <view class="surface-card section rise-in stagger-1 contacts-filter-card">
+      <view class="search-panel compact-search-panel">
+        <input class="input-sim input-native contacts-search-input" value="{{searchKeyword}}" bindinput="onSearchInput" placeholder="搜索姓名 / 公司 / 角色 / 项目 / 摘要" placeholder-class="input-placeholder" confirm-type="search" />
+        <view wx:if="{{searchKeyword}}" class="search-clear" bindtap="clearSearch">清空</view>
+      </view>
+    </view>
+
+    <view class="summary-grid contacts-summary-strip rise-in stagger-2">
+      <view class="summary-card" wx:for="{{summaryCards}}" wx:key="label">
+        <view class="summary-card-label">{{item.label}}</view>
+        <view class="summary-card-value">{{item.value}}</view>
+        <view class="summary-card-note">{{item.note}}</view>
+      </view>
+    </view>
+
+    <view class="form-card section result-bar rise-in stagger-2">
+      <view class="result-bar-text">{{resultSummaryText}}</view>
+    </view>
+
+    <view class="section rise-in stagger-3">
+      <view class="project-card contact-card" wx:for="{{filteredContacts}}" wx:key="id" data-contact-id="{{item.id}}" bindtap="openContactDetail">
+        <view class="project-top contact-card-top">
+          <view class="project-main">
+            <view class="project-name">{{item.name}}</view>
+            <view class="project-client">{{item.company}} · {{item.roleSummary}}</view>
+            <view class="project-meta">{{item.latestContextText}}</view>
+          </view>
+          <view class="status-badge {{item.badgeClass}}">{{item.badgeText}}</view>
+        </view>
+
+        <view wx:if="{{item.relationTags.length || item.stageTags.length}}" class="pill-row project-pill-row contact-pill-row">
+          <view wx:for="{{item.relationTags}}" wx:key="*this" class="soft-badge">{{item}}</view>
+          <view wx:for="{{item.stageTags}}" wx:key="*this" class="field-pill">{{item}}</view>
+        </view>
+
+        <view class="project-summary-compact contact-summary-card">
+          <view class="project-summary-row">
+            <view class="project-summary-label">最新判断</view>
+            <view class="project-summary-text">{{item.latestSummary}}</view>
+          </view>
+          <view class="project-summary-row">
+            <view class="project-summary-label">项目承接</view>
+            <view class="project-summary-text">{{item.projectSummaryText}}</view>
+          </view>
+        </view>
+
+        <view class="compact-inline-metrics contact-inline-metrics">
+          <view class="compact-inline-item">最近触达 {{item.latestFollowUpText}}</view>
+          <view class="compact-inline-item">{{item.projectCountText}}</view>
+          <view wx:if="{{item.latestOwnerLabel}}" class="compact-inline-item">{{item.latestOwnerLabel}}</view>
+        </view>
+
+        <view class="inline-actions compact-inline-actions">
+          <view wx:if="{{item.latestProjectId}}" class="btn-ghost" data-project-id="{{item.latestProjectId}}" catchtap="openLatestProject">最近项目</view>
+          <view class="btn-secondary" data-contact-id="{{item.id}}" catchtap="openContactDetail">查看详情</view>
+        </view>
+      </view>
+
+      <empty-state
+        wx:if="{{!filteredContacts.length}}"
+        appearance-page-class="{{appearancePageClass}}"
+        title="{{emptyTitle}}"
+        desc="{{emptyDesc}}"
+        image="/assets/illustrations/empty-projects.svg"
+        actionText="{{emptyActionText}}"
+        bind:action="handleEmptyAction"
+      />
+    </view>
+  </block>
+</view>

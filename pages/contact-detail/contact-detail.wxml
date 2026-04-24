@@ -1,0 +1,103 @@
+<view class="page-shell contact-detail-page {{appearancePageClass}}">
+  <view wx:if="{{isLoading}}" class="rise-in">
+    <loading-panel rows="3" appearance-page-class="{{appearancePageClass}}" />
+  </view>
+
+  <block wx:else>
+    <view wx:if="{{isLoadFailed}}" class="form-card section state-card rise-in">
+      <view class="form-card-title">当前无法加载联系人详情</view>
+      <view class="form-card-desc">{{loadError}}</view>
+      <view class="hero-actions state-actions">
+        <view class="btn-primary state-btn" bindtap="retryFetch">重新加载</view>
+      </view>
+    </view>
+
+    <block wx:elif="{{contact}}">
+      <view class="hero rise-in">
+        <view class="eyebrow-row">
+          <view class="eyebrow">联系人</view>
+          <view class="source-badge">{{dataSource}}</view>
+        </view>
+        <view class="hero-title">{{contact.name}}</view>
+        <view class="hero-subtitle">{{contact.company}} · {{contact.roleSummary}}</view>
+        <view class="pill-row contact-hero-pills">
+          <view wx:for="{{contact.relationTags}}" wx:key="*this" class="soft-badge">{{item}}</view>
+          <view wx:for="{{contact.stageTags}}" wx:key="*this" class="field-pill">{{item}}</view>
+          <view class="chip">关联 {{contact.projectCount}} 项目</view>
+        </view>
+      </view>
+
+      <view class="surface-card section rise-in stagger-1">
+        <view class="section-title">最近判断</view>
+        <view class="project-summary-compact contact-detail-summary">
+          <view class="project-summary-row">
+            <view class="project-summary-label">最新判断</view>
+            <view class="project-summary-text">{{contact.latestSummary}}</view>
+          </view>
+        </view>
+        <view class="compact-inline-metrics contact-detail-metrics">
+          <view class="compact-inline-item">最近触达 {{contact.latestFollowUpText}}</view>
+          <view wx:if="{{contact.latestProjectName}}" class="compact-inline-item">最近项目 {{contact.latestProjectName}}</view>
+          <view class="compact-inline-item">{{contact.projectCountText}}</view>
+          <view wx:if="{{contact.latestOwnerLabel}}" class="compact-inline-item">{{contact.latestOwnerLabel}}</view>
+        </view>
+      </view>
+
+      <view class="surface-card section rise-in stagger-2">
+        <view class="line-between contact-section-head">
+          <view class="section-title">联系方式</view>
+          <view class="field-pill">云存储已加密</view>
+        </view>
+        <view class="contact-info-card">
+          <view class="contact-info-row">
+            <view class="contact-info-main">
+              <view class="contact-info-label">电话</view>
+              <view class="contact-info-value">{{contact.phoneDisplay}}</view>
+            </view>
+            <view class="btn-ghost contact-copy-btn" data-value="{{contact.phoneDisplay}}" bindtap="copyField">复制</view>
+          </view>
+          <view class="contact-info-row">
+            <view class="contact-info-main">
+              <view class="contact-info-label">微信</view>
+              <view class="contact-info-value">{{contact.wechatDisplay}}</view>
+            </view>
+            <view class="btn-ghost contact-copy-btn" data-value="{{contact.wechatDisplay}}" bindtap="copyField">复制</view>
+          </view>
+        </view>
+      </view>
+
+      <view class="section rise-in stagger-3">
+        <view class="section-title detail-projects-title">关联项目</view>
+        <view class="project-card contact-project-card" wx:for="{{contact.projectCards}}" wx:key="id" data-project-id="{{item.id}}" bindtap="openProjectDetail">
+          <view class="project-top">
+            <view class="project-main">
+              <view class="project-name">{{item.name}}</view>
+              <view class="project-client">{{item.client}} · {{item.ownerLabel}}</view>
+              <view class="project-meta">{{item.latestTouchText}}</view>
+            </view>
+            <view class="soft-badge">{{item.stage}}</view>
+          </view>
+          <view class="project-summary-compact">
+            <view class="project-summary-row">
+              <view class="project-summary-label">最近判断</view>
+              <view class="project-summary-text">{{item.latestSummary}}</view>
+            </view>
+          </view>
+          <view class="inline-actions compact-inline-actions">
+            <view class="btn-secondary" data-project-id="{{item.id}}" catchtap="openProjectDetail">查看项目</view>
+          </view>
+        </view>
+      </view>
+    </block>
+
+    <empty-state
+      wx:else
+      appearance-page-class="{{appearancePageClass}}"
+      title="联系人不存在"
+      desc="这条联系人记录可能已被删除，或当前参数不完整。"
+      image="/assets/illustrations/empty-projects.svg"
+      actionText="重新加载"
+      bind:action="retryFetch"
+    />
+  </block>
+</view>

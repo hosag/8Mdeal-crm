@@ -73,6 +73,177 @@ async function loadProjectsData() {
   }
 }
 
+function parseDateTime(value) {
+  if (!value) {
+    return null
+  }
+
+  if (value instanceof Date) {
+    return Number.isNaN(value.getTime()) ? null : value
+  }
+
+  const text = String(value).trim()
+  if (!text) {
+    return null
+  }
+
+  const directDate = new Date(text.includes('T') ? text : text.replace(' ', 'T'))
+  if (!Number.isNaN(directDate.getTime())) {
+    return directDate
+  }
+
+  const shortMatch = text.match(/^(\d{2})-(\d{2})\s+(\d{2}):(\d{2})$/)
+  if (shortMatch) {
+    const now = new Date()
+    return new Date(
+      now.getFullYear(),
+      Number(shortMatch[1]) - 1,
+      Number(shortMatch[2]),
+      Number(shortMatch[3]),
+      Number(shortMatch[4]),
+      0,
+      0
+    )
+  }
+
+  return null
+}
+
+function buildMockContactsList() {
+  const detailContacts = Array.isArray(mock.contacts) ? mock.contacts : []
+  const detailContactMap = detailContacts.reduce((result, item) => {
+    const key = normalizeText(item && item.name)
+    if (key) {
+      result[key] = item
+    }
+    return result
+  }, {})
+
+  const contactMap = {}
+  ;(Array.isArray(mock.projectCards) ? mock.projectCards : []).forEach((project) => {
+    const latestTouch = parseDateTime(project.updatedAtRaw || project.nextFollowUpAt || '')
+    const projectCard = {
+      id: normalizeText(project.id),
+      name: normalizeText(project.name) || '未命名项目',
+      client: normalizeText(project.client) || '未填写客户',
+      stage: normalizeText(project.stage) || '线索',
+      latestSummary: normalizeText(project.latestSummary) || '当前还没有沟通摘要',
+      latestTouchText: normalizeText(project.latest) || '最近',
+      latestTouchRaw: latestTouch ? latestTouch.toISOString() : '',
+      ownerLabel: normalizeText(project.ownerLabel) || '我负责推进',
+      ownerType: normalizeText(project.ownerType) || 'owned'
+    }
+
+    ;(Array.isArray(project.contactNames) ? project.contactNames : []).forEach((name) => {
+      const contactName = normalizeText(name)
+      if (!contactName) {
+        return
+      }
+
+      if (!contactMap[contactName]) {
+        const detail = detailContactMap[contactName] || {}
+        contactMap[contactName] = {
+          id: `mock-contact-${contactName}`,
+          name: contactName,
+          company: normalizeText(detail.company || project.client),
+          roleSummary: normalizeText(detail.role) || '未标注角色',
+          phone: normalizeText(detail.phone),
+          phoneMasked: normalizeText(detail.phone),
+          wechat: normalizeText(detail.wechat),
+          wechatMasked: normalizeText(detail.wechat),
+          hasPhone: Boolean(normalizeText(detail.phone)),
+          hasWechat: Boolean(normalizeText(detail.wechat)),
+          relationTags: /决策|董事长|总经理|老板/i.test(normalizeText(detail.role)) ? ['关键人'] : [],
+          isKeyContact: /决策|董事长|总经理|老板/i.test(normalizeText(detail.role)),
+          stageTags: [],
+          projectNames: [],
+          projectCards: [],
+          latestSummary: '',
+          latestFollowUpText: '',
+          latestFollowUpTimeRaw: '',
+          latestProjectId: '',
+          latestProjectName: '',
+          latestOwnerLabel: ''
+        }
+      }
+
+      const target = contactMap[contactName]
+      if (projectCard.stage && target.stageTags.indexOf(projectCard.stage) === -1) {
+        target.stageTags.push(projectCard.stage)
+      }
+      if (target.projectNames.indexOf(projectCard.name) === -1) {
+        target.projectNames.push(projectCard.name)
+      }
+      if (!target.projectCards.some((item) => item.id === projectCard.id)) {
+        target.projectCards.push(projectCard)
+      }
+
+      const currentLatest = parseDateTime(target.latestFollowUpTimeRaw)
+      if (!currentLatest || (latestTouch && latestTouch.getTime() >= currentLatest.getTime())) {
+        target.latestSummary = projectCard.latestSummary
+        target.latestFollowUpText = projectCard.latestTouchText
+        target.latestFollowUpTimeRaw = projectCard.latestTouchRaw
+        target.latestProjectId = projectCard.id
+        target.latestProjectName = projectCard.name
+        target.latestOwnerLabel = projectCard.ownerLabel
+      }
+    })
+  })
+
+  return Object.keys(contactMap)
+    .map((key) => ({
+      ...contactMap[key],
+      projectCount: contactMap[key].projectCards.length,
+      stageTags: contactMap[key].stageTags.slice(0, 4),
+      projectCards: contactMap[key].projectCards.slice().sort((left, right) => {
+        return new Date(right.latestTouchRaw || 0).getTime() - new Date(left.latestTouchRaw || 0).getTime()
+      })
+    }))
+    .sort((left, right) => {
+      const leftTime = parseDateTime(left.latestFollowUpTimeRaw)
+      const rightTime = parseDateTime(right.latestFollowUpTimeRaw)
+      return (rightTime ? rightTime.getTime() : 0) - (leftTime ? leftTime.getTime() : 0)
+    })
+}
+
+async function loadContactsData() {
+  try {
+    const result = await callCloudFunction('listContacts')
+    if (result && Array.isArray(result.contacts)) {
+      return {
+        data: clone(result.contacts),
+        source: 'CloudBase'
+      }
+    }
+  } catch (error) {
+    if (canUseCloud()) {
+      throw error
+    }
+  }
+
+  await wait(180)
+
+  return {
+    data: buildMockContactsList(),
+    source: getAppDataSource()
+  }
+}
+
+async function loadContactDetailData(contactId) {
+  const result = await loadContactsData()
+  const contacts = Array.isArray(result.data) ? result.data : []
+  const target = contacts.find((item) => String(item && item.id ? item.id : '') === String(contactId || ''))
+
+  if (!target) {
+    throw new Error('contact not found')
+  }
+
+  return {
+    data: clone(target),
+    source: result.source
+  }
+}
+
 async function loadProjectDetailData(projectId) {
   if (projectId) {
     try {
@@ -624,6 +795,8 @@ async function saveUserPreferencesData(payload) {
 module.exports = {
   loadHomeData,
   loadProjectsData,
+  loadContactsData,
+  loadContactDetailData,
   loadProjectDetailData,
   loadProjectFormData,
   saveProjectData,

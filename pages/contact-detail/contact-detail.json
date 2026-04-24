@@ -1,0 +1,7 @@
+{
+  "navigationBarTitleText": "联系人详情",
+  "usingComponents": {
+    "loading-panel": "/components/loading-panel/index",
+    "empty-state": "/components/empty-state/index"
+  }
+}

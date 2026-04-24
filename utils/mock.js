@@ -169,8 +169,8 @@ const followTimeline = [
 ]
 
 const shareModes = [
-  { key: 'info', title: '分享信息', desc: '发给需要了解项目情况的人，只展示授权字段，不转移管理权。', badge: '仅查看' },
-  { key: 'outbound', title: '项目外发', desc: '发给需要正式接手项目的人，展示推进所需信息，打开后转移管理权。', badge: '接手管理权' }
+  { key: 'info', title: '发送资料', desc: '发给需要了解项目情况的人，只展示授权字段，项目仍由你维护。', badge: '资料卡' },
+  { key: 'outbound', title: '转交项目', desc: '发给正式接手项目的人，后续在外发项目查看进展。', badge: '交接卡' }
 ]
 
 const shareTags = [

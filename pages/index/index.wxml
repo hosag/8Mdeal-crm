@@ -64,7 +64,6 @@
     <view class="section rise-in stagger-1">
       <view class="section-header">
         <view class="section-title">推进动作优先</view>
-        <view class="section-link" data-quick-filter="todo" data-sort-mode="next" data-source="home-task" bindtap="openProjectsWithFilter">查看全部项目</view>
       </view>
       <view class="form-card task-summary-strip">
         <view class="task-summary-item">
@@ -235,6 +234,325 @@
   </block>
 </view>
 
+<view wx:if="{{showQuickEntrySheet}}">
+  <view class="sheet-mask quick-entry-mask" bindtap="onQuickEntryMaskTap"></view>
+  <view class="sheet-panel quick-entry-sheet {{appearancePageClass}} {{isQuickEntryEditing ? 'is-editing' : ''}}" style="{{quickEntrySheetStyle}}">
+    <view class="sheet-handle"></view>
+    <view class="sheet-header">
+      <view class="sheet-title">快速录入</view>
+      <view class="sheet-close" bindtap="onQuickEntryHeaderClose">{{showQuickEntrySuccessPanel ? '完成' : '关闭'}}</view>
+    </view>
+    <view wx:if="{{!showQuickEntrySuccessPanel}}" class="quick-entry-head">
+      <view class="quick-entry-head-main">
+        <view class="card-title">{{quickEntryModeTitle}}</view>
+        <view class="card-subtitle">{{quickEntryModeDesc}}</view>
+      </view>
+      <view wx:if="{{quickEntrySheetSource}}" class="source-badge quick-entry-source">{{quickEntrySheetSource}}</view>
+    </view>
+    <view wx:if="{{!showQuickEntrySuccessPanel}}" class="chips quick-entry-mode-wall">
+      <view
+        wx:for="{{quickEntryModes}}"
+        wx:key="key"
+        class="chip quick-entry-mode-chip {{quickEntryMode === item.key ? 'is-active' : ''}}"
+        data-mode="{{item.key}}"
+        bindtap="setQuickEntryMode"
+      >{{item.label}}</view>
+    </view>
+    <view class="quick-entry-body" style="{{quickEntryBodyStyle}}">
+      <block wx:if="{{showQuickEntrySuccessPanel}}">
+        <view class="quick-entry-success-card">
+          <view class="quick-entry-success-badge">已保存</view>
+          <view class="quick-entry-success-title">{{quickEntrySuccessState.title}}</view>
+          <view class="quick-entry-success-detail">{{quickEntrySuccessState.detail}}</view>
+          <view wx:if="{{quickEntrySuccessState.projectName}}" class="quick-entry-success-project">{{quickEntrySuccessState.projectName}}</view>
+        </view>
+      </block>
+      <block wx:else>
+      <block wx:if="{{quickEntryMode === 'project'}}">
+        <view class="field-group quick-entry-field-group">
+          <view class="field-label">项目名称</view>
+          <input
+            class="input-sim input-native"
+            value="{{quickEntryForm.projectName}}"
+            data-field="projectName"
+            bindinput="onQuickEntryInput"
+            bindfocus="onQuickEntryFieldFocus"
+            cursor-spacing="{{quickEntryCursorSpacing}}"
+            placeholder="例如：华大基因数据库改造"
+            placeholder-class="input-placeholder"
+          />
+        </view>
+        <view class="field-group quick-entry-field-group">
+          <view class="field-label">客户名称</view>
+          <input
+            class="input-sim input-native"
+            value="{{quickEntryForm.clientName}}"
+            data-field="clientName"
+            bindinput="onQuickEntryInput"
+            bindfocus="onQuickEntryFieldFocus"
+            cursor-spacing="{{quickEntryCursorSpacing}}"
+            placeholder="例如：华大基因科技有限公司"
+            placeholder-class="input-placeholder"
+          />
+        </view>
+        <view class="field-group quick-entry-field-group">
+          <view class="field-label">当前阶段</view>
+          <view class="chips quick-entry-stage-wall">
+            <view
+              wx:for="{{quickEntryStages}}"
+              wx:key="*this"
+              class="chip quick-entry-stage-chip {{quickEntryForm.stage === item ? 'is-active' : ''}}"
+              data-stage="{{item}}"
+              bindtap="setQuickEntryStage"
+            >{{item}}</view>
+          </view>
+        </view>
+      </block>
+
+      <block wx:if="{{quickEntryMode === 'follow_up'}}">
+        <view class="field-group quick-entry-field-group">
+          <view class="field-label">跟进内容</view>
+          <textarea
+            class="textarea-sim textarea-native quick-entry-textarea"
+            value="{{quickEntryForm.followUpContent}}"
+            data-field="followUpContent"
+            bindinput="onQuickEntryInput"
+            bindfocus="onQuickEntryFieldFocus"
+            cursor-spacing="{{quickEntryCursorSpacing}}"
+            placeholder="先写原话和关键判断，后面需要更完整时再进正式录入。"
+            placeholder-class="input-placeholder"
+            maxlength="-1"
+          ></textarea>
+        </view>
+        <view class="quick-entry-project-card">
+          <view class="line-between quick-entry-project-head">
+            <view class="quick-entry-project-summary">
+              <view class="field-label quick-entry-inline-label">关联项目</view>
+              <view class="quick-entry-selected-project {{quickEntrySelectedProjectMeta ? '' : 'is-placeholder'}}">{{quickEntrySelectedProjectName}}</view>
+            </view>
+            <view class="quick-entry-project-head-actions">
+              <view wx:if="{{quickEntrySelectedProjectMeta}}" class="status-badge quick-entry-project-stage">{{quickEntrySelectedProjectMeta.stage}}</view>
+              <view class="section-link quick-entry-project-link" bindtap="toggleQuickEntryProjectSearch">{{quickEntryShowProjectSearch ? '收起' : '更多项目'}}</view>
+            </view>
+          </view>
+          <view wx:if="{{quickEntrySelectedProjectMeta}}" class="helper-text quick-entry-project-meta">{{quickEntrySelectedProjectMeta.client}}<text wx:if="{{quickEntrySelectedProjectMeta.nextText}}"> · {{quickEntrySelectedProjectMeta.nextText}}</text><text wx:if="{{quickEntryProjectSelectionMode === 'auto'}}"> · 已按内容匹配</text></view>
+          <view wx:else class="helper-text quick-entry-project-meta">先把内容记下来，再从最近项目里选一个关联即可。</view>
+          <view wx:if="{{quickEntrySuggestedProjects.length}}" class="chips quick-entry-project-suggest-wall">
+            <view
+              wx:for="{{quickEntrySuggestedProjects}}"
+              wx:key="id"
+              class="chip quick-entry-project-suggest-chip {{quickEntrySelectedProjectId === item.id ? 'is-active' : ''}}"
+              data-project-id="{{item.id}}"
+              bindtap="selectQuickEntryProject"
+            >{{item.name}}</view>
+          </view>
+          <block wx:if="{{quickEntryShowProjectSearch}}">
+            <view class="search-panel quick-entry-project-search">
+              <input
+                class="input-sim input-native projects-search-input"
+                value="{{quickEntryProjectKeyword}}"
+                bindinput="onQuickEntryProjectSearch"
+                bindfocus="onQuickEntryFieldFocus"
+                placeholder="搜索项目 / 客户 / 联系人"
+                placeholder-class="input-placeholder"
+                confirm-type="search"
+                cursor-spacing="{{quickEntryCursorSpacing}}"
+              />
+              <view wx:if="{{quickEntryProjectKeyword}}" class="search-clear" bindtap="clearQuickEntryProjectSearch">清空</view>
+            </view>
+            <view wx:if="{{quickEntryVisibleProjects.length}}" class="quick-entry-project-list">
+              <view
+                wx:for="{{quickEntryVisibleProjects}}"
+                wx:key="id"
+                class="quick-entry-project-option {{quickEntrySelectedProjectId === item.id ? 'is-active' : ''}}"
+                data-project-id="{{item.id}}"
+                bindtap="selectQuickEntryProject"
+              >
+                <view class="quick-entry-project-option-top">
+                  <view class="quick-entry-project-option-name">{{item.name}}</view>
+                  <view class="field-pill quick-entry-project-option-pill">{{item.stage}}</view>
+                </view>
+                <view class="helper-text quick-entry-project-option-meta">{{item.client}}<text wx:if="{{item.contactText}}"> · {{item.contactText}}</text></view>
+                <view wx:if="{{item.nextText || item.focusText || item.latestSummary}}" class="quick-entry-project-option-brief">{{item.nextText || item.focusText || item.latestSummary}}</view>
+              </view>
+            </view>
+            <view wx:else class="helper-text quick-entry-empty">没有找到匹配项目，可以先切到“新建项目”。</view>
+          </block>
+        </view>
+        <view class="field-group quick-entry-field-group">
+          <view class="field-label">跟进时间</view>
+          <view class="split-row quick-entry-time-row">
+            <picker class="picker-block" mode="date" value="{{quickEntryForm.followUpDate}}" data-field="followUpDate" bindchange="onQuickEntryPicker">
+              <view class="picker-sim">
+                <view class="picker-value">{{quickEntryForm.followUpDate}}</view>
+              </view>
+            </picker>
+            <picker class="picker-block" mode="time" value="{{quickEntryForm.followUpClock}}" data-field="followUpClock" bindchange="onQuickEntryPicker">
+              <view class="picker-sim">
+                <view class="picker-value">{{quickEntryForm.followUpClock}}</view>
+              </view>
+            </picker>
+          </view>
+        </view>
+        <view class="field-group quick-entry-field-group">
+          <view class="field-label">跟进方式</view>
+          <view class="chips quick-entry-method-wall">
+            <view
+              wx:for="{{quickEntryMethods}}"
+              wx:key="*this"
+              class="chip quick-entry-method-chip {{quickEntryForm.followUpMethod === item ? 'is-active' : ''}}"
+              data-method="{{item}}"
+              bindtap="setQuickEntryMethod"
+            >{{item}}</view>
+          </view>
+        </view>
+      </block>
+
+      <block wx:if="{{quickEntryMode === 'task'}}">
+        <view class="field-group quick-entry-field-group">
+          <view class="field-label">任务标题</view>
+          <input
+            class="input-sim input-native"
+            value="{{quickEntryForm.taskTitle}}"
+            data-field="taskTitle"
+            bindinput="onQuickEntryInput"
+            bindfocus="onQuickEntryFieldFocus"
+            cursor-spacing="{{quickEntryCursorSpacing}}"
+            placeholder="例如：本周五前发报价"
+            placeholder-class="input-placeholder"
+          />
+        </view>
+        <view class="field-group quick-entry-field-group">
+          <view class="field-label">截止时间</view>
+          <view class="split-row quick-entry-time-row">
+            <picker class="picker-block" mode="date" value="{{quickEntryForm.taskDueDate}}" data-field="taskDueDate" bindchange="onQuickEntryPicker">
+              <view class="picker-sim">
+                <view class="picker-value">{{quickEntryForm.taskDueDate}}</view>
+              </view>
+            </picker>
+            <picker class="picker-block" mode="time" value="{{quickEntryForm.taskDueTime}}" data-field="taskDueTime" bindchange="onQuickEntryPicker">
+              <view class="picker-sim">
+                <view class="picker-value">{{quickEntryForm.taskDueTime}}</view>
+              </view>
+            </picker>
+          </view>
+        </view>
+        <view class="quick-entry-project-card">
+          <view class="line-between quick-entry-project-head">
+            <view class="quick-entry-project-summary">
+              <view class="field-label quick-entry-inline-label">关联项目</view>
+              <view class="quick-entry-selected-project {{quickEntrySelectedProjectMeta ? '' : 'is-placeholder'}}">{{quickEntrySelectedProjectName}}</view>
+            </view>
+            <view class="quick-entry-project-head-actions">
+              <view wx:if="{{quickEntrySelectedProjectMeta}}" class="status-badge quick-entry-project-stage">{{quickEntrySelectedProjectMeta.stage}}</view>
+              <view class="section-link quick-entry-project-link" bindtap="toggleQuickEntryProjectSearch">{{quickEntryShowProjectSearch ? '收起' : '更多项目'}}</view>
+            </view>
+          </view>
+          <view wx:if="{{quickEntrySelectedProjectMeta}}" class="helper-text quick-entry-project-meta">{{quickEntrySelectedProjectMeta.client}}<text wx:if="{{quickEntrySelectedProjectMeta.nextText}}"> · {{quickEntrySelectedProjectMeta.nextText}}</text><text wx:if="{{quickEntryProjectSelectionMode === 'auto'}}"> · 已按内容匹配</text></view>
+          <view wx:else class="helper-text quick-entry-project-meta">先把动作定下来，再从最近项目里选一个关联即可。</view>
+          <view wx:if="{{quickEntrySuggestedProjects.length}}" class="chips quick-entry-project-suggest-wall">
+            <view
+              wx:for="{{quickEntrySuggestedProjects}}"
+              wx:key="id"
+              class="chip quick-entry-project-suggest-chip {{quickEntrySelectedProjectId === item.id ? 'is-active' : ''}}"
+              data-project-id="{{item.id}}"
+              bindtap="selectQuickEntryProject"
+            >{{item.name}}</view>
+          </view>
+          <block wx:if="{{quickEntryShowProjectSearch}}">
+            <view class="search-panel quick-entry-project-search">
+              <input
+                class="input-sim input-native projects-search-input"
+                value="{{quickEntryProjectKeyword}}"
+                bindinput="onQuickEntryProjectSearch"
+                bindfocus="onQuickEntryFieldFocus"
+                placeholder="搜索项目 / 客户 / 联系人"
+                placeholder-class="input-placeholder"
+                confirm-type="search"
+                cursor-spacing="{{quickEntryCursorSpacing}}"
+              />
+              <view wx:if="{{quickEntryProjectKeyword}}" class="search-clear" bindtap="clearQuickEntryProjectSearch">清空</view>
+            </view>
+            <view wx:if="{{quickEntryVisibleProjects.length}}" class="quick-entry-project-list">
+              <view
+                wx:for="{{quickEntryVisibleProjects}}"
+                wx:key="id"
+                class="quick-entry-project-option {{quickEntrySelectedProjectId === item.id ? 'is-active' : ''}}"
+                data-project-id="{{item.id}}"
+                bindtap="selectQuickEntryProject"
+              >
+                <view class="quick-entry-project-option-top">
+                  <view class="quick-entry-project-option-name">{{item.name}}</view>
+                  <view class="field-pill quick-entry-project-option-pill">{{item.stage}}</view>
+                </view>
+                <view class="helper-text quick-entry-project-option-meta">{{item.client}}<text wx:if="{{item.contactText}}"> · {{item.contactText}}</text></view>
+                <view wx:if="{{item.nextText || item.focusText || item.latestSummary}}" class="quick-entry-project-option-brief">{{item.nextText || item.focusText || item.latestSummary}}</view>
+              </view>
+            </view>
+            <view wx:else class="helper-text quick-entry-empty">没有找到匹配项目，可以先切到“新建项目”。</view>
+          </block>
+        </view>
+        <view class="field-group quick-entry-field-group">
+          <view class="field-label">任务类型</view>
+          <view class="chips quick-entry-task-wall">
+            <view
+              wx:for="{{nextTaskTemplates}}"
+              wx:key="type"
+              class="chip quick-entry-task-chip {{quickEntryForm.taskType === item.type ? 'is-active' : ''}}"
+              data-type="{{item.type}}"
+              bindtap="setQuickEntryTaskType"
+            >{{item.label}}</view>
+          </view>
+        </view>
+        <view class="field-group quick-entry-field-group">
+          <view class="field-label">动作背景</view>
+          <textarea
+            class="textarea-sim textarea-native quick-entry-textarea is-compact"
+            value="{{quickEntryForm.taskContext}}"
+            data-field="taskContext"
+            bindinput="onQuickEntryInput"
+            bindfocus="onQuickEntryFieldFocus"
+            cursor-spacing="{{quickEntryCursorSpacing}}"
+            placeholder="可选：补一句当前为什么要做这件事。"
+            placeholder-class="input-placeholder"
+            maxlength="-1"
+          ></textarea>
+        </view>
+        <view class="field-group quick-entry-field-group">
+          <view class="field-label">动作说明</view>
+          <textarea
+            class="textarea-sim textarea-native quick-entry-textarea is-small"
+            value="{{quickEntryForm.taskDescription}}"
+            data-field="taskDescription"
+            bindinput="onQuickEntryInput"
+            bindfocus="onQuickEntryFieldFocus"
+            cursor-spacing="{{quickEntryCursorSpacing}}"
+            placeholder="可选：补一句执行时需要注意的事项。"
+            placeholder-class="input-placeholder"
+            maxlength="-1"
+          ></textarea>
+        </view>
+      </block>
+      </block>
+    </view>
+    <view wx:if="{{!showQuickEntrySuccessPanel}}" class="inline-actions quick-entry-actions is-fixed {{isQuickEntryEditing ? 'is-editing' : ''}}" style="{{quickEntryActionsStyle}}">
+      <view class="btn-ghost quick-entry-cancel-btn" bindtap="closeQuickEntrySheet">取消</view>
+      <view class="btn-primary quick-entry-submit-btn" bindtap="submitQuickEntry">
+        <block wx:if="{{quickEntryMode === 'project'}}">{{quickEntryActionId === 'project' ? '创建中...' : '立即创建'}}</block>
+        <block wx:elif="{{quickEntryMode === 'task'}}">{{quickEntryActionId === 'task' ? '保存中...' : '补进清单'}}</block>
+        <block wx:else>{{quickEntryActionId === 'follow_up' ? '提交中...' : '快速保存'}}</block>
+      </view>
+    </view>
+    <view wx:else class="quick-entry-success-actions">
+      <view class="btn-primary quick-entry-success-primary" bindtap="continueQuickEntryAfterSuccess">继续录下一条</view>
+      <view class="inline-actions quick-entry-success-secondary-row">
+        <view class="btn-ghost quick-entry-success-secondary" bindtap="openQuickEntrySavedProject">查看刚刚那条项目</view>
+        <view class="btn-ghost quick-entry-success-secondary" bindtap="closeQuickEntryAfterSuccess">关闭</view>
+      </view>
+    </view>
+  </view>
+</view>
+
 <view wx:if="{{showTaskCompleteSheet}}">
   <view class="sheet-mask task-complete-mask" bindtap="closeTaskCompleteSheet"></view>
   <view class="sheet-panel task-complete-sheet {{appearancePageClass}} {{isTaskCompletionEditing ? 'is-editing' : ''}}" style="{{taskCompleteSheetStyle}}">
@@ -330,4 +648,4 @@
   </view>
 </view>
 
-<bottom-nav current="home" appearance-page-class="{{appearancePageClass}}" />
+<bottom-nav current="home" appearance-page-class="{{appearancePageClass}}" bind:quickentry="handleQuickEntryTap" />

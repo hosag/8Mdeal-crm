@@ -1,0 +1,143 @@
+.contact-detail-page {
+  padding-bottom: 84rpx;
+}
+
+.contact-detail-page .hero {
+  padding: 26rpx 28rpx 28rpx;
+  border-radius: 32rpx;
+  box-shadow: var(--theme-hero-shadow);
+}
+
+.contact-detail-page .hero-title {
+  margin-top: 18rpx;
+  font-size: 40rpx;
+}
+
+.contact-detail-page .hero-subtitle {
+  margin-top: 10rpx;
+  font-size: 22rpx;
+  line-height: 1.5;
+}
+
+.contact-detail-page .contact-hero-pills {
+  margin-top: 16rpx;
+  gap: 8rpx;
+}
+
+.contact-detail-page .contact-section-head {
+  align-items: center;
+  gap: 16rpx;
+}
+
+.contact-detail-page .contact-info-card {
+  margin-top: 12rpx;
+  border-radius: 22rpx;
+  background: var(--theme-soft-block-bg);
+  box-shadow: inset 0 0 0 1rpx rgba(24, 39, 51, 0.05);
+  overflow: hidden;
+}
+
+.contact-detail-page .contact-info-row {
+  display: flex;
+  align-items: center;
+  gap: 18rpx;
+  padding: 18rpx 18rpx 16rpx;
+}
+
+.contact-detail-page .contact-info-row + .contact-info-row {
+  border-top: 1rpx solid rgba(24, 39, 51, 0.08);
+}
+
+.contact-detail-page .contact-info-main {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.contact-detail-page .contact-info-label {
+  font-size: 20rpx;
+  color: var(--theme-text-muted);
+}
+
+.contact-detail-page .contact-info-value {
+  margin-top: 6rpx;
+  font-size: 28rpx;
+  font-weight: 700;
+  color: var(--theme-title);
+  word-break: break-all;
+}
+
+.contact-detail-page .contact-copy-btn {
+  min-width: 108rpx;
+}
+
+.contact-detail-page .contact-detail-summary {
+  margin-top: 12rpx;
+}
+
+.contact-detail-page .contact-detail-metrics {
+  margin-top: 12rpx;
+}
+
+.contact-detail-page .detail-projects-title {
+  margin-bottom: 10rpx;
+}
+
+.contact-detail-page .contact-project-card {
+  padding: 22rpx;
+}
+
+.contact-detail-page .contact-project-card + .contact-project-card {
+  margin-top: 12rpx;
+}
+
+.contact-detail-page .contact-project-card .project-meta {
+  margin-top: 8rpx;
+}
+
+.contact-detail-page .state-card {
+  padding: 18rpx 20rpx;
+}
+
+.contact-detail-page .state-actions {
+  margin-top: 18rpx;
+}
+
+.contact-detail-page .state-btn {
+  min-width: 220rpx;
+}
+
+.page-shell.contact-detail-page.appearance-font-large .hero {
+  padding: 30rpx;
+}
+
+.page-shell.contact-detail-page.appearance-font-large .hero-title {
+  font-size: 50rpx;
+}
+
+.page-shell.contact-detail-page.appearance-font-large .hero-subtitle {
+  font-size: 28rpx;
+  line-height: 1.68;
+}
+
+.page-shell.contact-detail-page.appearance-font-large .contact-info-card,
+.page-shell.contact-detail-page.appearance-font-large .contact-project-card {
+  border-radius: 24rpx;
+}
+
+.page-shell.contact-detail-page.appearance-font-readable .hero {
+  padding: 34rpx;
+}
+
+.page-shell.contact-detail-page.appearance-font-readable .hero-title {
+  font-size: 60rpx;
+  line-height: 1.34;
+}
+
+.page-shell.contact-detail-page.appearance-font-readable .hero-subtitle {
+  font-size: 36rpx;
+  line-height: 1.76;
+}
+
+.page-shell.contact-detail-page.appearance-font-readable .contact-info-value {
+  font-size: 34rpx;
+}

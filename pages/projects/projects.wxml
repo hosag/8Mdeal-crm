@@ -12,8 +12,8 @@
       <view class="hero-title">把项目池收成一页可执行清单</view>
       <view class="hero-subtitle">先搜项目，再按阶段、跟进状态和优先级排序，避免项目一多就找不到今天该推进哪几个。</view>
       <view class="hero-actions">
-        <view class="btn-secondary" bindtap="openProjectForm">新建项目</view>
-        <view class="btn-ghost" data-url="/pages/shared-out/shared-out" bindtap="openPage">外发项目</view>
+        <view class="btn-secondary hero-primary-btn" bindtap="openProjectForm">新建项目</view>
+        <view class="btn-ghost hero-secondary-btn" data-url="/pages/shared-out/shared-out" bindtap="openPage">外发项目</view>
       </view>
     </view>
 
@@ -129,6 +129,10 @@
           <view wx:if="{{item.canMarkDeal}}" class="btn-primary" data-project-id="{{item.id}}" data-stage="{{item.stage}}" catchtap="openDealPage">登记成交</view>
           <view wx:else class="btn-ghost" catchtap="noop">{{item.dealStatusText}}</view>
         </view>
+
+        <view class="project-share-entry" data-project-id="{{item.id}}" catchtap="openProjectShareQuick">
+          <image class="project-share-entry-icon" src="/assets/icons/share-entry.svg" mode="aspectFit" />
+        </view>
       </view>
 
       <empty-state
@@ -144,6 +148,48 @@
 
     <view class="fab" bindtap="openProjectForm">+</view>
   </block>
+</view>
+
+<view wx:if="{{showShareSheet}}">
+  <view class="sheet-mask" bindtap="closeShareSheet"></view>
+  <view class="sheet-panel share-entry-sheet {{appearancePageClass}}">
+    <view class="sheet-handle"></view>
+    <view class="sheet-header">
+      <view class="sheet-title">分享设置</view>
+      <view class="sheet-close" bindtap="closeShareSheet">关闭</view>
+    </view>
+
+    <view class="share-entry-project-card">
+      <view class="share-entry-project-name">{{selectedShareProjectName}}</view>
+      <view class="compact-inline-metrics share-entry-project-pills">
+        <view wx:if="{{selectedShareProjectMeta && selectedShareProjectMeta.client}}" class="compact-inline-item">客户 {{selectedShareProjectMeta.client}}</view>
+        <view wx:if="{{selectedShareProjectMeta && selectedShareProjectMeta.stage}}" class="compact-inline-item">阶段 {{selectedShareProjectMeta.stage}}</view>
+        <view wx:if="{{selectedShareProjectMeta && selectedShareProjectMeta.amount}}" class="compact-inline-item">预计 {{selectedShareProjectMeta.amount}}</view>
+        <view wx:if="{{selectedShareProjectMeta && selectedShareProjectMeta.nextDisplay}}" class="compact-inline-item">跟进 {{selectedShareProjectMeta.nextDisplay}}</view>
+      </view>
+    </view>
+
+    <view class="share-entry-list">
+      <view
+        class="mode-card share-entry-card"
+        wx:for="{{shareActionOptions}}"
+        wx:key="key"
+        data-mode="{{item.key}}"
+        bindtap="openShareFlow"
+      >
+        <view class="line-between share-entry-head">
+          <view>
+            <view class="mode-title">{{item.title}}</view>
+            <view class="mode-desc">{{item.desc}}</view>
+          </view>
+          <view class="status-badge is-brand">{{item.badge}}</view>
+        </view>
+        <view class="pill-row share-entry-option-pills">
+          <view class="field-pill">{{item.note}}</view>
+        </view>
+      </view>
+    </view>
+  </view>
 </view>
 
 <view wx:if="{{showTaskCompleteSheet}}">
@@ -241,4 +287,4 @@
   </view>
 </view>
 
-<bottom-nav current="projects" appearance-page-class="{{appearancePageClass}}" />
+<bottom-nav current="projects" appearance-page-class="{{appearancePageClass}}" bind:quickentry="handleQuickEntryTap" />

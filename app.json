@@ -11,6 +11,8 @@
     "pages/shared-out/shared-out",
     "pages/notifications/notifications",
     "pages/mine/mine",
+    "pages/contacts/contacts",
+    "pages/contact-detail/contact-detail",
     "pages/mark-deal/mark-deal",
     "pages/earnings/earnings",
     "pages/privacy-tags/privacy-tags",
