@@ -222,16 +222,31 @@ function hasProjectBeforeRelation(projects, relation = {}) {
 function buildRelationRow(item = {}) {
   const status = normalizeText(item.status)
   const rewarded = status === 'rewarded'
+  const blocked = status === 'blocked'
+  const blockReason = normalizeText(item.blockReason)
+  const blockReasonLabel = {
+    invitee_already_used_project_feature: '被推荐人已使用过项目功能，不符合新用户推荐条件',
+    self_referral_or_missing_referrer: '推荐关系无效：推荐人与被推荐人相同或推荐人缺失',
+    invalid_relation: '推荐关系无效，已跳过奖励',
+    not_first_project: '被推荐人不是首次创建项目，未触发奖励',
+    reward_failed: '奖励发放失败，需检查额度流水'
+  }[blockReason] || blockReason || '已被系统阻止'
   return {
     relationId: normalizeText(item._id),
     status: status || 'pending',
-    statusLabel: rewarded ? '已奖励' : '待完成',
+    statusLabel: rewarded ? '已奖励' : (blocked ? '已阻止' : '待完成'),
     rewardAiTokens: Number(item.rewardAiTokens || REFERRAL_REWARD_AI_TOKENS),
     boundAt: toIso(item.boundAt || item.createdAt),
     rewardedAt: toIso(item.rewardedAt),
     triggerScene: normalizeText(item.triggerScene),
-    title: rewarded ? '朋友已创建首个项目' : '朋友已接受推荐',
-    desc: rewarded ? '双方 AI 额度已发放' : '朋友创建第一个项目后，双方各得奖励'
+    title: rewarded
+      ? '朋友已创建首个项目'
+      : (blocked ? '推荐关系已阻止' : '朋友已接受推荐'),
+    desc: rewarded
+      ? '双方 AI 额度已发放'
+      : (blocked ? blockReasonLabel : '朋友创建第一个项目后，双方各得奖励'),
+    blockReason,
+    blockReasonLabel
   }
 }
 
@@ -242,9 +257,6 @@ exports.main = async () => {
   const relations = await loadReferralRelations(accountId)
   const relationVisibility = await Promise.all(relations.map(async (item) => {
     const status = normalizeText(item.status)
-    if (status === 'blocked') {
-      return false
-    }
     if (status === 'pending') {
       const inviteeAccountId = normalizeText(item.inviteeAccountId)
       const inviteeOpenid = normalizeText(item.inviteeOpenid || item._openid)
