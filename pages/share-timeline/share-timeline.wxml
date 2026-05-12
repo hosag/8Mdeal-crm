@@ -7,20 +7,14 @@
     <view class="hero rise-in">
       <view class="eyebrow-row">
         <view class="eyebrow">完整时间线</view>
-        <view class="source-badge">{{dataSource}}</view>
       </view>
       <view class="hero-title">{{preview.project.name || '项目时间线'}}</view>
       <view class="hero-subtitle">{{timelineSummaryText}}</view>
     </view>
 
     <view class="form-card section rise-in stagger-1 timeline-overview-card">
-      <view class="line-between">
-        <view>
-          <view class="form-card-title">{{historyScopeLabel}}</view>
-          <view class="form-card-desc">包含跟进记录、任务完成和阶段变更。</view>
-        </view>
-        <view class="status-badge">{{activeMode === 'outbound' ? '转交项目' : '发送资料'}}</view>
-      </view>
+      <view class="form-card-title">项目历史</view>
+      <view class="form-card-desc">包含跟进记录、任务完成和阶段变更。</view>
     </view>
 
     <view class="glass-card section rise-in stagger-2">
@@ -49,7 +43,7 @@
                 <view wx:if="{{item.nextFollowUpText}}" class="field-pill">下次 {{item.nextFollowUpText}}</view>
               </view>
               <view class="timeline-section" wx:if="{{item.summary}}">
-                <view class="timeline-section-label">{{item.summaryLabel || 'AI 摘要'}}</view>
+                <view class="timeline-section-label">{{item.summaryLabel || '整理摘要'}}</view>
                 <view class="timeline-section-text">{{item.summary}}</view>
               </view>
               <view class="timeline-section" wx:if="{{item.highlights && item.highlights.length}}">
@@ -84,7 +78,7 @@
                 </view>
               </view>
               <view class="timeline-section" wx:if="{{item.desc}}">
-                <view class="timeline-section-label">{{item.rawLabel || '原始记录'}}</view>
+                <view class="timeline-section-label">{{item.rawLabel || '原始录入'}}</view>
                 <view class="timeline-section-text">{{item.desc}}</view>
               </view>
             </view>

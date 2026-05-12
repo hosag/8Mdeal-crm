@@ -1,0 +1,548 @@
+.plans-page {
+  padding-bottom: 120rpx;
+}
+
+.plans-hero {
+  padding: 26rpx 26rpx 28rpx;
+  border-radius: 34rpx;
+}
+
+.plans-hero .hero-title {
+  margin-top: 16rpx;
+  max-width: 560rpx;
+  font-size: 36rpx;
+}
+
+.plans-hero .hero-subtitle {
+  margin-top: 10rpx;
+  max-width: 620rpx;
+  font-size: 22rpx;
+  line-height: 1.55;
+}
+
+.plans-hero-actions {
+  margin-top: 22rpx;
+}
+
+.plans-hero-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12rpx;
+  margin-top: 24rpx;
+}
+
+.plans-hero-metric {
+  padding: 18rpx 18rpx 16rpx;
+  border-radius: 24rpx;
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(14rpx);
+}
+
+.plans-hero-metric-label {
+  font-size: 18rpx;
+  color: rgba(246, 240, 229, 0.72);
+}
+
+.plans-hero-metric-value {
+  margin-top: 6rpx;
+  font-size: 24rpx;
+  line-height: 1.35;
+  font-weight: 700;
+  color: var(--theme-hero-text);
+}
+
+.plans-hero-metric-note {
+  margin-top: 6rpx;
+  font-size: 18rpx;
+  line-height: 1.45;
+  color: rgba(255, 241, 224, 0.64);
+}
+
+.plans-entry-banner {
+  position: relative;
+  overflow: hidden;
+  padding: 20rpx 22rpx 22rpx;
+  border-radius: 26rpx;
+  background: var(--theme-state-card-bg);
+  box-shadow: var(--theme-state-card-shadow);
+}
+
+.plans-entry-banner::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 8rpx;
+  border-radius: 26rpx 0 0 26rpx;
+  background: linear-gradient(180deg, rgba(160, 174, 189, 0.96) 0%, rgba(101, 118, 136, 0.96) 100%);
+}
+
+.plans-entry-banner.is-danger::before {
+  background: linear-gradient(180deg, rgba(244, 162, 150, 0.98) 0%, rgba(214, 103, 90, 0.98) 100%);
+}
+
+.plans-entry-banner.is-soft::before {
+  background: linear-gradient(180deg, rgba(244, 214, 145, 0.98) 0%, rgba(206, 163, 79, 0.98) 100%);
+}
+
+.plans-entry-banner.is-brand::before {
+  background: linear-gradient(180deg, rgba(174, 209, 229, 0.98) 0%, rgba(92, 153, 190, 0.98) 100%);
+}
+
+.plans-entry-banner.is-neutral::before {
+  background: linear-gradient(180deg, rgba(164, 179, 135, 0.98) 0%, rgba(111, 132, 95, 0.98) 100%);
+}
+
+.plans-entry-banner-title {
+  font-size: 24rpx;
+  font-weight: 700;
+  color: var(--theme-title);
+}
+
+.plans-entry-banner-desc {
+  margin-top: 8rpx;
+  font-size: 20rpx;
+  line-height: 1.6;
+  color: var(--theme-text-soft);
+}
+
+.plans-decision-card {
+  padding: 22rpx 22rpx 24rpx;
+  border: 1rpx solid rgba(36, 75, 97, 0.08);
+  background: linear-gradient(180deg, rgba(255, 252, 247, 0.94), rgba(244, 239, 231, 0.88));
+}
+
+.plans-decision-head {
+  align-items: flex-start;
+  gap: 18rpx;
+}
+
+.plans-decision-title {
+  margin-top: 18rpx;
+  font-size: 25rpx;
+  line-height: 1.4;
+  font-weight: 700;
+  color: var(--theme-title);
+}
+
+.plans-dashboard-card {
+  padding: 22rpx;
+}
+
+.plans-overview-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10rpx;
+  margin-top: 16rpx;
+}
+
+.plans-overview-item {
+  padding: 16rpx 16rpx 14rpx;
+  border-radius: 22rpx;
+  background: var(--theme-soft-block-bg);
+  box-shadow: inset 0 0 0 1rpx rgba(24, 39, 51, 0.05);
+}
+
+.plans-overview-label {
+  font-size: 18rpx;
+  color: var(--theme-text-muted);
+}
+
+.plans-overview-value {
+  margin-top: 8rpx;
+  font-size: 23rpx;
+  font-weight: 700;
+  line-height: 1.46;
+  color: var(--theme-title);
+}
+
+.plans-effective-card {
+  padding: 22rpx;
+  background: linear-gradient(180deg, rgba(228, 242, 233, 0.98), rgba(245, 251, 247, 0.98));
+  box-shadow: 0 18rpx 36rpx rgba(73, 122, 93, 0.1);
+}
+
+.plans-subscription-head {
+  align-items: flex-start;
+  gap: 16rpx;
+}
+
+.plans-subscription-desc {
+  margin-top: 8rpx;
+}
+
+.plans-section-header {
+  margin-bottom: 18rpx;
+}
+
+.plans-card-wall {
+  display: flex;
+  flex-direction: column;
+  gap: 18rpx;
+}
+
+.plans-product-card {
+  position: relative;
+  overflow: hidden;
+  padding: 24rpx;
+  border-radius: 30rpx;
+}
+
+.plans-product-card::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 8rpx;
+  background: linear-gradient(90deg, rgba(168, 139, 97, 0.6), rgba(49, 90, 116, 0.88));
+  opacity: 0.6;
+}
+
+.plans-product-card.is-highlight {
+  box-shadow: 0 20rpx 42rpx rgba(53, 93, 118, 0.12);
+}
+
+.plans-product-card.is-recommended {
+  border: 1rpx solid rgba(92, 153, 190, 0.18);
+  background: linear-gradient(180deg, rgba(242, 248, 255, 0.94), rgba(255, 255, 255, 0.98));
+}
+
+.plans-product-card.is-addon {
+  background: linear-gradient(180deg, rgba(255, 254, 252, 0.96), rgba(247, 243, 236, 0.92));
+}
+
+.plans-product-head {
+  align-items: flex-start;
+  gap: 16rpx;
+}
+
+.plans-product-kicker {
+  margin-bottom: 14rpx;
+}
+
+.plans-product-title {
+  font-size: 27rpx;
+  line-height: 1.28;
+  font-weight: 700;
+  color: var(--theme-title);
+}
+
+.plans-product-billing {
+  margin-top: 8rpx;
+  font-size: 20rpx;
+  line-height: 1.5;
+  color: var(--theme-text-muted);
+}
+
+.plans-product-price {
+  margin-top: 20rpx;
+  font-size: 38rpx;
+  line-height: 1.1;
+  font-weight: 700;
+  color: var(--theme-title);
+}
+
+.plans-price-row {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 12rpx;
+  margin-top: 20rpx;
+}
+
+.plans-price-row .plans-product-price {
+  margin-top: 0;
+}
+
+.plans-product-price.is-copy {
+  font-size: 26rpx;
+  line-height: 1.35;
+  font-weight: 600;
+}
+
+.plans-product-original-price {
+  font-size: 20rpx;
+  line-height: 1.4;
+  color: var(--theme-text-muted);
+  text-decoration: line-through;
+  text-decoration-thickness: 2rpx;
+}
+
+.plans-product-desc {
+  margin-top: 12rpx;
+}
+
+.plans-feature-list {
+  margin-top: 18rpx;
+  display: flex;
+  flex-direction: column;
+  gap: 14rpx;
+}
+
+.plans-feature-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12rpx;
+}
+
+.plans-feature-dot {
+  width: 12rpx;
+  height: 12rpx;
+  margin-top: 12rpx;
+  border-radius: 50%;
+  flex: 0 0 auto;
+  background: var(--theme-accent);
+}
+
+.plans-feature-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 22rpx;
+  line-height: 1.62;
+  color: var(--theme-text-main);
+}
+
+.plans-product-actions {
+  margin-top: 22rpx;
+  gap: 12rpx;
+}
+
+.plans-order-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14rpx;
+  margin-top: 8rpx;
+}
+
+.plans-order-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 18rpx;
+  padding: 18rpx 0;
+  border-bottom: 1rpx solid rgba(24, 39, 51, 0.06);
+}
+
+.plans-order-row:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+.plans-order-main {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.plans-order-title {
+  font-size: 23rpx;
+  font-weight: 700;
+  color: var(--theme-title);
+}
+
+.plans-order-side {
+  flex: 0 0 auto;
+  min-width: 132rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10rpx;
+}
+
+.plans-order-amount {
+  font-size: 22rpx;
+  font-weight: 700;
+  color: var(--theme-title);
+}
+
+.plans-empty-copy {
+  margin-top: 12rpx;
+}
+
+.plans-confirm-sheet {
+  z-index: 30;
+  max-height: 82vh;
+  overflow-y: auto;
+}
+
+.plans-confirm-hero {
+  padding: 22rpx;
+  border-radius: 28rpx;
+  background: linear-gradient(180deg, rgba(255, 252, 247, 0.98), rgba(243, 238, 230, 0.9));
+  box-shadow: inset 0 0 0 1rpx rgba(36, 75, 97, 0.06);
+}
+
+.plans-confirm-kicker {
+  margin-bottom: 14rpx;
+}
+
+.plans-confirm-title {
+  font-size: 28rpx;
+  line-height: 1.38;
+  font-weight: 700;
+  color: var(--theme-title);
+}
+
+.plans-confirm-billing {
+  margin-top: 8rpx;
+  font-size: 21rpx;
+  color: var(--theme-text-soft);
+}
+
+.plans-confirm-price-row {
+  display: flex;
+  align-items: baseline;
+  gap: 12rpx;
+  margin-top: 18rpx;
+}
+
+.plans-confirm-price {
+  font-size: 42rpx;
+  line-height: 1.12;
+  font-weight: 700;
+  color: var(--theme-title);
+}
+
+.plans-confirm-price.is-copy {
+  font-size: 30rpx;
+  line-height: 1.42;
+}
+
+.plans-confirm-original-price {
+  font-size: 22rpx;
+  color: var(--theme-text-muted);
+  text-decoration: line-through;
+}
+
+.plans-confirm-desc {
+  margin-top: 14rpx;
+}
+
+.plans-confirm-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12rpx;
+  margin-top: 18rpx;
+}
+
+.plans-confirm-item {
+  padding: 16rpx 16rpx 14rpx;
+  border-radius: 22rpx;
+  background: var(--theme-soft-block-bg);
+  box-shadow: inset 0 0 0 1rpx rgba(24, 39, 51, 0.05);
+}
+
+.plans-confirm-label {
+  font-size: 18rpx;
+  color: var(--theme-text-muted);
+}
+
+.plans-confirm-value {
+  margin-top: 8rpx;
+  font-size: 24rpx;
+  line-height: 1.45;
+  font-weight: 700;
+  color: var(--theme-title);
+}
+
+.plans-confirm-capabilities {
+  margin-top: 18rpx;
+}
+
+.plans-confirm-section-title {
+  font-size: 21rpx;
+  font-weight: 700;
+  color: var(--theme-title);
+}
+
+.plans-confirm-pills {
+  margin-top: 12rpx;
+}
+
+.plans-confirm-actions {
+  margin-top: 20rpx;
+  gap: 12rpx;
+}
+
+.plans-confirm-cancel,
+.plans-confirm-submit {
+  flex: 1 1 0;
+  justify-content: center;
+}
+
+.page-shell.plans-page.appearance-font-large .plans-hero .hero-title {
+  font-size: 42rpx;
+}
+
+.page-shell.plans-page.appearance-font-large .plans-product-price {
+  font-size: 42rpx;
+}
+
+.page-shell.plans-page.appearance-font-large .plans-product-price.is-copy {
+  font-size: 30rpx;
+}
+
+.page-shell.plans-page.appearance-font-large .plans-feature-text {
+  font-size: 24rpx;
+}
+
+.page-shell.plans-page.appearance-font-large .plans-confirm-title,
+.plans-confirm-sheet.appearance-font-large .plans-confirm-title {
+  font-size: 32rpx;
+}
+
+.page-shell.plans-page.appearance-font-large .plans-confirm-price,
+.plans-confirm-sheet.appearance-font-large .plans-confirm-price {
+  font-size: 46rpx;
+}
+
+.page-shell.plans-page.appearance-font-large .plans-confirm-price.is-copy,
+.plans-confirm-sheet.appearance-font-large .plans-confirm-price.is-copy {
+  font-size: 33rpx;
+}
+
+.plans-confirm-sheet.appearance-font-large .plans-confirm-value,
+.plans-confirm-sheet.appearance-font-large .plans-confirm-billing,
+.plans-confirm-sheet.appearance-font-large .plans-confirm-section-title {
+  font-size: 24rpx;
+}
+
+.page-shell.plans-page.appearance-font-readable .plans-hero-grid,
+.page-shell.plans-page.appearance-font-readable .plans-overview-grid,
+.plans-confirm-sheet.appearance-font-readable .plans-confirm-grid {
+  grid-template-columns: repeat(1, minmax(0, 1fr));
+}
+
+.page-shell.plans-page.appearance-font-readable .plans-product-price {
+  font-size: 44rpx;
+}
+
+.page-shell.plans-page.appearance-font-readable .plans-product-price.is-copy {
+  font-size: 32rpx;
+  line-height: 1.4;
+}
+
+.page-shell.plans-page.appearance-font-readable .plans-feature-text {
+  font-size: 25rpx;
+}
+
+.page-shell.plans-page.appearance-font-readable .plans-confirm-price,
+.plans-confirm-sheet.appearance-font-readable .plans-confirm-price {
+  font-size: 48rpx;
+}
+
+.page-shell.plans-page.appearance-font-readable .plans-confirm-price.is-copy,
+.plans-confirm-sheet.appearance-font-readable .plans-confirm-price.is-copy {
+  font-size: 34rpx;
+  line-height: 1.4;
+}
+
+.plans-confirm-sheet.appearance-font-readable .plans-confirm-title {
+  font-size: 34rpx;
+}
+
+.plans-confirm-sheet.appearance-font-readable .plans-confirm-value,
+.plans-confirm-sheet.appearance-font-readable .plans-confirm-billing,
+.plans-confirm-sheet.appearance-font-readable .plans-confirm-section-title {
+  font-size: 25rpx;
+}

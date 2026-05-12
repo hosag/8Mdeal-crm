@@ -4,14 +4,26 @@ cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 
 const db = cloud.database()
 
+function normalizeText(value) {
+  return String(value || '').trim()
+}
+
 exports.main = async (event) => {
   const wxContext = cloud.getWXContext()
   const now = new Date()
   const users = db.collection('users')
+  const incomingNickName = normalizeText(event.nickName)
+  const incomingAvatarUrl = normalizeText(event.avatarUrl)
+  const nextNickName = incomingNickName || '微信用户'
   const profile = {
-    nickName: event.nickName || '微信用户',
-    avatarUrl: event.avatarUrl || '',
     updatedAt: now
+  }
+  if (incomingNickName) {
+    profile.nickName = incomingNickName
+    profile.wechatNickname = incomingNickName
+  }
+  if (typeof event.avatarUrl === 'string') {
+    profile.avatarUrl = incomingAvatarUrl
   }
   const reminderSettings = {
     followUpEnabled: true,
@@ -37,6 +49,10 @@ exports.main = async (event) => {
     await users.add({
       data: {
         _openid: wxContext.OPENID,
+        nickName: nextNickName,
+        wechatNickname: nextNickName,
+        customDisplayName: '',
+        avatarUrl: incomingAvatarUrl,
         shareTags: [],
         reminderSettings,
         appearanceSettings,

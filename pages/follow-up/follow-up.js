@@ -1,6 +1,7 @@
 const {
   loadProjectDetailData,
   requestFollowUpSummary,
+  requestSpeechToTextData,
   requestNextFollowUpSuggestion,
   saveFollowUpData,
   reportSystemFailureData,
@@ -9,59 +10,10 @@ const {
 const { buildFollowUpEntryHint } = require('../../utils/navigation-context')
 const { touchNotificationSync } = require('../../utils/notification-sync')
 const { syncPageAppearance } = require('../../utils/appearance')
+const { ensureActionAllowed, getEntitlementSnapshot, buildEntitlementPagePrompt } = require('../../utils/entitlement-guard')
 
 const MAX_RECORD_DURATION = 60000
-
-const HELP_CONTENTS = {
-  record_intro: {
-    title: '记录说明',
-    content: '先写原始跟进内容，再让 AI 帮你整理摘要、风险和阶段建议。确认无误后再保存，这样时间线会更清晰。'
-  },
-  basic_meta: {
-    title: '基础信息',
-    content: '这里决定这条记录的时间和触达方式，后续 AI 整理和时间线展示都会基于这部分内容。'
-  },
-  follow_up_time: {
-    title: '跟进时间',
-    content: '这里记录本次实际发生的跟进时间，时间线会按这个时间排序。点击日期或时间框即可使用系统选择器。'
-  },
-  follow_up_method: {
-    title: '跟进方式',
-    content: '用于区分这次是电话、微信、邮件还是面谈，后续复盘时能快速看出推进节奏。'
-  },
-  advance_settings: {
-    title: '推进设置',
-    content: '这里决定项目后续的阶段与待办节奏。保存后，项目详情和首页待办都会基于这部分变化更新。'
-  },
-  stage_change: {
-    title: '用户手动阶段变更',
-    content: '如果这次跟进推动了项目进展，你可以手动改阶段；如果只是补充信息，保持“不变更”即可。'
-  },
-  next_follow: {
-    title: '下次跟进时间',
-    content: '这里记录下次动作时间，首页待办和项目详情会基于这个时间更新。'
-  },
-  task_board: {
-    title: '推进动作',
-    content: '这里记录接下来要落地的具体动作，例如发方案、报价、回访。动作会进入项目详情、首页动作优先和消息中心提醒。'
-  },
-  attachments: {
-    title: '附件材料',
-    content: '支持上传会议照片、聊天截图和现场资料。最多 9 张，上传后会进入云存储，并随这条跟进一起保存。'
-  },
-  raw_content: {
-    title: '原始跟进内容',
-    content: '这里尽量写原话和现场判断，不用先润色。越贴近真实对话，AI 整理后的摘要和风险提示通常越准确，也支持直接语音录入转文字。'
-  },
-  ai_result: {
-    title: 'AI 整理结果',
-    content: 'AI 会把原始记录拆成摘要、关键进展、风险和阶段建议。回填整理结果时，如果建议阶段与当前阶段不同，系统会顺手让你确认是否同步更新。'
-  },
-  ai_next: {
-    title: 'AI 下一步建议',
-    content: '基于本次整理结果，AI 会进一步给出下一步动作、建议对象、建议时间和任务草稿。你可以一键回填到下次跟进时间和推进动作。'
-  }
-}
+const FOLLOW_UP_METHODS = ['电话', '微信', '邮件', '面谈', '其他']
 
 function getDraftStorageKey(projectId) {
   return `follow-up-draft:${projectId || 'default'}`
@@ -81,6 +33,15 @@ function formatTime(value) {
   return `${padNumber(date.getHours())}:${padNumber(date.getMinutes())}`
 }
 
+function formatAiGeneratedTime(value) {
+  const date = value instanceof Date ? value : new Date(value)
+  if (Number.isNaN(date.getTime())) {
+    return ''
+  }
+
+  return `${padNumber(date.getMonth() + 1)}-${padNumber(date.getDate())} ${padNumber(date.getHours())}:${padNumber(date.getMinutes())}`
+}
+
 function createDefaultDates() {
   const now = new Date()
   const next = new Date(now)
@@ -98,7 +59,7 @@ const defaultDates = createDefaultDates()
 
 const MODEL_SOURCE_DEFAULTS = {
   sourceType: 'model',
-  sourceLabel: '大模型建议',
+  sourceLabel: '云端模型',
   providerLabel: 'CloudBase AI',
   modelName: 'hunyuan-exp / hunyuan-turbos-latest',
   canRegenerate: true
@@ -106,23 +67,41 @@ const MODEL_SOURCE_DEFAULTS = {
 
 const FALLBACK_SOURCE_DEFAULTS = {
   sourceType: 'fallback',
-  sourceLabel: '基础建议',
-  providerLabel: '本地规则引擎',
+  sourceLabel: '系统基础建议',
+  providerLabel: '',
   modelName: '',
   canRegenerate: true
 }
 
 function getSpeechPlugin() {
-  return null
+  if (!wx || typeof wx.getRecorderManager !== 'function') {
+    return null
+  }
+
+  return wx.getRecorderManager()
 }
 
 function normalizeRecognizedText(value) {
   return String(value || '').replace(/\s+/g, ' ').trim()
 }
 
+function getVoiceFileExtension(filePath = '') {
+  const matched = /\.([^.\\/]+)$/.exec(String(filePath || '').trim().toLowerCase())
+  const extension = matched ? matched[1] : 'mp3'
+  if (['mp3', 'm4a', 'wav', 'aac', 'amr'].includes(extension)) {
+    return extension
+  }
+
+  return 'mp3'
+}
+
 const TASK_TEMPLATES = [
   { type: 'send_solution', label: '待发方案' },
   { type: 'send_quote', label: '待报价' },
+  { type: 'demo', label: '待演示' },
+  { type: 'report_solution', label: '待汇报方案' },
+  { type: 'business_negotiation', label: '待商务谈判' },
+  { type: 'research', label: '待调研' },
   { type: 'callback', label: '待回访' },
   { type: 'contract', label: '待签约' },
   { type: 'other', label: '其他动作' }
@@ -155,6 +134,89 @@ function normalizeTaskDrafts(value) {
   return value.map((item) => buildTaskDraft(item))
 }
 
+function cloneSnapshot(value) {
+  if (!value || typeof value !== 'object') {
+    return null
+  }
+
+  return JSON.parse(JSON.stringify(value))
+}
+
+function buildAiSummaryVersionKey(value) {
+  const payload = value && typeof value === 'object' ? value : {}
+  if (payload.generatedAt) {
+    return `summary:${String(payload.generatedAt).trim()}`
+  }
+
+  return `summary:${[
+    payload.summary,
+    payload.recommendedStage,
+    Array.isArray(payload.highlights) ? payload.highlights.join('|') : '',
+    Array.isArray(payload.risks) ? payload.risks.join('|') : ''
+  ].map((item) => String(item || '').trim()).join('::')}`
+}
+
+function buildAiNextVersionKey(value) {
+  const payload = value && typeof value === 'object' ? value : {}
+  if (payload.generatedAt) {
+    return `next:${String(payload.generatedAt).trim()}`
+  }
+
+  return `next:${[
+    payload.nextAction,
+    payload.recommendedTarget,
+    payload.recommendedDate,
+    payload.recommendedTime,
+    payload.talkTrack
+  ].map((item) => String(item || '').trim()).join('::')}`
+}
+
+function decorateAiSummaryResult(value, adoptedKey = '') {
+  const payload = value && typeof value === 'object' ? value : {}
+  const versionKey = buildAiSummaryVersionKey(payload)
+  return {
+    ...payload,
+    versionKey,
+    isAdopted: Boolean(adoptedKey && adoptedKey === versionKey)
+  }
+}
+
+function decorateAiNextSuggestion(value, adoptedKey = '') {
+  const payload = value && typeof value === 'object' ? value : {}
+  const versionKey = buildAiNextVersionKey(payload)
+  return {
+    ...payload,
+    versionKey,
+    isAdopted: Boolean(adoptedKey && adoptedKey === versionKey),
+    canApplyAll: false
+  }
+}
+
+function decorateAiDialogState(summary, nextSuggestion, adoptedSummaryKey = '', adoptedNextKey = '') {
+  const decoratedSummary = summary
+    ? decorateAiSummaryResult(summary, adoptedSummaryKey)
+    : null
+  const decoratedNext = nextSuggestion
+    ? decorateAiNextSuggestion(nextSuggestion, adoptedNextKey)
+    : null
+  const canApplyAll = Boolean(
+    decoratedSummary
+    && decoratedNext
+    && !decoratedSummary.isAdopted
+    && !decoratedNext.isAdopted
+  )
+
+  if (decoratedNext) {
+    decoratedNext.canApplyAll = canApplyAll
+  }
+
+  return {
+    aiResult: decoratedSummary,
+    aiNextSuggestion: decoratedNext,
+    canApplyAllAiSuggestions: canApplyAll
+  }
+}
+
 function normalizeAiSourceMeta(value) {
   const payload = value && typeof value === 'object' ? value : {}
   const sourceType = String(payload.sourceType || (payload.fallback ? 'fallback' : 'model')).trim() === 'fallback'
@@ -165,6 +227,15 @@ function normalizeAiSourceMeta(value) {
   const modelName = String(payload.modelName || defaults.modelName).trim()
   const sourceLabel = String(payload.sourceLabel || defaults.sourceLabel).trim()
   const canRegenerate = payload.canRegenerate !== false
+  const generatedAt = String(payload.generatedAt || '').trim()
+  const generatedAtText = formatAiGeneratedTime(payload.generatedAt)
+  const sourceMetaParts = [sourceLabel]
+  if (sourceType !== 'fallback' && modelName) {
+    sourceMetaParts.push(modelName)
+  }
+  if (generatedAtText) {
+    sourceMetaParts.push(`生成于 ${generatedAtText}`)
+  }
 
   return {
     sourceType,
@@ -172,8 +243,14 @@ function normalizeAiSourceMeta(value) {
     providerLabel,
     modelName,
     canRegenerate,
+    generatedAt,
+    generatedAtText,
+    sourceMetaText: sourceMetaParts.join(' · '),
     sourceCaption: modelName ? `${providerLabel} · ${modelName}` : providerLabel,
-    regenerateLabel: sourceType === 'fallback' ? '再次获取大模型建议' : '重新建议'
+    sourceDisplayText: sourceType === 'fallback'
+      ? '来自：系统基础建议'
+      : `来自：云端模型${modelName ? ` · ${modelName}` : ''}`,
+    regenerateLabel: sourceType === 'fallback' ? '获取云端结果' : '重新生成'
   }
 }
 
@@ -217,11 +294,51 @@ function normalizeNextSuggestion(value) {
   }
 }
 
+function normalizeFollowUpMethod(value, fallback = '') {
+  const method = String(value || '').trim()
+  return FOLLOW_UP_METHODS.includes(method) ? method : fallback
+}
+
+function inferFollowUpMethodFromContent(value) {
+  const text = String(value || '').trim()
+  if (!text) {
+    return '其他'
+  }
+
+  if (/电话|通话|打给|来电|回电|语音电话|电联|致电/.test(text)) {
+    return '电话'
+  }
+
+  if (/微信|企微|企业微信|wx|群里|私信|聊天记录|朋友圈/.test(text)) {
+    return '微信'
+  }
+
+  if (/邮件|邮箱|email|e-mail|发函|回函/.test(text)) {
+    return '邮件'
+  }
+
+  if (/面谈|拜访|到访|见面|会议室|现场|约见|当面|会面|线下|开会/.test(text)) {
+    return '面谈'
+  }
+
+  return '其他'
+}
+
 function normalizeAiSummaryResult(value) {
   const result = value && typeof value === 'object' ? value : {}
+  const normalizedSource = normalizeAiSourceMeta(result)
+  const recommendedStage = String(result.recommendedStage || '').trim()
+  const currentStage = String(result.currentStage || '').trim()
   return {
     ...result,
-    ...normalizeAiSourceMeta(result)
+    ...normalizedSource,
+    followUpMethod: normalizeFollowUpMethod(result.followUpMethod, ''),
+    recommendedStage,
+    showRecommendedStage: Boolean(
+      recommendedStage
+      && recommendedStage !== '不变更'
+      && recommendedStage !== currentStage
+    )
   }
 }
 
@@ -229,7 +346,7 @@ function showStageConfirmModal(payload = {}) {
   return new Promise((resolve) => {
     wx.showModal({
       title: `AI 建议将阶段调整为“${payload.recommendedStage || ''}”`,
-      content: payload.reason ? `原因：${payload.reason}` : '是否在回填整理结果时，同时更新项目阶段？',
+      content: payload.reason ? `原因：${payload.reason}` : '是否在采用整理时，同时更新项目阶段？',
       confirmText: '同时更新',
       cancelText: '只回填内容',
       success: resolve,
@@ -248,10 +365,11 @@ Page({
     projectTitle: '未指定项目',
     projectStage: '线索',
     entryHintText: '',
-    methods: ['电话', '微信', '邮件', '面谈', '其他'],
-    currentMethod: '面谈',
+    methods: FOLLOW_UP_METHODS,
+    currentMethod: '',
+    methodTouched: false,
+    showMethodOptions: false,
     stages: ['不变更', '线索', '洽谈', '方案', '商务', '成交', '流失'],
-    stageIndex: 0,
     followUpDate: defaultDates.followUpDate,
     followUpClock: defaultDates.followUpClock,
     nextFollowUpDate: defaultDates.nextFollowUpDate,
@@ -261,15 +379,16 @@ Page({
     isAiLoading: false,
     isSaving: false,
     aiResult: null,
+    aiResultBackup: null,
+    adoptedAiSummaryVersionKey: '',
     aiNextSuggestion: null,
+    aiNextSuggestionBackup: null,
+    adoptedAiNextVersionKey: '',
     aiError: '',
     aiNextError: '',
     isAiNextLoading: false,
     showAiDialog: false,
     draftUpdatedAt: '',
-    showHelpDialog: false,
-    helpTitle: '',
-    helpContent: '',
     dataSource: 'Mock Demo',
     isVoiceSupported: false,
     isVoiceRecording: false,
@@ -277,7 +396,16 @@ Page({
     voiceStatusText: '点击语音录入，可把口述内容自动追加到记录框',
     voicePreviewText: '',
     taskTemplates: TASK_TEMPLATES,
-    taskDrafts: []
+    taskDrafts: [],
+    entitlementPrompt: {
+      visible: false,
+      tone: 'neutral',
+      title: '',
+      desc: '',
+      actionText: '',
+      actionType: '',
+      actionUrl: ''
+    }
   },
 
   async onLoad(options) {
@@ -289,6 +417,7 @@ Page({
       projectId,
       entryHintText
     })
+    await this.refreshEntitlementPrompt({ refresh: true })
 
     if (!projectId) {
       const app = getApp()
@@ -305,8 +434,7 @@ Page({
       this.setData({
         dataSource: source,
         projectTitle: data.projectDetail.name,
-        projectStage: data.projectDetail.stage,
-        stageIndex: 0
+        projectStage: data.projectDetail.stage
       })
     } catch (error) {
       wx.showToast({
@@ -319,9 +447,10 @@ Page({
     this.initVoiceRecognition()
   },
 
-  onShow() {
+  async onShow() {
     syncPageAppearance(this)
     this.isPageActive = true
+    await this.refreshEntitlementPrompt({ refresh: true })
   },
 
   onHide() {
@@ -346,27 +475,47 @@ Page({
     })
   },
 
+  async refreshEntitlementPrompt(options = {}) {
+    const snapshot = await getEntitlementSnapshot({
+      refresh: options.refresh === true
+    })
+    if (!this.isPageActive) {
+      return
+    }
+
+    this.setData({
+      entitlementPrompt: buildEntitlementPagePrompt(snapshot, 'follow_up')
+    })
+  },
+
+  handleEntitlementPromptAction() {
+    const { actionUrl } = this.data.entitlementPrompt || {}
+    if (!actionUrl) {
+      return
+    }
+
+    wx.navigateTo({
+      url: actionUrl
+    })
+  },
+
   setMethod(event) {
     this.setData({
-      currentMethod: event.currentTarget.dataset.method
+      currentMethod: normalizeFollowUpMethod(event.currentTarget.dataset.method, '其他'),
+      methodTouched: true,
+      showMethodOptions: false
+    })
+  },
+
+  toggleMethodOptions() {
+    this.setData({
+      showMethodOptions: !this.data.showMethodOptions
     })
   },
 
   onContentInput(event) {
     this.setData({
       content: event.detail.value
-    })
-  },
-
-  onStageChange(event) {
-    this.setData({
-      stageIndex: Number(event.detail.value)
-    })
-  },
-
-  setStage(event) {
-    this.setData({
-      stageIndex: Number(event.currentTarget.dataset.index)
     })
   },
 
@@ -394,28 +543,6 @@ Page({
     })
   },
 
-  openHelp(event) {
-    const key = event.currentTarget.dataset.key
-    const payload = HELP_CONTENTS[key]
-    if (!payload) {
-      return
-    }
-
-    this.setData({
-      showHelpDialog: true,
-      helpTitle: payload.title,
-      helpContent: payload.content
-    })
-  },
-
-  closeHelp() {
-    this.setData({
-      showHelpDialog: false,
-      helpTitle: '',
-      helpContent: ''
-    })
-  },
-
   restoreDraft() {
     try {
       const draft = wx.getStorageSync(getDraftStorageKey(this.data.projectId))
@@ -424,8 +551,8 @@ Page({
       }
 
       this.setData({
-        currentMethod: draft.currentMethod || this.data.currentMethod,
-        stageIndex: typeof draft.stageIndex === 'number' ? draft.stageIndex : this.data.stageIndex,
+        currentMethod: normalizeFollowUpMethod(draft.currentMethod, this.data.currentMethod),
+        methodTouched: draft.methodTouched === true,
         followUpDate: draft.followUpDate || this.data.followUpDate,
         followUpClock: draft.followUpClock || this.data.followUpClock,
         nextFollowUpDate: draft.nextFollowUpDate || this.data.nextFollowUpDate,
@@ -465,7 +592,7 @@ Page({
     const now = new Date()
     const draft = {
       currentMethod: this.data.currentMethod,
-      stageIndex: this.data.stageIndex,
+      methodTouched: this.data.methodTouched === true,
       followUpDate: this.data.followUpDate,
       followUpClock: this.data.followUpClock,
       nextFollowUpDate: this.data.nextFollowUpDate,
@@ -749,27 +876,17 @@ Page({
       return true
     }
 
-    const speechPlugin = getSpeechPlugin()
-    if (!speechPlugin || typeof speechPlugin.getRecordRecognitionManager !== 'function') {
+    const manager = getSpeechPlugin()
+    if (!manager || typeof manager.onStart !== 'function') {
       this.setData({
         isVoiceSupported: false,
-        voiceStatusText: '当前账号下语音转文字不可用，建议改接云端语音识别服务',
+        voiceStatusText: '当前微信版本暂不支持语音录入，请升级后再试',
         voicePreviewText: ''
       })
       return false
     }
 
-    const manager = speechPlugin.getRecordRecognitionManager()
-    if (!manager) {
-      this.setData({
-        isVoiceSupported: false,
-        voiceStatusText: '语音识别管理器初始化失败，请重新编译后再试',
-        voicePreviewText: ''
-      })
-      return false
-    }
-
-    manager.onStart = () => {
+    manager.onStart(() => {
       if (!this.isPageActive) {
         return
       }
@@ -782,25 +899,9 @@ Page({
         voiceStatusText: '录音中，再点一次结束并转成文字',
         voicePreviewText: ''
       })
-    }
+    })
 
-    manager.onRecognize = (result) => {
-      if (!this.isPageActive) {
-        return
-      }
-
-      const previewText = normalizeRecognizedText(result && result.result)
-      this.setData({
-        voicePreviewText: previewText,
-        voiceStatusText: previewText ? '正在识别语音内容' : '录音中，再点一次结束并转成文字'
-      })
-    }
-
-    manager.onStop = (result) => {
-      if (!this.isPageActive) {
-        return
-      }
-
+    manager.onStop(async (result) => {
       if (this.skipNextVoiceCommit) {
         this.skipNextVoiceCommit = false
         this.setData({
@@ -812,36 +913,21 @@ Page({
         return
       }
 
-      const recognizedText = normalizeRecognizedText((result && result.result) || this.data.voicePreviewText)
-
-      if (!recognizedText) {
-        this.setData({
-          isVoiceRecording: false,
-          isVoiceRecognizing: false,
-          voicePreviewText: '',
-          voiceStatusText: '这次没有识别出有效内容，可以再试一次'
-        })
+      if (!this.isPageActive) {
         return
       }
 
-      const currentContent = String(this.data.content || '').trim()
-      const nextContent = currentContent ? `${currentContent}\n${recognizedText}` : recognizedText
-
       this.setData({
-        content: nextContent,
         isVoiceRecording: false,
-        isVoiceRecognizing: false,
-        voicePreviewText: recognizedText,
-        voiceStatusText: `已追加 ${recognizedText.length} 个字到记录框`
+        isVoiceRecognizing: true,
+        voicePreviewText: '',
+        voiceStatusText: '录音上传中...'
       })
 
-      wx.showToast({
-        title: '语音已转文字',
-        icon: 'success'
-      })
-    }
+      await this.transcribeVoiceFile(result)
+    })
 
-    manager.onError = (error) => {
+    manager.onError((error) => {
       if (!this.isPageActive) {
         return
       }
@@ -863,7 +949,7 @@ Page({
         title: '语音识别失败',
         icon: 'none'
       })
-    }
+    })
 
     this.voiceManager = manager
     this.setData({
@@ -874,8 +960,8 @@ Page({
 
   openVoicePluginGuide() {
     wx.showModal({
-      title: '当前方案不可用',
-      content: '你当前的小程序账号未获得该语音插件授权，继续走插件方案会反复卡住。更稳的做法是改为云端语音识别服务。',
+      title: '语音服务未就绪',
+      content: '当前设备暂不支持原生录音，或云端语音识别服务尚未完成配置。请先确认真机环境与云函数配置。',
       showCancel: false,
       confirmText: '知道了'
     })
@@ -944,6 +1030,11 @@ Page({
       return
     }
 
+    const decision = await ensureActionAllowed('speech', { guide: true })
+    if (!decision.allowed) {
+      return
+    }
+
     const hasPermission = await this.ensureRecordScope()
     if (!hasPermission) {
       return
@@ -957,8 +1048,11 @@ Page({
       })
 
       this.voiceManager.start({
-        lang: 'zh_CN',
-        duration: MAX_RECORD_DURATION
+        duration: MAX_RECORD_DURATION,
+        format: 'mp3',
+        sampleRate: 16000,
+        numberOfChannels: 1,
+        encodeBitRate: 32000
       })
     } catch (error) {
       this.setData({
@@ -969,6 +1063,111 @@ Page({
       })
       wx.showToast({
         title: '录音启动失败',
+        icon: 'none'
+      })
+    }
+  },
+
+  async uploadVoiceFile(filePath) {
+    if (!wx.cloud || typeof wx.cloud.uploadFile !== 'function') {
+      throw new Error('当前环境未连接云存储')
+    }
+
+    const extension = getVoiceFileExtension(filePath)
+    const cloudPath = `voiceInputs/${this.data.projectId || 'draft'}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${extension}`
+    const result = await wx.cloud.uploadFile({
+      cloudPath,
+      filePath
+    })
+
+    if (!result || !result.fileID) {
+      throw new Error('录音上传失败，请重新试一次')
+    }
+
+    return {
+      fileID: result.fileID,
+      extension
+    }
+  },
+
+  async transcribeVoiceFile(result = {}) {
+    const filePath = String(result.tempFilePath || '').trim()
+    if (!filePath) {
+      this.setData({
+        isVoiceRecording: false,
+        isVoiceRecognizing: false,
+        voicePreviewText: '',
+        voiceStatusText: '本次录音未生成有效音频，请重新试一次'
+      })
+      return
+    }
+
+    try {
+      const uploadResult = await this.uploadVoiceFile(filePath)
+      if (!this.isPageActive) {
+        this.setData({
+          isVoiceRecording: false,
+          isVoiceRecognizing: false,
+          voicePreviewText: '',
+          voiceStatusText: '点击语音录入，可把口述内容自动追加到记录框'
+        })
+        return
+      }
+
+      this.setData({
+        voiceStatusText: '语音识别中...'
+      })
+
+      const asrResult = await requestSpeechToTextData({
+        fileID: uploadResult.fileID,
+        voiceFormat: uploadResult.extension,
+        projectId: this.data.projectId || '',
+        scene: 'follow_up_raw_content',
+        duration: Number(result.duration || 0) || 0
+      })
+
+      const recognizedText = normalizeRecognizedText(asrResult && asrResult.text)
+      if (!recognizedText) {
+        this.setData({
+          isVoiceRecording: false,
+          isVoiceRecognizing: false,
+          voicePreviewText: '',
+          voiceStatusText: '这次没有识别出有效内容，可以再试一次'
+        })
+        return
+      }
+
+      const currentContent = String(this.data.content || '').trim()
+      const nextContent = currentContent ? `${currentContent}\n${recognizedText}` : recognizedText
+
+      this.setData({
+        content: nextContent,
+        isVoiceRecording: false,
+        isVoiceRecognizing: false,
+        voicePreviewText: recognizedText,
+        voiceStatusText: `已追加 ${recognizedText.length} 个字到记录框`
+      })
+
+      wx.showToast({
+        title: '语音已转文字',
+        icon: 'success'
+      })
+    } catch (error) {
+      const errMsg = error && error.message ? error.message : ''
+      this.setData({
+        isVoiceRecording: false,
+        isVoiceRecognizing: false,
+        voicePreviewText: '',
+        voiceStatusText: errMsg ? `语音识别失败：${errMsg}` : '语音识别失败，请稍后再试'
+      })
+
+      if (/密钥|SECRET|语音识别服务/.test(errMsg)) {
+        this.openVoicePluginGuide()
+        return
+      }
+
+      wx.showToast({
+        title: '语音识别失败',
         icon: 'none'
       })
     }
@@ -1005,27 +1204,33 @@ Page({
 
     if (!String(this.data.content || '').trim()) {
       wx.showToast({
-        title: '请先输入原始跟进内容',
+        title: '请先输入跟进记录',
         icon: 'none'
       })
+      return
+    }
+
+    const decision = await ensureActionAllowed('ai', { guide: true })
+    if (!decision.allowed) {
       return
     }
 
     this.setData({
       isAiLoading: true,
       aiError: '',
-      aiResult: null,
+      aiResultBackup: this.data.aiResult ? cloneSnapshot(this.data.aiResult) : this.data.aiResultBackup,
       aiNextSuggestion: null,
+      aiNextSuggestionBackup: null,
+      adoptedAiNextVersionKey: '',
       aiNextError: ''
     })
 
     try {
-      const selectedStage = this.data.stages[this.data.stageIndex]
       const result = await requestFollowUpSummary({
         projectId: this.data.projectId,
-        method: this.data.currentMethod,
+        method: this.data.methodTouched ? this.data.currentMethod : '',
         content: this.data.content,
-        stageChange: selectedStage === '不变更' ? '' : selectedStage,
+        stageChange: '',
         projectContext: {
           projectName: this.data.projectTitle,
           clientName: '',
@@ -1035,7 +1240,7 @@ Page({
       })
 
       if (!result || !result.ok) {
-        throw new Error(result && result.message ? result.message : '当前无法完成 AI 整理')
+        throw new Error(result && result.message ? result.message : '当前无法生成整理结果')
       }
 
       await resolveNotificationData({
@@ -1044,29 +1249,57 @@ Page({
         scenes: ['follow_up_ai']
       })
 
-      this.setData({
-        aiResult: normalizeAiSummaryResult(result),
-        showAiDialog: true
+      const nextAiResult = normalizeAiSummaryResult({
+        ...result,
+        generatedAt: result.generatedAt || new Date().toISOString(),
+        currentStage: this.getEffectiveStage()
       })
+      const hadPreviousVersion = !!this.data.aiResult
+      const shouldApplyAiMethod = this.data.methodTouched !== true
+      const nextData = {
+        ...decorateAiDialogState(
+          nextAiResult,
+          this.data.aiNextSuggestion,
+          this.data.adoptedAiSummaryVersionKey,
+          this.data.adoptedAiNextVersionKey
+        ),
+        showAiDialog: true
+      }
+
+      if (shouldApplyAiMethod) {
+        nextData.currentMethod = normalizeFollowUpMethod(
+          nextAiResult.followUpMethod,
+          inferFollowUpMethodFromContent(this.data.content)
+        )
+      }
+
+      this.setData(nextData)
+
+      if (hadPreviousVersion) {
+        wx.showToast({
+          title: '新结果已生成，可恢复上一版',
+          icon: 'none'
+        })
+      }
     } catch (error) {
       await reportSystemFailureData({
         type: 'ai_failed',
         scene: 'follow_up_ai',
-        title: '当前无法完成 AI 整理',
-        message: error.message || '当前无法完成 AI 整理，请稍后重试',
+        title: '当前无法生成整理结果',
+        message: error.message || '当前无法生成整理结果，请稍后重试',
         projectId: this.data.projectId,
         projectName: this.data.projectTitle,
         actionUrl: this.data.projectId
           ? `/pages/follow-up/follow-up?projectId=${this.data.projectId}`
           : '/pages/follow-up/follow-up',
-        actionLabel: '重新整理'
+        actionLabel: '重新生成'
       })
 
       this.setData({
-        aiError: error.message || '当前无法完成 AI 整理，请稍后重试'
+        aiError: error.message || '当前无法生成整理结果，请稍后重试'
       })
       wx.showToast({
-        title: '当前无法完成 AI 整理',
+        title: '当前无法生成整理结果',
         icon: 'none'
       })
     } finally {
@@ -1081,7 +1314,11 @@ Page({
       return ''
     }
 
-    const sections = [this.data.aiResult.summary]
+    const sections = []
+
+    if (this.data.aiResult.summary) {
+      sections.push(`跟进摘要：${this.data.aiResult.summary}`)
+    }
 
     if (this.data.aiResult.highlights && this.data.aiResult.highlights.length) {
       sections.push(`关键进展：${this.data.aiResult.highlights.join('；')}`)
@@ -1091,15 +1328,60 @@ Page({
       sections.push(`风险提示：${this.data.aiResult.risks.join('；')}`)
     }
 
+    if (this.data.aiResult.missingInfo && this.data.aiResult.missingInfo.length) {
+      sections.push(`待补信息：${this.data.aiResult.missingInfo.join('；')}`)
+    }
+
     return sections.filter(Boolean).join('\n')
   },
 
   getEffectiveStage() {
-    if (this.data.stageIndex > 0) {
-      return this.data.stages[this.data.stageIndex] || this.data.projectStage
+    return this.data.projectStage
+  },
+
+  getPendingRecommendedStage() {
+    const aiResult = this.data.aiResult || {}
+    const recommendedStage = String(aiResult.recommendedStage || '').trim()
+    if (
+      !aiResult.isAdopted
+      || !recommendedStage
+      || recommendedStage === '不变更'
+      || recommendedStage === this.data.projectStage
+      || this.data.stages.indexOf(recommendedStage) === -1
+    ) {
+      return null
     }
 
-    return this.data.projectStage
+    return {
+      recommendedStage,
+      reason: String(aiResult.stageChangeReason || '').trim()
+    }
+  },
+
+  async applyAiSummaryToForm(options = {}) {
+    const aiResult = this.data.aiResult
+    if (!aiResult || aiResult.isAdopted) {
+      return false
+    }
+
+    const nextContent = this.buildAiSummaryContent()
+    const nextUpdate = {
+      content: nextContent,
+      adoptedAiSummaryVersionKey: aiResult.versionKey,
+      ...decorateAiDialogState(
+        aiResult,
+        this.data.aiNextSuggestion,
+        aiResult.versionKey,
+        this.data.adoptedAiNextVersionKey
+      )
+    }
+
+    if (options.closeDialog !== false) {
+      nextUpdate.showAiDialog = false
+    }
+
+    this.setData(nextUpdate)
+    return 'summary'
   },
 
   async applyAiSummary() {
@@ -1107,47 +1389,18 @@ Page({
       return
     }
 
-    const nextContent = this.buildAiSummaryContent()
-    const recommendedStage = String(this.data.aiResult.recommendedStage || '').trim()
-    const reason = String(this.data.aiResult.stageChangeReason || '').trim()
-    const currentStage = this.getEffectiveStage()
-    const shouldConfirmStage = Boolean(
-      recommendedStage
-      && recommendedStage !== '不变更'
-      && recommendedStage !== currentStage
-      && this.data.stages.indexOf(recommendedStage) > -1
-    )
-
-    if (!shouldConfirmStage) {
-      this.setData({
-        content: nextContent,
-        showAiDialog: false
-      })
-
+    if (this.data.aiResult.isAdopted) {
       wx.showToast({
-        title: '已回填到记录框',
-        icon: 'success'
+        title: '当前整理已采用',
+        icon: 'none'
       })
       return
     }
 
-    const modalResult = await showStageConfirmModal({
-      recommendedStage,
-      reason
-    })
-    const nextUpdate = {
-      content: nextContent,
-      showAiDialog: false
-    }
-
-    if (modalResult && modalResult.confirm) {
-      nextUpdate.stageIndex = this.data.stages.indexOf(recommendedStage)
-    }
-
-    this.setData(nextUpdate)
+    await this.applyAiSummaryToForm({ closeDialog: false })
 
     wx.showToast({
-      title: modalResult && modalResult.confirm ? '内容和阶段已更新' : '已回填到记录框',
+      title: '整理已采用',
       icon: 'success'
     })
   },
@@ -1158,6 +1411,31 @@ Page({
     })
   },
 
+  restoreAiSummaryVersion() {
+    if (!this.data.aiResultBackup) {
+      return
+    }
+
+    this.setData({
+      ...decorateAiDialogState(
+        cloneSnapshot(this.data.aiResultBackup),
+        null,
+        this.data.adoptedAiSummaryVersionKey,
+        ''
+      ),
+      aiResultBackup: cloneSnapshot(this.data.aiResult),
+      aiNextSuggestion: null,
+      aiNextSuggestionBackup: null,
+      adoptedAiNextVersionKey: '',
+      aiNextError: ''
+    })
+
+    wx.showToast({
+      title: '已恢复上一版整理结果',
+      icon: 'success'
+    })
+  },
+
   async handleAiNextSuggestion() {
     if (this.data.isAiNextLoading) {
       return
@@ -1165,15 +1443,21 @@ Page({
 
     if (!this.data.aiResult || !String(this.data.aiResult.summary || '').trim()) {
       wx.showToast({
-        title: '请先完成 AI整理',
+        title: '请先生成整理结果',
         icon: 'none'
       })
       return
     }
 
+    const decision = await ensureActionAllowed('ai', { guide: true })
+    if (!decision.allowed) {
+      return
+    }
+
     this.setData({
       isAiNextLoading: true,
-      aiNextError: ''
+      aiNextError: '',
+      aiNextSuggestionBackup: this.data.aiNextSuggestion ? cloneSnapshot(this.data.aiNextSuggestion) : this.data.aiNextSuggestionBackup
     })
 
     try {
@@ -1192,10 +1476,28 @@ Page({
         scenes: ['follow_up_ai_next']
       })
 
+      const nextSuggestion = normalizeNextSuggestion({
+        ...result,
+        generatedAt: result.generatedAt || new Date().toISOString()
+      })
+      const hadPreviousVersion = !!this.data.aiNextSuggestion
+
       this.setData({
-        aiNextSuggestion: normalizeNextSuggestion(result),
+        ...decorateAiDialogState(
+          this.data.aiResult,
+          nextSuggestion,
+          this.data.adoptedAiSummaryVersionKey,
+          this.data.adoptedAiNextVersionKey
+        ),
         showAiDialog: true
       })
+
+      if (hadPreviousVersion) {
+        wx.showToast({
+          title: '新建议已生成，可恢复上一版',
+          icon: 'none'
+        })
+      }
     } catch (error) {
       await reportSystemFailureData({
         type: 'ai_failed',
@@ -1207,7 +1509,7 @@ Page({
         actionUrl: this.data.projectId
           ? `/pages/follow-up/follow-up?projectId=${this.data.projectId}`
           : '/pages/follow-up/follow-up',
-        actionLabel: '重新建议'
+        actionLabel: '重新生成'
       })
 
       this.setData({
@@ -1224,25 +1526,106 @@ Page({
     }
   },
 
-  applyAiNextSuggestion() {
+  applyAiNextSuggestionToForm(options = {}) {
     const suggestion = this.data.aiNextSuggestion
-    if (!suggestion) {
-      return
+    if (!suggestion || suggestion.isAdopted) {
+      return false
     }
 
     const taskDrafts = mergeSuggestedTaskDrafts(this.data.taskDrafts, suggestion.taskDrafts)
     const nextFollowUpDate = String(suggestion.recommendedDate || '').trim() || this.data.nextFollowUpDate
     const nextFollowUpClock = String(suggestion.recommendedTime || '').trim() || this.data.nextFollowUpClock
 
-    this.setData({
+    const nextUpdate = {
       nextFollowUpDate,
       nextFollowUpClock,
       taskDrafts,
+      adoptedAiNextVersionKey: suggestion.versionKey,
+      ...decorateAiDialogState(
+        this.data.aiResult,
+        suggestion,
+        this.data.adoptedAiSummaryVersionKey,
+        suggestion.versionKey
+      )
+    }
+
+    if (options.closeDialog !== false) {
+      nextUpdate.showAiDialog = false
+    }
+
+    this.setData(nextUpdate)
+    return true
+  },
+
+  applyAiNextSuggestion() {
+    const suggestion = this.data.aiNextSuggestion
+    if (!suggestion) {
+      return
+    }
+
+    if (suggestion.isAdopted) {
+      wx.showToast({
+        title: '当前动作已采用',
+        icon: 'none'
+      })
+      return
+    }
+
+    this.applyAiNextSuggestionToForm({ closeDialog: false })
+
+    wx.showToast({
+      title: '动作已采用',
+      icon: 'success'
+    })
+  },
+
+  async applyAllAiSuggestions() {
+    const canApplySummary = this.data.aiResult && !this.data.aiResult.isAdopted
+    const canApplyNext = this.data.aiNextSuggestion && !this.data.aiNextSuggestion.isAdopted
+    if (!canApplySummary && !canApplyNext) {
+      wx.showToast({
+        title: '当前内容已采用',
+        icon: 'none'
+      })
+      return
+    }
+
+    let summaryResult = false
+    let nextResult = false
+    if (canApplySummary) {
+      summaryResult = await this.applyAiSummaryToForm({ closeDialog: false })
+    }
+    if (canApplyNext) {
+      nextResult = this.applyAiNextSuggestionToForm({ closeDialog: false })
+    }
+
+    this.setData({
       showAiDialog: false
     })
 
     wx.showToast({
-      title: '已回填下一步建议',
+      title: summaryResult && nextResult ? '整理和动作已采用' : '已采用',
+      icon: 'success'
+    })
+  },
+
+  restoreAiNextSuggestionVersion() {
+    if (!this.data.aiNextSuggestionBackup) {
+      return
+    }
+
+    this.setData({
+      ...decorateAiDialogState(
+        this.data.aiResult,
+        cloneSnapshot(this.data.aiNextSuggestionBackup),
+        this.data.adoptedAiSummaryVersionKey,
+        this.data.adoptedAiNextVersionKey
+      ),
+      aiNextSuggestionBackup: cloneSnapshot(this.data.aiNextSuggestion)
+    })
+
+    wx.showToast({
+      title: '已恢复上一版建议',
       icon: 'success'
     })
   },
@@ -1277,19 +1660,33 @@ Page({
       return
     }
 
+    const decision = await ensureActionAllowed('save_follow_up', { refresh: true, guide: true })
+    if (!decision.allowed) {
+      return
+    }
+
+    let stageChange = ''
+    const pendingStage = this.getPendingRecommendedStage()
+    if (pendingStage) {
+      const modalResult = await showStageConfirmModal(pendingStage)
+      if (modalResult && modalResult.confirm) {
+        stageChange = pendingStage.recommendedStage
+      }
+    }
+
     this.setData({
       isSaving: true
     })
 
     try {
-      const selectedStage = this.data.stages[this.data.stageIndex]
+      const selectedMethod = normalizeFollowUpMethod(this.data.currentMethod, '其他')
       const result = await saveFollowUpData({
         projectId: this.data.projectId,
-        method: this.data.currentMethod,
+        method: selectedMethod,
         followUpTime: `${this.data.followUpDate} ${this.data.followUpClock}`,
         content: this.data.content,
-        stageChange: selectedStage === '不变更' ? '' : selectedStage,
-        nextFollowUpTime: `${this.data.nextFollowUpDate} ${this.data.nextFollowUpClock}`,
+        stageChange,
+        nextFollowUpTime: '',
         images: this.data.attachments.map((item) => item.fileId),
         aiSummary: this.data.aiResult ? this.data.aiResult.summary : '',
         aiHighlights: this.data.aiResult ? this.data.aiResult.highlights : [],

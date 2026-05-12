@@ -1,0 +1,41 @@
+.phone-bind-page {
+  padding-bottom: 220rpx;
+}
+
+.phone-bind-hero {
+  padding: 24rpx 26rpx;
+  border-radius: 30rpx;
+}
+
+.phone-bind-return-card {
+  background: linear-gradient(180deg, rgba(53, 93, 118, 0.08), rgba(53, 93, 118, 0.03));
+}
+
+.phone-bind-check-group {
+  margin-bottom: 0;
+}
+
+.phone-bind-check-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12rpx;
+}
+
+.phone-bind-check-copy {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.phone-bind-timeline {
+  margin-top: 10rpx;
+}
+
+.phone-bind-timeline-item {
+  font-size: 23rpx;
+  line-height: 1.65;
+  color: var(--theme-text-secondary);
+}
+
+.phone-bind-timeline-item + .phone-bind-timeline-item {
+  margin-top: 8rpx;
+}

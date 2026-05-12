@@ -16,7 +16,6 @@
       <view class="hero rise-in">
         <view class="eyebrow-row">
           <view class="eyebrow">联系人</view>
-          <view class="source-badge">{{dataSource}}</view>
         </view>
         <view class="hero-title">{{contact.name}}</view>
         <view class="hero-subtitle">{{contact.company}} · {{contact.roleSummary}}</view>
@@ -68,6 +67,7 @@
 
       <view class="section rise-in stagger-3">
         <view class="section-title detail-projects-title">关联项目</view>
+        <view class="helper-text">这里会保留该联系人的全部关联项目；如果项目已转交，点进去会自动切到“外发项目”视角。</view>
         <view class="project-card contact-project-card" wx:for="{{contact.projectCards}}" wx:key="id" data-project-id="{{item.id}}" bindtap="openProjectDetail">
           <view class="project-top">
             <view class="project-main">

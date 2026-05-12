@@ -1,0 +1,237 @@
+.billing-order-page {
+  padding-bottom: 120rpx;
+}
+
+.billing-order-hero {
+  padding: 24rpx 26rpx;
+  border-radius: 30rpx;
+}
+
+.billing-order-hero-price-row {
+  display: flex;
+  align-items: baseline;
+  gap: 14rpx;
+  margin-top: 14rpx;
+}
+
+.billing-order-hero-price {
+  font-size: 48rpx;
+  line-height: 1.08;
+  font-weight: 700;
+  color: var(--theme-hero-text);
+}
+
+.billing-order-callout-card {
+  background: linear-gradient(180deg, rgba(53, 93, 118, 0.08), rgba(53, 93, 118, 0.03));
+}
+
+.billing-order-hero-price-note {
+  font-size: 22rpx;
+  line-height: 1.5;
+  color: rgba(244, 238, 229, 0.72);
+  text-decoration: line-through;
+}
+
+.billing-order-entry-banner {
+  position: relative;
+  overflow: hidden;
+  padding: 18rpx 20rpx 20rpx;
+  border-radius: 24rpx;
+  background: var(--theme-state-card-bg);
+  box-shadow: var(--theme-state-card-shadow);
+}
+
+.billing-order-entry-banner::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 8rpx;
+  border-radius: 24rpx 0 0 24rpx;
+  background: linear-gradient(180deg, rgba(160, 174, 189, 0.96) 0%, rgba(101, 118, 136, 0.96) 100%);
+}
+
+.billing-order-entry-banner.is-danger::before {
+  background: linear-gradient(180deg, rgba(244, 162, 150, 0.98) 0%, rgba(214, 103, 90, 0.98) 100%);
+}
+
+.billing-order-entry-banner.is-soft::before {
+  background: linear-gradient(180deg, rgba(244, 214, 145, 0.98) 0%, rgba(206, 163, 79, 0.98) 100%);
+}
+
+.billing-order-entry-banner.is-brand::before {
+  background: linear-gradient(180deg, rgba(174, 209, 229, 0.98) 0%, rgba(92, 153, 190, 0.98) 100%);
+}
+
+.billing-order-entry-banner.is-neutral::before {
+  background: linear-gradient(180deg, rgba(164, 179, 135, 0.98) 0%, rgba(111, 132, 95, 0.98) 100%);
+}
+
+.billing-order-entry-banner-title {
+  font-size: 26rpx;
+  font-weight: 700;
+  color: var(--theme-title);
+}
+
+.billing-order-entry-banner-desc {
+  margin-top: 6rpx;
+  font-size: 22rpx;
+  line-height: 1.55;
+  color: var(--theme-text-soft);
+}
+
+.billing-order-callout-desc {
+  margin-top: 10rpx;
+}
+
+.billing-order-effective-card {
+  background: linear-gradient(180deg, rgba(228, 242, 233, 0.96), rgba(245, 251, 247, 0.98));
+  box-shadow: 0 18rpx 36rpx rgba(73, 122, 93, 0.1);
+}
+
+.billing-order-effective-desc {
+  margin-top: 8rpx;
+}
+
+.billing-order-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10rpx;
+  margin-top: 14rpx;
+}
+
+.billing-order-summary-grid {
+  margin-top: 18rpx;
+}
+
+.billing-order-item {
+  padding: 16rpx 16rpx 14rpx;
+  border-radius: 20rpx;
+  background: var(--theme-soft-block-bg);
+  box-shadow: inset 0 0 0 1rpx rgba(24, 39, 51, 0.05);
+}
+
+.billing-order-label {
+  font-size: 20rpx;
+  color: var(--theme-text-muted);
+}
+
+.billing-order-value {
+  margin-top: 8rpx;
+  font-size: 26rpx;
+  font-weight: 700;
+  line-height: 1.42;
+  color: var(--theme-title);
+}
+
+.billing-order-empty-copy {
+  margin-top: 12rpx;
+}
+
+.billing-order-purchase-card {
+  padding: 22rpx;
+  border-radius: 28rpx;
+  background: linear-gradient(180deg, rgba(255, 252, 247, 0.98), rgba(244, 239, 231, 0.9));
+  box-shadow: inset 0 0 0 1rpx rgba(36, 75, 97, 0.06);
+}
+
+.billing-order-purchase-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16rpx;
+}
+
+.billing-order-purchase-title {
+  margin-top: 14rpx;
+  font-size: 28rpx;
+  line-height: 1.38;
+  font-weight: 700;
+  color: var(--theme-title);
+}
+
+.billing-order-purchase-subtitle {
+  margin-top: 8rpx;
+  font-size: 21rpx;
+  color: var(--theme-text-soft);
+}
+
+.billing-order-capability-wrap {
+  margin-top: 18rpx;
+}
+
+.billing-order-capability-title {
+  font-size: 21rpx;
+  font-weight: 700;
+  color: var(--theme-title);
+}
+
+.billing-order-capability-pills {
+  margin-top: 12rpx;
+}
+
+.billing-order-feature-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12rpx;
+  margin-top: 18rpx;
+}
+
+.billing-order-feature-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12rpx;
+}
+
+.billing-order-feature-dot {
+  width: 12rpx;
+  height: 12rpx;
+  margin-top: 12rpx;
+  border-radius: 50%;
+  flex: 0 0 auto;
+  background: var(--theme-accent);
+}
+
+.billing-order-feature-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 22rpx;
+  line-height: 1.62;
+  color: var(--theme-text-main);
+}
+
+.billing-order-summary-note {
+  margin-top: 14rpx;
+  font-size: 22rpx;
+  line-height: 1.6;
+  color: var(--theme-text-soft);
+}
+
+.page-shell.billing-order-page.appearance-font-large .billing-order-hero-price {
+  font-size: 54rpx;
+}
+
+.page-shell.billing-order-page.appearance-font-large .billing-order-purchase-title {
+  font-size: 32rpx;
+}
+
+.page-shell.billing-order-page.appearance-font-large .billing-order-feature-text {
+  font-size: 24rpx;
+}
+
+.page-shell.billing-order-page.appearance-font-readable .billing-order-grid {
+  grid-template-columns: repeat(1, minmax(0, 1fr));
+}
+
+.page-shell.billing-order-page.appearance-font-readable .billing-order-hero-price {
+  font-size: 56rpx;
+}
+
+.page-shell.billing-order-page.appearance-font-readable .billing-order-purchase-title {
+  font-size: 34rpx;
+}
+
+.page-shell.billing-order-page.appearance-font-readable .billing-order-feature-text {
+  font-size: 25rpx;
+}

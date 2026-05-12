@@ -1,0 +1,14 @@
+{
+  "name": "deal-crm-admin-web-bridge",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Local bridge for 成交 CRM admin-web to invoke CloudBase management cloud functions",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "check": "node --check server.js"
+  },
+  "dependencies": {
+    "@cloudbase/node-sdk": "^3.10.0"
+  }
+}

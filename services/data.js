@@ -1,6 +1,62 @@
 const mock = require('../utils/mock')
 const { callCloudFunction, clone, wait, getCloudStatus, canUseCloud } = require('./runtime')
 const { getDefaultShareModes, getVisibleFields, resolveShareTags } = require('./share')
+const { getDefaultBillingCatalogData, normalizeBillingCatalogPayload } = require('../utils/billing')
+
+function getDefaultAccountSummary() {
+  return {
+    accountId: '',
+    status: 'trialing',
+    phone: '',
+    phoneVerified: false,
+    phoneMasked: '',
+    wechatNickname: '',
+    customDisplayName: '',
+    displayName: '',
+    displayNameSource: '',
+    trialEndsAt: '',
+    currentAccessLevel: 'trial_full',
+    source: getAppDataSource(),
+    isMock: !canUseCloud()
+  }
+}
+
+function getDefaultEntitlements() {
+  return {
+    accountId: '',
+    status: 'trialing',
+    currentAccessLevel: 'trial_full',
+    aiQuotaPolicy: 'local_quota',
+    bindRequiredForWrite: false,
+    phoneVerified: false,
+    canCreateProject: true,
+    canEditProject: true,
+    canSaveFollowUp: true,
+    canCreateTask: true,
+    canUseQuickEntry: true,
+    canUseSpeechToText: true,
+    canUseAi: true,
+    canShareOut: true,
+    projectLimit: 3,
+    currentProjectCount: 0,
+    voiceSecondsTotal: 600,
+    voiceSecondsUsed: 0,
+    voiceSecondsRemaining: 600,
+    aiTokensTotal: 50000,
+    aiTokensUsed: 0,
+    aiTokensRemaining: 50000,
+    effectiveFrom: '',
+    effectiveTo: '',
+    reasonSummary: '',
+    source: getAppDataSource(),
+    isMock: !canUseCloud()
+  }
+}
+
+let cachedAccountSummary = getDefaultAccountSummary()
+let cachedEntitlements = getDefaultEntitlements()
+let cachedMockBillingOrders = []
+let cachedMockBillingPaymentTransactions = []
 
 function getAppDataSource() {
   const app = getApp()
@@ -9,6 +65,32 @@ function getAppDataSource() {
   }
 
   return getCloudStatus().label
+}
+
+function cacheAccountSummary(value) {
+  const source = value && typeof value === 'object' && !Array.isArray(value) ? value : {}
+  cachedAccountSummary = {
+    ...getDefaultAccountSummary(),
+    ...clone(source)
+  }
+  return clone(cachedAccountSummary)
+}
+
+function cacheEntitlementsSummary(value) {
+  const source = value && typeof value === 'object' && !Array.isArray(value) ? value : {}
+  cachedEntitlements = {
+    ...getDefaultEntitlements(),
+    ...clone(source)
+  }
+  return clone(cachedEntitlements)
+}
+
+function getCachedAccountSummary() {
+  return clone(cachedAccountSummary)
+}
+
+function getCachedEntitlements() {
+  return clone(cachedEntitlements)
 }
 
 async function loadScope(scope) {
@@ -50,9 +132,9 @@ async function loadHomeData() {
   return loadScope('dashboard')
 }
 
-async function loadProjectsData() {
+async function loadProjectsData(options = {}) {
   try {
-    const result = await callCloudFunction('listProjects')
+    const result = await callCloudFunction('listProjects', options)
     if (result && result.projects) {
       return {
         data: clone(result.projects),
@@ -69,6 +151,43 @@ async function loadProjectsData() {
 
   return {
     data: clone(mock.projectCards),
+    source: getAppDataSource()
+  }
+}
+
+async function loadTasksData(options = {}) {
+  try {
+    const result = await callCloudFunction('listTasks', options)
+    if (result && Array.isArray(result.tasks) && result.summary) {
+      return {
+        data: clone(result),
+        source: 'CloudBase'
+      }
+    }
+  } catch (error) {
+    if (canUseCloud()) {
+      if (error && error.code === 'FUNCTION_NOT_FOUND') {
+        error.message = '任务中心云函数 listTasks 未部署，请先上传并部署 listTasks 后重试'
+      }
+      throw error
+    }
+  }
+
+  await wait(180)
+
+  return {
+    data: {
+      ok: true,
+      summary: {
+        totalCount: 0,
+        openCount: 0,
+        overdueCount: 0,
+        todayCount: 0,
+        doneCount: 0,
+        canceledCount: 0
+      },
+      tasks: []
+    },
     source: getAppDataSource()
   }
 }
@@ -244,10 +363,13 @@ async function loadContactDetailData(contactId) {
   }
 }
 
-async function loadProjectDetailData(projectId) {
+async function loadProjectDetailData(projectId, options = {}) {
   if (projectId) {
     try {
-      const result = await callCloudFunction('getProjectDetail', { projectId })
+      const result = await callCloudFunction('getProjectDetail', {
+        projectId,
+        viewMode: options.viewMode || options.view || ''
+      })
       if (result && result.projectDetail) {
         return {
           data: clone(result),
@@ -280,9 +402,11 @@ async function loadProjectFormData(projectId) {
         projectId: '',
         projectName: '',
         clientName: '',
+        voiceAliasesText: '',
         stage: '线索',
         estimatedAmount: '',
         expectedCommission: '',
+        followUpSilenceDays: 0,
         tagsText: '',
         description: '',
         contacts: [
@@ -306,9 +430,11 @@ async function loadProjectFormData(projectId) {
       projectId: detail.data.projectDetail.id || '',
       projectName: detail.data.projectDetail.name || '',
       clientName: detail.data.projectDetail.client || '',
+      voiceAliasesText: (detail.data.projectDetail.voiceAliases || []).join(' / '),
       stage: detail.data.projectDetail.stage || '线索',
       estimatedAmount: detail.data.projectDetail.estimatedAmountValue || '',
       expectedCommission: detail.data.projectDetail.expectedCommissionValue || '',
+      followUpSilenceDays: Number(detail.data.projectDetail.followUpSilenceDays || 0),
       tagsText: (detail.data.projectDetail.tags || []).join(' / '),
       description: detail.data.projectDetail.description || '',
       contacts: detail.data.contacts.length ? detail.data.contacts : [
@@ -329,12 +455,25 @@ async function saveProjectData(payload) {
   return callCloudFunction('saveProject', payload)
 }
 
+async function flowProjectData(payload) {
+  const result = await callCloudFunction('flowProject', payload)
+  if (result && result.ok === false) {
+    throw new Error(result.message || '项目流转失败')
+  }
+
+  return result
+}
+
 async function createNotifyTaskData(payload) {
   return callCloudFunction('createNotifyTask', payload)
 }
 
 function normalizeText(value) {
   return String(value || '').trim()
+}
+
+function createRequestId(prefix = 'req') {
+  return `${normalizeText(prefix) || 'req'}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
 }
 
 const CLOUD_PROVIDER_LABEL = 'CloudBase AI'
@@ -344,8 +483,8 @@ function buildAiSourceMeta(sourceType = 'model') {
   if (sourceType === 'fallback') {
     return {
       sourceType: 'fallback',
-      sourceLabel: '基础建议',
-      providerLabel: '本地规则引擎',
+      sourceLabel: '系统基础建议',
+      providerLabel: '',
       modelName: '',
       canRegenerate: true
     }
@@ -353,7 +492,7 @@ function buildAiSourceMeta(sourceType = 'model') {
 
   return {
     sourceType: 'model',
-    sourceLabel: '大模型建议',
+    sourceLabel: '云端模型',
     providerLabel: CLOUD_PROVIDER_LABEL,
     modelName: CLOUD_MODEL_NAME,
     canRegenerate: true
@@ -417,7 +556,373 @@ async function reportSystemFailureData(payload = {}) {
 }
 
 async function requestFollowUpSummary(payload) {
-  return callCloudFunction('summarizeFollowUp', payload)
+  const nextPayload = payload && typeof payload === 'object' ? { ...payload } : {}
+  if (!normalizeText(nextPayload.requestId)) {
+    nextPayload.requestId = createRequestId('summary')
+  }
+  return callCloudFunction('summarizeFollowUp', nextPayload)
+}
+
+async function requestSpeechToTextData(payload) {
+  const nextPayload = payload && typeof payload === 'object' ? { ...payload } : {}
+  if (!normalizeText(nextPayload.requestId)) {
+    nextPayload.requestId = createRequestId('speech')
+  }
+  return callCloudFunction('speechToText', nextPayload)
+}
+
+function buildLocalQuickEntryProjectResolution(payload = {}) {
+  const candidates = Array.isArray(payload.candidates)
+    ? payload.candidates
+      .map((item) => ({
+        id: normalizeText(item && item.id),
+        localScore: Number(item && item.localScore) || 0
+      }))
+      .filter((item) => item.id)
+      .sort((left, right) => right.localScore - left.localScore)
+    : []
+  const candidateIds = candidates.slice(0, 5).map((item) => item.id)
+  const topCandidate = candidates[0] || null
+  const secondCandidate = candidates[1] || null
+  const topScore = Number(topCandidate && topCandidate.localScore || 0)
+  const secondScore = Number(secondCandidate && secondCandidate.localScore || 0)
+
+  let matchedProjectId = ''
+  let confidence = 'low'
+  let reason = '当前内容里的客户或项目线索还不够明确，请手动确认关联项目。'
+
+  if (topCandidate && topScore >= 16 && (!secondCandidate || topScore - secondScore >= 6)) {
+    matchedProjectId = topCandidate.id
+    confidence = 'high'
+    reason = '已匹配到更接近的项目，可直接确认。'
+  } else if (topCandidate && topScore >= 10) {
+    confidence = 'medium'
+    reason = '已找到较接近的项目，请确认后保存。'
+  }
+
+  return {
+    ok: true,
+    fallback: true,
+    source: 'local_fallback',
+    sourceType: 'fallback',
+    sourceLabel: '本地候选排序',
+    providerLabel: '',
+    modelName: '',
+    canRegenerate: true,
+    generatedAt: new Date().toISOString(),
+    matchedProjectId,
+    confidence,
+    reason,
+    candidateIds
+  }
+}
+
+function getLatestTimelineEntry(groups) {
+  const timelineGroups = Array.isArray(groups) ? groups : []
+  for (let index = 0; index < timelineGroups.length; index += 1) {
+    const items = Array.isArray(timelineGroups[index].items) ? timelineGroups[index].items : []
+    if (items.length) {
+      return items[0]
+    }
+  }
+
+  return null
+}
+
+function flattenTimelineEntries(groups) {
+  return (Array.isArray(groups) ? groups : []).reduce((result, group) => {
+    const items = Array.isArray(group && group.items) ? group.items : []
+    return result.concat(items)
+  }, [])
+}
+
+function buildLocalProjectJudgement(payload = {}, detail = {}) {
+  const projectDetail = detail.projectDetail || {}
+  const stage = normalizeText(projectDetail.stage) || '线索'
+  const projectName = normalizeText(projectDetail.name) || '当前项目'
+  const description = normalizeText(projectDetail.description)
+  const contacts = Array.isArray(detail.contacts) ? detail.contacts : []
+  const tasks = Array.isArray(detail.tasks) ? detail.tasks : []
+  const followTimeline = Array.isArray(detail.followTimeline) ? detail.followTimeline : []
+  const latestTimeline = getLatestTimelineEntry(followTimeline)
+  const latestSummary = normalizeText(latestTimeline && (latestTimeline.summary || latestTimeline.desc || latestTimeline.title))
+  const openTasks = tasks.filter((item) => item && (item.status === 'pending' || item.status === 'in_progress'))
+  const overdueTasks = openTasks.filter((item) => item && item.isOverdue)
+  const keyBlockers = []
+  const positiveSignals = []
+
+  if (latestSummary) {
+    positiveSignals.push('最近已有明确跟进记录')
+  }
+  if (contacts.length) {
+    positiveSignals.push(`已建立 ${contacts.length} 位联系人`)
+  }
+  if (openTasks.length) {
+    positiveSignals.push(`当前保留 ${openTasks.length} 条推进动作`)
+  }
+  if (stage === '方案' || stage === '商务') {
+    positiveSignals.push(`项目已进入${stage}阶段`)
+  }
+
+  if (!contacts.length) {
+    keyBlockers.push('当前还没有关键联系人信息')
+  }
+  if (!latestSummary) {
+    keyBlockers.push('最近缺少可用于判断的有效跟进记录')
+  }
+  if (!openTasks.length) {
+    keyBlockers.push('当前没有明确的下一步推进动作')
+  }
+  if (overdueTasks.length) {
+    keyBlockers.push(`有 ${overdueTasks.length} 条推进动作已逾期`)
+  }
+
+  const summary = [
+    `${projectName}当前处于${stage}阶段。`,
+    latestSummary
+      ? `最近推进显示：${latestSummary}`
+      : (description ? `当前项目背景为：${description}` : '当前还缺少清晰的最近推进记录。'),
+    openTasks.length
+      ? `目前还有${openTasks.length}条未完成动作待推进。`
+      : '目前还没有收成明确的下一步动作。'
+  ].filter(Boolean).join('')
+
+  let statusJudgement = '当前判断依据还不够扎实，建议先把关键推进信息补完整。'
+  if (stage === '商务') {
+    statusJudgement = overdueTasks.length
+      ? '项目已进入商务推进，但关键商务动作存在延迟，当前节奏偏松。'
+      : '项目已进入商务推进，当前重点是尽快压实拍板动作与商务节奏。'
+  } else if (stage === '方案') {
+    statusJudgement = openTasks.length
+      ? '项目已有方案推进基础，关键在于尽快把方案反馈推进到商务判断。'
+      : '项目已到方案阶段，但缺少明确动作承接，容易停留在讨论层。'
+  } else if (latestSummary && openTasks.length) {
+    statusJudgement = '项目已有连续推进迹象，当前关键是把下一步动作做实并按时回填。'
+  }
+
+  let priorityAction = '先把下一步动作收成一条明确任务，并补上截止时间。'
+  if (overdueTasks.length) {
+    priorityAction = `优先处理逾期动作“${normalizeText(overdueTasks[0].title) || '当前任务'}”，避免推进节奏继续失真。`
+  } else if (!contacts.length) {
+    priorityAction = '先补一个可直接推进的关键联系人，至少明确一位能持续沟通的人。'
+  } else if (openTasks.length) {
+    priorityAction = `最值得先推进的是“${normalizeText(openTasks[0].title) || '当前动作'}”，完成后立即补下一步动作。`
+  } else if (latestSummary) {
+    priorityAction = '围绕最近一次跟进内容，尽快确认下一次沟通对象、方式和截止时间。'
+  }
+
+  return {
+    ok: true,
+    sourceType: 'fallback',
+    sourceLabel: '系统基础建议',
+    providerLabel: '',
+    modelName: '',
+    canRegenerate: true,
+    summary,
+    statusJudgement,
+    keyBlockers: keyBlockers.slice(0, 3),
+    positiveSignals: positiveSignals.slice(0, 3),
+    priorityAction
+  }
+}
+
+function buildLocalProjectReview(payload = {}, detail = {}) {
+  const projectDetail = detail.projectDetail || {}
+  const stage = normalizeText(projectDetail.stage)
+  const projectName = normalizeText(projectDetail.name) || '当前项目'
+  const description = normalizeText(projectDetail.description)
+  const contacts = Array.isArray(detail.contacts) ? detail.contacts : []
+  const tasks = Array.isArray(detail.tasks) ? detail.tasks : []
+  const followTimeline = Array.isArray(detail.followTimeline) ? detail.followTimeline : []
+  const timelineEntries = flattenTimelineEntries(followTimeline)
+  const latestTimeline = timelineEntries[0] || null
+  const completedTasks = tasks.filter((item) => item && item.status === 'done')
+  const overdueTasks = tasks.filter((item) => item && item.isOverdue)
+  const turningPoints = []
+  const effectiveActions = []
+  const reusableLessons = []
+  const slowdownPoints = []
+  const lossReasons = []
+
+  if (latestTimeline && latestTimeline.summary) {
+    turningPoints.push(`最近阶段性结论是“${normalizeText(latestTimeline.summary)}”`)
+  }
+  if (completedTasks.length) {
+    turningPoints.push(`项目过程中累计完成 ${completedTasks.length} 条推进动作`)
+  }
+  if (contacts.length) {
+    turningPoints.push(`至少建立了 ${contacts.length} 位联系人支点`)
+  }
+
+  completedTasks.slice(0, 3).forEach((item) => {
+    const title = normalizeText(item.title)
+    if (title) {
+      effectiveActions.push(title)
+    }
+  })
+
+  if (!effectiveActions.length && latestTimeline && latestTimeline.highlights && latestTimeline.highlights.length) {
+    latestTimeline.highlights.slice(0, 3).forEach((item) => {
+      const text = normalizeText(item)
+      if (text) {
+        effectiveActions.push(text)
+      }
+    })
+  }
+
+  if (stage === '成交') {
+    reusableLessons.push('当前记录不足以提炼稳定方法，成交更可能来自价格、品牌或客户窗口期等因素')
+    if (contacts.length) {
+      reusableLessons.push('后续同类项目应优先确认关键联系人是否真实推动决策')
+    }
+    if (completedTasks.length) {
+      reusableLessons.push('已完成动作较多的项目，要重点复查哪一步真正改变了客户决策')
+    }
+
+    const reviewOverview = [
+      `${projectName}当前已成交。`,
+      description ? `项目背景为：${description}` : '',
+      latestTimeline && latestTimeline.summary
+        ? `从最近结果看，最终成交前的关键结论是：${normalizeText(latestTimeline.summary)}`
+        : '',
+      completedTasks.length
+        ? `过程中共完成 ${completedTasks.length} 条推进动作，说明项目是被持续压着往前走的。`
+        : '项目已成交，但当前沉淀的动作记录还不够完整。'
+    ].filter(Boolean).join('')
+
+    return {
+      ok: true,
+      sourceType: 'fallback',
+      sourceLabel: '系统基础建议',
+      providerLabel: '',
+      modelName: '',
+      canRegenerate: true,
+      stage,
+      reviewOverview,
+      turningPoints: turningPoints.slice(0, 3),
+      effectiveActions: effectiveActions.slice(0, 3),
+      reusableLessons: reusableLessons.slice(0, 3),
+      slowdownPoints: [],
+      lossReasons: [],
+      reactivationAdvice: ''
+    }
+  }
+
+  if (overdueTasks.length) {
+    slowdownPoints.push(`存在 ${overdueTasks.length} 条逾期动作，推进节奏曾明显放缓`)
+  }
+  if (latestTimeline && latestTimeline.risks && latestTimeline.risks.length) {
+    latestTimeline.risks.slice(0, 3).forEach((item) => {
+      const text = normalizeText(item)
+      if (text) {
+        slowdownPoints.push(text)
+      }
+    })
+  }
+  if (!contacts.length) {
+    slowdownPoints.push('项目过程中缺少稳定可持续推进的关键联系人')
+  }
+
+  if (latestTimeline && latestTimeline.risks && latestTimeline.risks.length) {
+    latestTimeline.risks.slice(0, 3).forEach((item) => {
+      const text = normalizeText(item)
+      if (text) {
+        lossReasons.push(text)
+      }
+    })
+  }
+  if (!lossReasons.length && !completedTasks.length) {
+    lossReasons.push('记录中缺少有效推进动作，无法看到客户决策被推动的证据')
+  }
+  if (!lossReasons.length && !contacts.length) {
+    lossReasons.push('联系人基础薄弱，缺少能影响结果的明确推动人')
+  }
+
+  const reactivationAdvice = lossReasons.length || overdueTasks.length
+    ? '后续同类项目要更早确认预算、关键人和时间窗口；二次激活只建议在出现新预算、新联系人或新窗口期后再做。'
+    : '当前记录不足以提炼稳定经验。'
+
+  const reviewOverview = [
+    `${projectName}当前已流失。`,
+    description ? `项目背景为：${description}` : '',
+    latestTimeline && latestTimeline.summary
+      ? `从最近记录看，流失前最后一个明确判断是：${normalizeText(latestTimeline.summary)}`
+      : '',
+    overdueTasks.length
+      ? `项目后段出现动作延迟，说明推进节奏可能在关键窗口期已经松掉。`
+      : '当前记录显示，流失原因还需要结合关键节点再补判断。'
+  ].filter(Boolean).join('')
+
+  return {
+    ok: true,
+    sourceType: 'fallback',
+    sourceLabel: '系统基础建议',
+    providerLabel: '',
+    modelName: '',
+    canRegenerate: true,
+    stage,
+    reviewOverview,
+    turningPoints: turningPoints.slice(0, 3),
+    effectiveActions: [],
+    reusableLessons: [],
+    slowdownPoints: slowdownPoints.slice(0, 3),
+    lossReasons: lossReasons.slice(0, 3),
+    reactivationAdvice
+  }
+}
+
+function buildLocalDormantWake(payload = {}, detail = {}) {
+  const projectDetail = detail.projectDetail || {}
+  const stage = normalizeText(projectDetail.stage) || '线索'
+  const projectName = normalizeText(projectDetail.name) || '当前项目'
+  const description = normalizeText(projectDetail.description)
+  const contacts = Array.isArray(detail.contacts) ? detail.contacts : []
+  const tasks = Array.isArray(detail.tasks) ? detail.tasks : []
+  const followTimeline = Array.isArray(detail.followTimeline) ? detail.followTimeline : []
+  const latestTimeline = getLatestTimelineEntry(followTimeline)
+  const latestSummary = normalizeText(latestTimeline && (latestTimeline.summary || latestTimeline.desc || latestTimeline.title))
+  const openTasks = tasks.filter((item) => item && (item.status === 'pending' || item.status === 'in_progress'))
+  const topTask = openTasks[0] || null
+  const topContact = contacts[0] || null
+
+  let wakeSummary = `${projectName}当前处于${stage}阶段，最近推进沉淀偏少，值得用一次低成本触达重新试探窗口。`
+  if (latestSummary) {
+    wakeSummary = `${projectName}当前处于${stage}阶段，最近明确推进停留在“${latestSummary}”，可以先做一次轻量唤醒判断是否还有窗口。`
+  } else if (description) {
+    wakeSummary = `${projectName}当前处于${stage}阶段，现有记录主要停留在项目背景层，适合先做一次轻量确认判断是否继续推进。`
+  }
+
+  let suggestedAction = '先发一条轻量消息确认项目当前是否仍在推进，再决定是否继续投入。'
+  if (topTask && normalizeText(topTask.title)) {
+    suggestedAction = `优先把当前动作“${normalizeText(topTask.title)}”重新拉起来，并顺手确认对方本周是否还有推进窗口。`
+  } else if (stage === '方案') {
+    suggestedAction = '先确认客户是否还在看方案或内部评审，再决定是否补充材料。'
+  } else if (stage === '商务') {
+    suggestedAction = '先确认预算和商务判断是否还有效，再决定是否继续往报价或合同推进。'
+  }
+
+  let suggestedContact = topContact && normalizeText(topContact.name)
+    ? `建议先从${normalizeText(topContact.name)}${normalizeText(topContact.role) ? `（${normalizeText(topContact.role)}）` : ''}切入，确认当前真实状态。`
+    : '建议先找当前主要对接人或能确认预算、决策进度的人，先拿到最新口径。'
+  if (!topContact && stage === '方案') {
+    suggestedContact = '建议优先联系正在看方案或负责内部评审的人，确认方案是否还在被继续推进。'
+  } else if (!topContact && stage === '商务') {
+    suggestedContact = '建议优先联系能确认预算、采购或商务条款的人，判断项目是否还值得继续压。'
+  }
+
+  return {
+    ok: true,
+    sourceType: 'fallback',
+    sourceLabel: '系统基础建议',
+    providerLabel: '',
+    modelName: '',
+    canRegenerate: true,
+    wakeSummary,
+    suggestedAction,
+    suggestedContact,
+    dormantDays: Number(payload.dormantDays || 0),
+    lastActiveText: normalizeText(payload.lastActiveText)
+  }
 }
 
 function buildLocalNextSuggestion(payload = {}, detail = {}) {
@@ -507,9 +1012,9 @@ function canFallbackNextSuggestion(error) {
   return /超时|timeout|timed out|网络|network|fetch|socket|abort/i.test(message)
 }
 
-async function requestNextFollowUpSuggestion(payload) {
+async function requestProjectJudgementData(payload = {}) {
   try {
-    return await callCloudFunction('suggestNextFollowUp', payload)
+    return await callCloudFunction('judgeProject', payload)
   } catch (error) {
     if (canUseCloud() && !canFallbackNextSuggestion(error)) {
       throw error
@@ -518,8 +1023,129 @@ async function requestNextFollowUpSuggestion(payload) {
 
   const detail = payload && payload.projectId
     ? await loadProjectDetailData(payload.projectId)
+    : {
+        data: {
+          projectDetail: clone(mock.projectDetail),
+          contacts: clone(mock.contacts),
+          tasks: [],
+          followTimeline: clone(mock.followTimeline)
+        }
+      }
+
+  return buildLocalProjectJudgement(payload, detail.data || detail)
+}
+
+async function requestProjectReviewData(payload = {}) {
+  try {
+    return await callCloudFunction('reviewClosedProject', payload)
+  } catch (error) {
+    if (canUseCloud() && !canFallbackNextSuggestion(error)) {
+      throw error
+    }
+  }
+
+  const detail = payload && payload.projectId
+    ? await loadProjectDetailData(payload.projectId)
+    : {
+        data: {
+          projectDetail: clone(mock.projectDetail),
+          contacts: clone(mock.contacts),
+          tasks: [],
+          followTimeline: clone(mock.followTimeline)
+        }
+      }
+
+  return buildLocalProjectReview(payload, detail.data || detail)
+}
+
+async function requestDormantProjectWakeData(payload = {}) {
+  try {
+    return await callCloudFunction('wakeDormantProject', payload)
+  } catch (error) {
+    if (canUseCloud() && !canFallbackNextSuggestion(error)) {
+      throw error
+    }
+  }
+
+  const detail = payload && payload.projectId
+    ? await loadProjectDetailData(payload.projectId)
+    : {
+        data: {
+          projectDetail: clone(mock.projectDetail),
+          contacts: clone(mock.contacts),
+          tasks: [],
+          followTimeline: clone(mock.followTimeline)
+        }
+      }
+
+  return buildLocalDormantWake(payload, detail.data || detail)
+}
+
+async function requestQuickEntryProjectResolution(payload = {}) {
+  const nextPayload = payload && typeof payload === 'object' ? { ...payload } : {}
+  if (!normalizeText(nextPayload.requestId)) {
+    nextPayload.requestId = createRequestId('quick_entry_project')
+  }
+  try {
+    return await callCloudFunction('resolveQuickEntryProject', nextPayload)
+  } catch (error) {
+    if (canUseCloud() && !canFallbackNextSuggestion(error)) {
+      throw error
+    }
+  }
+
+  return buildLocalQuickEntryProjectResolution(nextPayload)
+}
+
+async function requestQuickEntryProjectMemoryData(payload = {}) {
+  try {
+    return await callCloudFunction('getQuickEntryProjectMemory', payload)
+  } catch (error) {
+    if (canUseCloud()) {
+      throw error
+    }
+  }
+
+  return {
+    ok: true,
+    memoriesByProjectId: {},
+    source: getAppDataSource()
+  }
+}
+
+async function rememberQuickEntryProjectMemoryData(payload = {}) {
+  try {
+    return await callCloudFunction('rememberQuickEntryProjectMemory', payload)
+  } catch (error) {
+    if (canUseCloud()) {
+      throw error
+    }
+  }
+
+  return {
+    ok: true,
+    acceptedAliases: Array.isArray(payload.aliasTexts) ? clone(payload.aliasTexts) : [],
+    source: getAppDataSource()
+  }
+}
+
+async function requestNextFollowUpSuggestion(payload) {
+  const nextPayload = payload && typeof payload === 'object' ? { ...payload } : {}
+  if (!normalizeText(nextPayload.requestId)) {
+    nextPayload.requestId = createRequestId('next_action')
+  }
+  try {
+    return await callCloudFunction('suggestNextFollowUp', nextPayload)
+  } catch (error) {
+    if (canUseCloud() && !canFallbackNextSuggestion(error)) {
+      throw error
+    }
+  }
+
+  const detail = nextPayload && nextPayload.projectId
+    ? await loadProjectDetailData(nextPayload.projectId)
     : { data: { projectDetail: clone(mock.projectDetail), contacts: clone(mock.contacts) } }
-  const localResult = buildLocalNextSuggestion(payload, detail.data || detail)
+  const localResult = buildLocalNextSuggestion(nextPayload, detail.data || detail)
 
   return {
     ...localResult,
@@ -674,6 +1300,7 @@ async function loadTagEditorData(tagId = '') {
   return {
     data: {
       tag,
+      shareTags: tags,
       visibleFields: settings.data.visibleFields
     },
     source: settings.source
@@ -709,7 +1336,7 @@ function buildLocalShareBrief(payload = {}, config = {}) {
     latestSummary || description || '当前资料以项目基础信息为主。',
     mode === 'outbound'
       ? '当前输出重点放在项目现状和交接前的推进脉络。'
-      : (tag && tag.name ? `当前解读基于“${normalizeText(tag.name)}”范围内资料。` : '')
+      : '当前解读基于发送资料范围内资料。'
   ].filter(Boolean).slice(0, 4)
   const timelineInsight = nextFollowUp
     ? `最近推进已形成“${nextFollowUp}”这一时间节点，可据此理解当前项目节奏。`
@@ -784,6 +1411,52 @@ async function resolveNotificationData(payload) {
   return callCloudFunction('resolveNotification', payload)
 }
 
+async function submitFeedbackData(payload) {
+  return callCloudFunction('submitFeedback', payload)
+}
+
+async function getReferralInfoData() {
+  if (!canUseCloud()) {
+    return {
+      data: {
+        ok: true,
+        code: 'BMCDEMO100K',
+        rewardAiTokens: 100000,
+        sharePath: '/pages/referral/referral?referrerCode=BMCDEMO100K',
+        stats: {
+          invitedCount: 0,
+          pendingCount: 0,
+          rewardedCount: 0,
+          rewardedAiTokens: 0
+        },
+        relations: [],
+        source: getAppDataSource()
+      },
+      source: getAppDataSource()
+    }
+  }
+
+  const result = await callCloudFunction('getReferralInfo')
+  return {
+    data: result || {},
+    source: 'CloudBase'
+  }
+}
+
+async function bindReferralData(payload = {}) {
+  if (!canUseCloud()) {
+    return {
+      ok: true,
+      alreadyBound: false,
+      status: 'pending',
+      message: '推荐关系已确认',
+      rewardAiTokens: 100000
+    }
+  }
+
+  return callCloudFunction('bindReferral', payload)
+}
+
 async function loadUserPreferencesData() {
   return callCloudFunction('getUserPreferences')
 }
@@ -792,17 +1465,344 @@ async function saveUserPreferencesData(payload) {
   return callCloudFunction('saveUserPreferences', payload)
 }
 
+async function bindPhoneData(payload = {}) {
+  if (!canUseCloud()) {
+    const phoneNumber = String(payload.phoneNumber || '').trim()
+    const phoneMasked = /^1\d{10}$/.test(phoneNumber) ? `${phoneNumber.slice(0, 3)}****${phoneNumber.slice(-4)}` : ''
+    return {
+      data: cacheAccountSummary({
+        ...cachedAccountSummary,
+        phone: phoneNumber,
+        phoneVerified: /^1\d{10}$/.test(phoneNumber),
+        phoneMasked,
+        displayName: cachedAccountSummary.customDisplayName || cachedAccountSummary.wechatNickname || phoneMasked || cachedAccountSummary.accountId,
+        displayNameSource: cachedAccountSummary.customDisplayName
+          ? 'custom'
+          : (cachedAccountSummary.wechatNickname ? 'wechat' : (phoneMasked ? 'phone' : 'account')),
+        source: getAppDataSource()
+      }),
+      source: getAppDataSource()
+    }
+  }
+
+  const result = await callCloudFunction('bindPhone', payload)
+  const accountResult = await resolveAccountData()
+  const entitlementsResult = await getEntitlementsData()
+
+  return {
+    data: {
+      ...(result || {}),
+      account: accountResult.data,
+      entitlements: entitlementsResult.data
+    },
+    source: 'CloudBase'
+  }
+}
+
+async function resolveAccountData() {
+  if (!canUseCloud()) {
+    return {
+      data: cacheAccountSummary({
+        ...getDefaultAccountSummary(),
+        source: getAppDataSource()
+      }),
+      source: getAppDataSource()
+    }
+  }
+
+  const result = await callCloudFunction('resolveAccount')
+  return {
+    data: cacheAccountSummary({
+      ...getDefaultAccountSummary(),
+      ...(result || {}),
+      source: 'CloudBase',
+      isMock: false
+    }),
+    source: 'CloudBase'
+  }
+}
+
+async function getEntitlementsData() {
+  if (!canUseCloud()) {
+    return {
+      data: cacheEntitlementsSummary({
+        ...getDefaultEntitlements(),
+        source: getAppDataSource()
+      }),
+      source: getAppDataSource()
+    }
+  }
+
+  const result = await callCloudFunction('getEntitlements')
+  return {
+    data: cacheEntitlementsSummary({
+      ...getDefaultEntitlements(),
+      ...(result || {}),
+      source: 'CloudBase',
+      isMock: false
+    }),
+    source: 'CloudBase'
+  }
+}
+
+async function getBillingCatalogData() {
+  if (!canUseCloud()) {
+    return {
+      data: normalizeBillingCatalogPayload({
+        ...getDefaultBillingCatalogData(),
+        recentOrders: cachedMockBillingOrders,
+        source: getAppDataSource()
+      }),
+      source: getAppDataSource()
+    }
+  }
+
+  const result = await callCloudFunction('getBillingCatalog')
+  return {
+    data: normalizeBillingCatalogPayload({
+      ...getDefaultBillingCatalogData(),
+      ...(result || {}),
+      source: 'CloudBase'
+    }),
+    source: 'CloudBase'
+  }
+}
+
+async function createBillingOrderData(payload = {}) {
+  if (!canUseCloud()) {
+    const now = new Date().toISOString()
+    const productCode = String(payload.productCode || '').trim() || 'unknown_product'
+    const order = {
+      orderId: `ord_mock_${Date.now()}`,
+      title: String(payload.title || '内测订单').trim() || '内测订单',
+      productCode,
+      productType: String(payload.productType || 'subscription').trim() || 'subscription',
+      amount: 0,
+      currency: 'CNY',
+      status: 'pending',
+      source: 'mini_program',
+      paymentEnabled: false,
+      billingCycle: String(payload.billingCycle || '').trim(),
+      createdAt: now,
+      paidAt: '',
+      updatedAt: now
+    }
+
+    cachedMockBillingOrders = [order].concat(cachedMockBillingOrders).slice(0, 5)
+    return {
+      data: {
+        ok: true,
+        reused: false,
+        paymentEnabled: false,
+        order
+      },
+      source: getAppDataSource()
+    }
+  }
+
+  const result = await callCloudFunction('createBillingOrder', payload)
+  return {
+    data: result || {},
+    source: 'CloudBase'
+  }
+}
+
+async function getBillingOrderDetailData(payload = {}) {
+  const orderId = String(payload.orderId || '').trim()
+  if (!orderId) {
+    throw new Error('BILLING_ORDER_NOT_FOUND: 当前订单不存在或已无权查看')
+  }
+
+  if (!canUseCloud()) {
+    const order = cachedMockBillingOrders.find((item) => String(item && item.orderId ? item.orderId : '') === orderId)
+    if (!order) {
+      throw new Error('BILLING_ORDER_NOT_FOUND: 当前订单不存在或已无权查看')
+    }
+
+    const latestPaymentTransaction = cachedMockBillingPaymentTransactions
+      .filter((item) => String(item && item.orderId ? item.orderId : '') === orderId)
+      .sort((left, right) => new Date(right.updatedAt || 0).getTime() - new Date(left.updatedAt || 0).getTime())[0] || null
+
+    return {
+      data: {
+        ok: true,
+        order,
+        latestPaymentTransaction,
+        paymentEnabled: false
+      },
+      source: getAppDataSource()
+    }
+  }
+
+  const result = await callCloudFunction('getBillingOrderDetail', payload)
+  return {
+    data: result || {},
+    source: 'CloudBase'
+  }
+}
+
+async function prepareBillingPaymentData(payload = {}) {
+  const orderId = String(payload.orderId || '').trim()
+  if (!orderId) {
+    throw new Error('BILLING_ORDER_NOT_FOUND: 当前订单不存在或已无权查看')
+  }
+
+  if (!canUseCloud()) {
+    const orderIndex = cachedMockBillingOrders.findIndex((item) => String(item && item.orderId ? item.orderId : '') === orderId)
+    if (orderIndex < 0) {
+      throw new Error('BILLING_ORDER_NOT_FOUND: 当前订单不存在或已无权查看')
+    }
+
+    const order = {
+      ...cachedMockBillingOrders[orderIndex],
+      updatedAt: cachedMockBillingOrders[orderIndex].updatedAt || new Date().toISOString()
+    }
+    const now = new Date().toISOString()
+    const recentPending = cachedMockBillingPaymentTransactions
+      .filter((item) => String(item && item.orderId ? item.orderId : '') === orderId && String(item && item.status ? item.status : '') === 'pending')
+      .sort((left, right) => new Date(right.updatedAt || 0).getTime() - new Date(left.updatedAt || 0).getTime())[0] || null
+
+    if (recentPending && now && (new Date(now).getTime() - new Date(recentPending.updatedAt || 0).getTime() <= 10 * 60 * 1000)) {
+      const transactionId = String(recentPending.transactionId || recentPending.merchantTradeNo || `pay_mock_${Date.now()}`).trim()
+      const expiresAt = recentPending.expiresAt || new Date(Date.now() + 10 * 60 * 1000).toISOString()
+      const paymentSession = recentPending.paymentSession && typeof recentPending.paymentSession === 'object'
+        ? {
+            ...recentPending.paymentSession,
+            sessionId: String(recentPending.paymentSession.sessionId || transactionId).trim(),
+            provider: String(recentPending.paymentSession.provider || 'wechat_pay').trim(),
+            mode: String(recentPending.paymentSession.mode || 'placeholder').trim(),
+            paymentEnabled: recentPending.paymentSession.paymentEnabled === true,
+            canInvokePayment: recentPending.paymentSession.canInvokePayment === true,
+            preparedAt: String(recentPending.paymentSession.preparedAt || recentPending.createdAt || now).trim(),
+            expiresAt: String(recentPending.paymentSession.expiresAt || expiresAt).trim(),
+            pendingReason: String(recentPending.paymentSession.pendingReason || recentPending.failureReason || 'payment_not_enabled_yet').trim(),
+            callbackFunctionName: String(recentPending.paymentSession.callbackFunctionName || 'handleBillingPaymentCallback').trim(),
+            readinessCode: String(recentPending.paymentSession.readinessCode || 'placeholder_only').trim(),
+            readinessLabel: String(recentPending.paymentSession.readinessLabel || '当前仅占位').trim(),
+            profileCode: String(recentPending.paymentSession.profileCode || 'billing_payment_profile_v1').trim(),
+            merchantConfigReady: recentPending.paymentSession.merchantConfigReady === true,
+            missingConfigKeys: Array.isArray(recentPending.paymentSession.missingConfigKeys)
+              ? recentPending.paymentSession.missingConfigKeys.slice(0, 10)
+              : []
+          }
+        : {
+            sessionId: transactionId,
+            provider: 'wechat_pay',
+            mode: 'placeholder',
+            paymentEnabled: false,
+            canInvokePayment: false,
+            preparedAt: now,
+            expiresAt,
+            pendingReason: String(recentPending.failureReason || 'payment_not_enabled_yet').trim(),
+            callbackFunctionName: 'handleBillingPaymentCallback',
+            readinessCode: 'placeholder_only',
+            readinessLabel: '当前仅占位',
+            profileCode: 'billing_payment_profile_v1',
+            merchantConfigReady: false,
+            missingConfigKeys: []
+          }
+
+      return {
+        data: {
+          ok: true,
+          reused: true,
+          paymentEnabled: false,
+          order,
+          paymentTransaction: {
+            ...recentPending,
+            transactionId,
+            merchantTradeNo: String(recentPending.merchantTradeNo || transactionId).trim(),
+            channelTradeNo: String(recentPending.channelTradeNo || '').trim(),
+            expiresAt,
+            paymentSession
+          },
+          paymentSession,
+          message: '当前还未接入微信支付，已复用最近一笔支付准备记录'
+        },
+        source: getAppDataSource()
+      }
+    }
+
+    const mockTransactionId = `pay_mock_${Date.now()}`
+    const mockExpiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString()
+    const paymentSession = {
+      sessionId: mockTransactionId,
+      provider: 'wechat_pay',
+      mode: 'placeholder',
+      paymentEnabled: false,
+      canInvokePayment: false,
+      preparedAt: now,
+      expiresAt: mockExpiresAt,
+      pendingReason: 'payment_not_enabled_yet',
+      callbackFunctionName: 'handleBillingPaymentCallback',
+      readinessCode: 'placeholder_only',
+      readinessLabel: '当前仅占位',
+      profileCode: 'billing_payment_profile_v1',
+      merchantConfigReady: false,
+      missingConfigKeys: []
+    }
+    const paymentTransaction = {
+      transactionId: mockTransactionId,
+      merchantTradeNo: mockTransactionId,
+      orderId,
+      accountId: String(cachedAccountSummary.accountId || '').trim(),
+      channel: 'wechat_pay',
+      channelTradeNo: '',
+      status: 'pending',
+      failureReason: 'payment_not_enabled_yet',
+      expiresAt: mockExpiresAt,
+      paymentSession,
+      createdAt: now,
+      updatedAt: now
+    }
+
+    cachedMockBillingPaymentTransactions = [paymentTransaction].concat(cachedMockBillingPaymentTransactions).slice(0, 20)
+
+    return {
+      data: {
+        ok: true,
+        reused: false,
+        paymentEnabled: false,
+        order,
+        paymentTransaction,
+        paymentSession: paymentTransaction.paymentSession,
+        message: '当前还未接入微信支付，已完成支付发起占位记录'
+      },
+      source: getAppDataSource()
+    }
+  }
+
+  const result = await callCloudFunction('prepareBillingPayment', payload)
+  return {
+    data: result || {},
+    source: 'CloudBase'
+  }
+}
+
 module.exports = {
+  getDefaultAccountSummary,
+  getDefaultEntitlements,
+  getCachedAccountSummary,
+  getCachedEntitlements,
   loadHomeData,
   loadProjectsData,
+  loadTasksData,
   loadContactsData,
   loadContactDetailData,
   loadProjectDetailData,
   loadProjectFormData,
   saveProjectData,
+  flowProjectData,
   createNotifyTaskData,
   reportSystemFailureData,
   requestFollowUpSummary,
+  requestSpeechToTextData,
+  requestProjectJudgementData,
+  requestProjectReviewData,
+  requestDormantProjectWakeData,
+  requestQuickEntryProjectResolution,
+  requestQuickEntryProjectMemoryData,
+  rememberQuickEntryProjectMemoryData,
   requestNextFollowUpSuggestion,
   saveFollowUpData,
   updateTaskStatusData,
@@ -821,6 +1821,16 @@ module.exports = {
   loadNotificationsData,
   markNotificationReadData,
   resolveNotificationData,
+  submitFeedbackData,
+  getReferralInfoData,
+  bindReferralData,
+  bindPhoneData,
+  resolveAccountData,
+  getEntitlementsData,
+  getBillingCatalogData,
+  createBillingOrderData,
+  getBillingOrderDetailData,
+  prepareBillingPaymentData,
   loadUserPreferencesData,
   saveUserPreferencesData
 }

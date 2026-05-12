@@ -13,10 +13,6 @@ const SORT_OPTIONS = [
   { key: 'viewed', label: '浏览优先' }
 ]
 
-function normalizeShareModeLabel(mode) {
-  return String(mode || '').trim() === '发送资料' ? '发送资料' : '转交项目'
-}
-
 function parseDateTime(value) {
   if (!value) {
     return null
@@ -55,39 +51,39 @@ function parseDateTime(value) {
 
 function normalizeRecord(record, index) {
   const updatedAt = parseDateTime(record.updatedAtRaw || record.importedAtRaw || record.firstOpenedAtRaw || record.createdAtRaw || record.createdAt)
-  const statusText = record.statusText || '未打开'
+  const statusKey = String(record.statusKey || '').trim() || (() => {
+    const currentStatusText = String(record.statusText || '').trim()
+    if (currentStatusText === '已跟进') {
+      return 'followed'
+    }
+    if (currentStatusText === '已接手' || currentStatusText === '已导入') {
+      return 'taken_over'
+    }
+    if (currentStatusText === '已打开') {
+      return 'opened'
+    }
+    return 'unopened'
+  })()
+  const statusText = statusKey === 'followed'
+    ? '已跟进'
+    : (statusKey === 'taken_over'
+      ? '已接手'
+      : (statusKey === 'opened' ? '已打开' : '未打开'))
   const receiverName = record.receiverName || record.receiverOpenidMasked || '暂未识别'
-  const isOutbound = (record.mode || '项目外发') === '项目外发'
-  const modeLabel = normalizeShareModeLabel(record.mode)
-  let statusSummary = '已发出，等待对方查看'
-  let trackingSummary = '当前还在等待对方打开交接卡。'
+  let coreSummary = '交接卡已发出，等待对方打开。'
 
-  if (statusText === '已打开') {
-    statusSummary = isOutbound
-      ? '对方已查看，等待接手'
-      : '对方已查看资料'
-    trackingSummary = isOutbound
-      ? `${receiverName} 已查看交接卡，暂未接手项目。`
-      : `${receiverName} 已查看资料卡，本次分享仍由你继续维护。`
+  if (statusKey === 'opened') {
+    coreSummary = `${receiverName} 已查看交接卡，当前等待正式接手。`
   }
 
-  if (statusText === '已导入') {
-    statusSummary = '对方已接手项目'
-    trackingSummary = `${receiverName} 已接手项目，等待首条推进记录。`
+  if (statusKey === 'taken_over') {
+    coreSummary = `${receiverName} 已接手项目，等待首条推进记录。`
   }
 
-  if (statusText === '已跟进') {
-    statusSummary = `对方已继续跟进 ${Number(record.collaboratorFollowCount || 0)} 条`
-    trackingSummary = record.collaboratorLatestFollowAt
-      ? `${receiverName} 已新增 ${Number(record.collaboratorFollowCount || 0)} 条推进记录，最近更新 ${record.collaboratorLatestFollowAt}。`
-      : `${receiverName} 已开始继续推进，当前可进入详情查看完整时间线。`
-  }
-
-  let receiverSummary = '等待接手方打开交接卡'
-  if (statusText === '已打开') {
-    receiverSummary = `${receiverName} 已查看交接卡`
-  } else if (statusText === '已导入' || statusText === '已跟进') {
-    receiverSummary = `${receiverName} 已接手项目`
+  if (statusKey === 'followed') {
+    coreSummary = record.collaboratorLatestFollowAt
+      ? `${receiverName} 已继续推进 ${Number(record.collaboratorFollowCount || 0)} 条，最近更新 ${record.collaboratorLatestFollowAt}。`
+      : `${receiverName} 已开始继续推进。`
   }
 
   const firstTouchText = record.firstOpenedAt || '尚未打开'
@@ -99,8 +95,7 @@ function normalizeRecord(record, index) {
     projectId: record.projectId || '',
     importedProjectId: record.importedProjectId || '',
     name: record.name || '未命名项目',
-    partner: record.partner || '未命名标签',
-    mode: modeLabel,
+    partner: record.partner || '转交项目',
     viewed: record.viewed || `预览 ${Number(record.viewCount || 0)} 次`,
     viewCount: Number(record.viewCount || 0),
     receiverName,
@@ -110,25 +105,22 @@ function normalizeRecord(record, index) {
     lastViewedAt: record.lastViewedAt || '',
     collaboratorFollowCount: Number(record.collaboratorFollowCount || 0),
     collaboratorLatestFollowAt: record.collaboratorLatestFollowAt || '',
+    unreadProgressCount: Math.max(0, Number(record.unreadProgressCount || 0) || 0),
+    unreadProgressBadgeText: Number(record.unreadProgressCount || 0) > 99
+      ? '99+'
+      : (Number(record.unreadProgressCount || 0) > 0 ? String(Number(record.unreadProgressCount || 0)) : ''),
     status: record.status || '进行中',
+    statusKey,
     statusText,
-    statusSummary,
-    trackingSummary,
-    receiverSummary,
+    coreSummary,
     firstTouchText,
     takeoverText,
     latestTrackingText,
-    syncSummary: statusText === '已跟进'
-      ? `对方已新增推进记录 ${Number(record.collaboratorFollowCount || 0)} 条`
-      : (statusText === '已导入'
-        ? '项目已进入对方“我的项目”'
-        : (statusText === '已打开' ? '对方已查看，等待接手' : '当前还在等待对方查看')),
     stage: record.stage || '线索',
     updatedAt,
     searchText: [
       record.name,
       record.partner,
-      record.mode,
       record.receiverName,
       record.receiverOpenidMasked,
       record.stage
@@ -136,9 +128,10 @@ function normalizeRecord(record, index) {
     statusBadgeClass: record.status === '已成交'
       ? 'is-success'
       : (record.status === '已流失' ? 'is-danger' : ''),
-    progressBadgeClass: statusText === '已跟进'
+    progressBadgeClass: statusKey === 'followed'
       ? 'is-success'
-      : (statusText === '未打开' ? 'is-danger' : (statusText === '已打开' ? 'is-brand' : '')),
+      : (statusKey === 'unopened' ? 'is-danger' : (statusKey === 'opened' ? 'is-brand' : '')),
+    stageBadgeText: record.stage || '线索',
     latestTrackingAt: record.collaboratorLatestFollowAt || record.importedAt || record.firstOpenedAt || record.lastViewedAt || record.createdAt || ''
   }
 }
@@ -304,16 +297,16 @@ Page({
       .filter((item) => (keyword ? item.searchText.includes(keyword) : true))
       .filter((item) => {
         if (statusFilter === 'unopened') {
-          return item.statusText === '未打开'
+          return item.statusKey === 'unopened'
         }
         if (statusFilter === 'opened') {
-          return item.statusText === '已打开'
+          return item.statusKey === 'opened'
         }
         if (statusFilter === 'imported') {
-          return item.statusText === '已导入'
+          return item.statusKey === 'taken_over'
         }
         if (statusFilter === 'followed') {
-          return item.statusText === '已跟进'
+          return item.statusKey === 'followed'
         }
         return true
       })
@@ -329,8 +322,8 @@ Page({
     const allRecords = this.data.outboundProjects
     const summaryCards = [
       { label: '全部外发', value: String(allRecords.length), note: '当前追踪池' },
-      { label: '待查看', value: String(allRecords.filter((item) => item.statusText === '未打开').length), note: '对方还未打开' },
-      { label: '已接手', value: String(allRecords.filter((item) => item.statusText === '已导入' || item.statusText === '已跟进').length), note: '已进入对方项目池' }
+      { label: '待查看', value: String(allRecords.filter((item) => item.statusKey === 'unopened').length), note: '对方还未打开' },
+      { label: '已接手', value: String(allRecords.filter((item) => item.statusKey === 'taken_over' || item.statusKey === 'followed').length), note: '已进入对方项目池' }
     ]
 
     const hasCustomFilter = Boolean(keyword) || statusFilter !== 'all'
@@ -404,8 +397,8 @@ Page({
   },
 
   handleQuickEntryTap() {
-    wx.reLaunch({
-      url: '/pages/index/index?openQuickEntry=1'
+    wx.navigateTo({
+      url: '/pages/index/index?openQuickEntry=1&quickEntryStandalone=1'
     })
   }
 })

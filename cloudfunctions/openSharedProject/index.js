@@ -12,26 +12,58 @@ const CONTACT_CRYPTO_KEY = crypto.createHash('sha256').update(CONTACT_CRYPTO_SEC
 const defaultShareTags = [
   {
     id: 't1',
-    name: '基础浏览',
-    desc: '隐藏电话、微信，仅展示项目基础信息与联系人姓名。',
+    mode: 'info',
+    name: '发送资料',
+    desc: '对方仅查看资料，项目仍由我维护。',
     fields: ['项目名称', '客户名称', '当前阶段', '预计金额', '联系人姓名', '项目描述']
   },
   {
     id: 't2',
-    name: '完整外发',
-    desc: '展示完整联系方式与下一步动作，适合项目接手。',
+    mode: 'outbound',
+    name: '转交项目',
+    desc: '对方接手后继续推进，我在外发项目查看进展。',
     fields: ['项目名称', '客户名称', '当前阶段', '预计金额', '项目描述', '联系人姓名', '联系人电话', '联系人微信', '下一步动作', '分享来源']
-  },
-  {
-    id: 't3',
-    name: '全量查看',
-    desc: '展示全部可分享字段，并附带来源说明。',
-    fields: ['全部字段']
   }
 ]
 
 function normalizeText(value) {
   return String(value || '').trim()
+}
+
+function resolveUserDisplayName(user = {}, fallbackValue = '', defaultText = '微信用户') {
+  const customDisplayName = normalizeText(user.customDisplayName)
+  if (customDisplayName) {
+    return customDisplayName
+  }
+
+  const wechatNickname = normalizeText(user.wechatNickname || user.nickName)
+  if (wechatNickname) {
+    return wechatNickname
+  }
+
+  const phoneValue = normalizeText(user.phoneMasked || user.phone)
+  if (phoneValue) {
+    return phoneValue
+  }
+
+  return normalizeText(fallbackValue) || defaultText
+}
+
+async function resolveAccountIdByOpenid(openid = '') {
+  const currentOpenid = normalizeText(openid)
+  if (!currentOpenid) {
+    return ''
+  }
+
+  try {
+    const result = await db.collection('accountIdentities').where({
+      provider: 'wechat_mp',
+      openid: currentOpenid
+    }).limit(1).get()
+    return normalizeText(result.data[0] && result.data[0].accountId)
+  } catch (error) {
+    return ''
+  }
 }
 
 function isEncryptedValue(value) {
@@ -199,6 +231,8 @@ function normalizeShareTag(tag, index = 0) {
 }
 
 function resolveShareTag(record, ownerUser) {
+  const shareMode = normalizeText(record && record.shareMode) === 'outbound' ? 'outbound' : 'info'
+  const scopeName = shareMode === 'outbound' ? '转交项目' : '发送资料'
   const ownerTags = Array.isArray(ownerUser && ownerUser.shareTags) && ownerUser.shareTags.length
     ? ownerUser.shareTags.map(normalizeShareTag)
     : defaultShareTags.map(normalizeShareTag)
@@ -213,13 +247,14 @@ function resolveShareTag(record, ownerUser) {
   if (matched) {
     return {
       ...matched,
+      name: scopeName,
       fields: snapshotFields.length ? snapshotFields : matched.fields
     }
   }
 
   return {
-    id: normalizeText(record.shareTagId) || 'shared-tag',
-    name: normalizeText(record.shareTagName) || '分享标签',
+    id: normalizeText(record.shareTagId) || (shareMode === 'outbound' ? 't2' : 't1'),
+    name: scopeName,
     desc: '',
     fields: snapshotFields.length ? snapshotFields : ['全部字段']
   }
@@ -415,9 +450,11 @@ function buildTimelineItem(followUp, extra = {}) {
   } else if (typeKey === 'stage_change') {
     title = `阶段已更新为 ${stageChange}`
   } else if (typeKey === 'collaborator_follow') {
-    title = `${method}推进`
+    title = `${method}跟进`
   } else if (typeKey === 'shared_sync') {
     title = `${method}同步`
+  } else {
+    title = `${method}跟进`
   }
 
   return {
@@ -443,9 +480,9 @@ function buildTimelineItem(followUp, extra = {}) {
     methodLabel: method,
     stageChange,
     nextFollowUpText,
-    summaryLabel: typeKey === 'task_done' ? '完成动作' : (typeKey === 'collaborator_follow' ? '推进摘要' : 'AI 摘要'),
-    highlightsLabel: typeKey === 'task_done' ? '完成情况' : '关键进展',
-    rawLabel: typeKey === 'task_done' ? '完成详情' : '原始记录',
+    summaryLabel: typeKey === 'task_done' ? '完成结果' : (typeKey === 'collaborator_follow' ? '整理摘要' : '整理摘要'),
+    highlightsLabel: typeKey === 'task_done' ? '补充说明' : '关键进展',
+    rawLabel: typeKey === 'task_done' ? '任务原文' : '原始录入',
     collaborationLabel: extra.collaborationLabel || '',
     fromCollaborator
   }
@@ -619,7 +656,7 @@ async function ensureNotification(recipientOpenid, payload) {
   }
 }
 
-function buildImportedProjectPayload(sourceProject, shareRecord, ownerName, receiverOpenid, receiverName, now) {
+function buildImportedProjectPayload(sourceProject, shareRecord, ownerName, ownerAccountId, receiverOpenid, receiverName, receiverAccountId, now) {
   return {
     projectName: sourceProject.projectName || '未命名项目',
     clientName: sourceProject.clientName || '未填写客户',
@@ -640,6 +677,9 @@ function buildImportedProjectPayload(sourceProject, shareRecord, ownerName, rece
         }))
       : [],
     tags: Array.isArray(sourceProject.tags) ? clone(sourceProject.tags) : [],
+    accountId: receiverAccountId || normalizeText(sourceProject.accountId),
+    ownerAccountId: receiverAccountId || normalizeText(sourceProject.ownerAccountId) || normalizeText(sourceProject.accountId),
+    sharedFromAccountId: ownerAccountId || normalizeText(sourceProject.ownerAccountId) || normalizeText(sourceProject.accountId),
     isSharedProject: true,
     sourceProjectId: sourceProject._id,
     sharedFromOpenid: shareRecord._openid,
@@ -654,13 +694,81 @@ function buildImportedProjectPayload(sourceProject, shareRecord, ownerName, rece
   }
 }
 
-function buildImportedFollowUpPayload(followUp, receiverOpenid, importedProjectId, sourceOwnerOpenid, ownerName, now, historyScope) {
+function buildDefaultSeedProjectName(sourceProject) {
+  const clientName = normalizeText(sourceProject && sourceProject.clientName)
+  return clientName ? `${clientName} · 新需求` : '新需求项目'
+}
+
+function isCloneSeedRecord(shareRecord) {
+  return normalizeText(shareRecord && shareRecord.flowMode) === 'clone_seed'
+}
+
+function buildSeedProjectPayload(sourceProject, shareRecord, ownerName, ownerAccountId, receiverOpenid, receiverName, receiverAccountId, now) {
+  const sourceName = normalizeText(sourceProject.projectName) || '未命名项目'
+  const seedProjectName = normalizeText(shareRecord.seedProjectName || shareRecord.projectName) || buildDefaultSeedProjectName(sourceProject)
+
+  return {
+    projectName: seedProjectName,
+    clientName: normalizeText(sourceProject.clientName) || '未填写客户',
+    stage: '线索',
+    estimatedAmount: 0,
+    actualAmount: 0,
+    expectedCommission: 0,
+    description: '',
+    nextFollowUpDate: '',
+    status: '进行中',
+    isClosed: false,
+    contacts: Array.isArray(sourceProject.contacts)
+      ? sourceProject.contacts.map((contact, index) => ({
+          ...clone(contact),
+          contactId: normalizeText(contact && (contact.contactId || contact.id)) || `contact-${Date.now()}-${index}`,
+          phone: encryptSensitiveValue(contact && contact.phone),
+          wechat: encryptSensitiveValue(contact && contact.wechat)
+        }))
+      : [],
+    tags: [],
+    accountId: receiverAccountId || normalizeText(sourceProject.accountId),
+    ownerAccountId: receiverAccountId || normalizeText(sourceProject.ownerAccountId) || normalizeText(sourceProject.accountId),
+    sharedFromAccountId: ownerAccountId || normalizeText(sourceProject.ownerAccountId) || normalizeText(sourceProject.accountId),
+    isSharedProject: true,
+    sourceProjectId: sourceProject._id,
+    sourceProjectName: sourceName,
+    sourceFlowMode: 'clone_seed',
+    sourceFlowIntent: 'new_transfer',
+    sourceFlowCreatedAt: now,
+    sharedFromOpenid: shareRecord._openid,
+    sharedFromName: ownerName || '分享方',
+    receiverOpenid,
+    receiverName,
+    sourceShareRecordId: shareRecord._id,
+    sharedMode: shareRecord.shareMode || 'outbound',
+    sharedTagId: shareRecord.shareTagId || '',
+    sharedTagName: shareRecord.shareTagName || '',
+    updatedAt: now
+  }
+}
+
+function buildImportedFollowUpPayload(
+  followUp,
+  receiverOpenid,
+  receiverAccountId,
+  importedProjectId,
+  importedProjectOwnerAccountId,
+  sourceOwnerOpenid,
+  sourceOwnerAccountId,
+  ownerName,
+  now,
+  historyScope
+) {
   const scope = normalizeHistoryScope(historyScope)
   const basePayload = {
     _openid: receiverOpenid,
+    accountId: receiverAccountId || normalizeText(followUp.accountId),
     projectId: importedProjectId,
+    projectAccountId: importedProjectOwnerAccountId || sourceOwnerAccountId || normalizeText(followUp.projectAccountId),
     sourceFollowUpId: followUp._id,
     sharedFromOpenid: sourceOwnerOpenid,
+    sharedFromAccountId: sourceOwnerAccountId || normalizeText(followUp.accountId),
     importedFromShare: true,
     actorOpenid: followUp.actorOpenid || sourceOwnerOpenid,
     actorName: followUp.actorName || ownerName || '分享方',
@@ -697,7 +805,17 @@ function buildImportedFollowUpPayload(followUp, receiverOpenid, importedProjectI
   }
 }
 
-async function syncImportedFollowUps(receiverOpenid, importedProjectId, sourceProjectId, sourceOwnerOpenid, ownerName, historyScope) {
+async function syncImportedFollowUps(
+  receiverOpenid,
+  receiverAccountId,
+  importedProjectId,
+  importedProjectOwnerAccountId,
+  sourceProjectId,
+  sourceOwnerOpenid,
+  sourceOwnerAccountId,
+  ownerName,
+  historyScope
+) {
   const scope = normalizeHistoryScope(historyScope, 'outbound')
   if (scope === 'none') {
     return
@@ -727,7 +845,18 @@ async function syncImportedFollowUps(receiverOpenid, importedProjectId, sourcePr
     }
 
     await db.collection('followUps').add({
-      data: buildImportedFollowUpPayload(followUp, receiverOpenid, importedProjectId, sourceOwnerOpenid, ownerName, now, scope)
+      data: buildImportedFollowUpPayload(
+        followUp,
+        receiverOpenid,
+        receiverAccountId,
+        importedProjectId,
+        importedProjectOwnerAccountId,
+        sourceOwnerOpenid,
+        sourceOwnerAccountId,
+        ownerName,
+        now,
+        scope
+      )
     })
   }
 }
@@ -755,16 +884,18 @@ exports.main = async (event) => {
 
   const ownerOpenid = shareRecord._openid
   const receiverOpenid = wxContext.OPENID
+  const ownerAccountId = await resolveAccountIdByOpenid(ownerOpenid)
+  const receiverAccountId = await resolveAccountIdByOpenid(receiverOpenid)
   const ownerUserResult = await db.collection('users').where({
     _openid: ownerOpenid
   }).limit(1).get()
   const ownerUser = ownerUserResult.data[0] || {}
-  const ownerName = normalizeText(ownerUser.nickName) || '分享方'
+  const ownerName = resolveUserDisplayName(ownerUser, ownerAccountId, '分享方')
   const receiverUserResult = await db.collection('users').where({
     _openid: receiverOpenid
   }).limit(1).get()
   const receiverUser = receiverUserResult.data[0] || {}
-  const receiverName = normalizeText(receiverUser.nickName) || '微信用户'
+  const receiverName = resolveUserDisplayName(receiverUser, receiverAccountId, '微信用户')
   const shareTag = resolveShareTag(shareRecord, ownerUser)
   const historyScope = normalizeHistoryScope(shareRecord.historyScope, shareRecord.shareMode)
   const existingViewLogs = getShareViewLogs(shareRecord)
@@ -800,13 +931,16 @@ exports.main = async (event) => {
   let blockedReceiverName = ''
 
   if (shareRecord.shareMode === 'outbound' && receiverOpenid && receiverOpenid !== ownerOpenid) {
+    const isCloneSeed = isCloneSeedRecord(shareRecord)
     const sourceOutboundShareRecordId = normalizeText(sourceProject.outboundShareRecordId)
     const handedOverToOpenid = normalizeText(sourceProject.handoverToOpenid)
-    const projectLockedByAnotherRecord = sourceProject.handoverStatus === 'handed_over'
+    const projectLockedByAnotherRecord = !isCloneSeed
+      && sourceProject.handoverStatus === 'handed_over'
       && sourceOutboundShareRecordId
       && sourceOutboundShareRecordId !== shareRecord._id
 
-    const projectLockedByAnotherReceiver = sourceProject.handoverStatus === 'handed_over'
+    const projectLockedByAnotherReceiver = !isCloneSeed
+      && sourceProject.handoverStatus === 'handed_over'
       && sourceOutboundShareRecordId === shareRecord._id
       && handedOverToOpenid
       && handedOverToOpenid !== receiverOpenid
@@ -824,14 +958,40 @@ exports.main = async (event) => {
       blockedMessage = `${blockedReceiverName} 已接手这个项目`
       importedProjectId = normalizeText(shareRecord.importedProjectId)
     } else {
-      const existingProjectResult = await db.collection('projects').where({
-        _openid: receiverOpenid,
-        sourceProjectId: sourceProject._id,
-        sharedFromOpenid: ownerOpenid
-      }).limit(1).get()
+      const existingProjectResult = await db.collection('projects').where(isCloneSeed
+        ? {
+            _openid: receiverOpenid,
+            sourceShareRecordId: shareRecord._id,
+            sharedFromOpenid: ownerOpenid
+          }
+        : {
+            _openid: receiverOpenid,
+            sourceProjectId: sourceProject._id,
+            sharedFromOpenid: ownerOpenid
+          }).limit(1).get()
 
       const now = new Date()
-      const importPayload = buildImportedProjectPayload(sourceProject, shareRecord, ownerName, receiverOpenid, receiverName, now)
+      const importPayload = isCloneSeed
+        ? buildSeedProjectPayload(
+            sourceProject,
+            shareRecord,
+            ownerName,
+            ownerAccountId,
+            receiverOpenid,
+            receiverName,
+            receiverAccountId,
+            now
+          )
+        : buildImportedProjectPayload(
+            sourceProject,
+            shareRecord,
+            ownerName,
+            ownerAccountId,
+            receiverOpenid,
+            receiverName,
+            receiverAccountId,
+            now
+          )
       const isFirstImport = !existingProjectResult.data.length && !normalizeText(shareRecord.importedProjectId)
 
       if (existingProjectResult.data.length) {
@@ -850,24 +1010,40 @@ exports.main = async (event) => {
         importedProjectId = addResult._id
       }
 
-      await syncImportedFollowUps(receiverOpenid, importedProjectId, sourceProject._id, ownerOpenid, ownerName, historyScope)
+      if (!isCloneSeed) {
+        await syncImportedFollowUps(
+          receiverOpenid,
+          receiverAccountId,
+          importedProjectId,
+          receiverAccountId,
+          sourceProject._id,
+          ownerOpenid,
+          ownerAccountId,
+          ownerName,
+          historyScope
+        )
 
-      await db.collection('projects').doc(sourceProject._id).update({
-        data: {
-          handoverStatus: 'handed_over',
-          handoverToOpenid: receiverOpenid,
-          handoverToName: receiverName,
-          handedOverAt: shareRecord.importedAt || now,
-          outboundShareRecordId: shareRecord._id,
-          updatedAt: now
-        }
-      })
+        await db.collection('projects').doc(sourceProject._id).update({
+          data: {
+            ownerAccountId: receiverAccountId || normalizeText(sourceProject.ownerAccountId) || normalizeText(sourceProject.accountId),
+            handoverStatus: 'handed_over',
+            handoverToOpenid: receiverOpenid,
+            handoverToAccountId: receiverAccountId,
+            handoverToName: receiverName,
+            handedOverAt: shareRecord.importedAt || now,
+            outboundShareRecordId: shareRecord._id,
+            updatedAt: now
+          }
+        })
+      }
 
       const importedProjectResult = await db.collection('projects').doc(importedProjectId).get()
-      const importedFollowResult = await db.collection('followUps').where({
-        _openid: receiverOpenid,
-        projectId: importedProjectId
-      }).orderBy('followUpTime', 'desc').get()
+      const importedFollowResult = isCloneSeed
+        ? { data: [] }
+        : await db.collection('followUps').where({
+            _openid: receiverOpenid,
+            projectId: importedProjectId
+          }).orderBy('followUpTime', 'desc').get()
 
       effectiveProject = importedProjectResult.data
       effectiveFollowUps = importedFollowResult.data
@@ -886,6 +1062,7 @@ exports.main = async (event) => {
       await db.collection('shareRecords').doc(shareRecordId).update({
         data: {
           receiverOpenid: shareRecord.receiverOpenid || receiverOpenid,
+          recipientAccountId: shareRecord.recipientAccountId || receiverAccountId,
           receiverName: shareRecord.receiverName || receiverName,
           receiverLockedAt: shareRecord.receiverLockedAt || nextImportedAt,
           firstOpenedAt: nextViewMeta.firstOpenedAt || shareRecord.firstOpenedAt || now,
@@ -904,10 +1081,10 @@ exports.main = async (event) => {
           ensureNotification(receiverOpenid, {
             type: 'project_taken_over',
             level: 'normal',
-            title: '你已接手项目',
-            summary: `${buildProjectDetail(sourceProject).name} 已进入“我的项目”，后续由你继续推进。`,
+            title: isCloneSeed ? '你已收到新项目' : '你已接手项目',
+            summary: `${buildProjectDetail(effectiveProject).name} 已进入“我的项目”，后续由你继续推进。`,
             projectId: importedProjectId,
-            projectName: buildProjectDetail(sourceProject).name,
+            projectName: buildProjectDetail(effectiveProject).name,
             shareRecordId,
             sourceOpenid: ownerOpenid,
             sourceName: ownerName,
@@ -917,15 +1094,16 @@ exports.main = async (event) => {
             dedupeKey: `project_taken_over_${importedProjectId}`,
             extra: {
               importedProjectId,
-              sourceProjectId: sourceProject._id
+              sourceProjectId: sourceProject._id,
+              flowMode: isCloneSeed ? 'clone_seed' : 'transfer_original'
             },
             createdAt: now
           }),
           ensureNotification(ownerOpenid, {
             type: 'shared_imported',
             level: 'normal',
-            title: '对方已接手项目',
-            summary: `${receiverName} 已接手 ${buildProjectDetail(sourceProject).name}，后续将由对方继续推进。`,
+            title: isCloneSeed ? '对方已接收新建转交' : '对方已接手项目',
+            summary: `${receiverName} 已接收 ${buildProjectDetail(effectiveProject).name}，后续将由对方独立推进。`,
             projectId: sourceProject._id,
             projectName: buildProjectDetail(sourceProject).name,
             shareRecordId,
@@ -937,7 +1115,8 @@ exports.main = async (event) => {
             dedupeKey: `shared_imported_${shareRecordId}`,
             extra: {
               importedProjectId,
-              receiverOpenid
+              receiverOpenid,
+              flowMode: isCloneSeed ? 'clone_seed' : 'transfer_original'
             },
             createdAt: now
           })
@@ -956,6 +1135,7 @@ exports.main = async (event) => {
     await db.collection('shareRecords').doc(shareRecordId).update({
       data: {
         receiverOpenid: nextViewMeta.latestViewerOpenid || receiverOpenid,
+        recipientAccountId: shareRecord.recipientAccountId || receiverAccountId,
         receiverName: nextViewMeta.latestViewerName || receiverName,
         firstOpenedAt: nextViewMeta.firstOpenedAt || shareRecord.firstOpenedAt || now,
         lastViewedAt: nextViewMeta.lastViewedAt || now,
@@ -993,9 +1173,12 @@ exports.main = async (event) => {
 
   return {
     ok: true,
+    isShareOwner: receiverOpenid === ownerOpenid,
     imported,
     importedProjectId,
     shareMode: shareRecord.shareMode || 'info',
+    flowMode: normalizeText(shareRecord.flowMode),
+    seedProjectName: normalizeText(shareRecord.seedProjectName),
     historyScope,
     blocked,
     blockedReason,

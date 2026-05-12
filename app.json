@@ -1,8 +1,10 @@
 {
   "pages": [
     "pages/index/index",
+    "pages/tasks/tasks",
     "pages/projects/projects",
     "pages/project-detail/project-detail",
+    "pages/project-assets/project-assets",
     "pages/follow-up/follow-up",
     "pages/project-form/project-form",
     "pages/share-config/share-config",
@@ -11,6 +13,12 @@
     "pages/shared-out/shared-out",
     "pages/notifications/notifications",
     "pages/mine/mine",
+    "pages/feedback/feedback",
+    "pages/referral/referral",
+    "pages/entitlements/entitlements",
+    "pages/plans/plans",
+    "pages/billing-order/billing-order",
+    "pages/phone-bind/phone-bind",
     "pages/contacts/contacts",
     "pages/contact-detail/contact-detail",
     "pages/mark-deal/mark-deal",

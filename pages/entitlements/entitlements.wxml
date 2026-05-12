@@ -1,0 +1,78 @@
+<view class="page-shell entitlements-page {{appearancePageClass}}">
+  <view wx:if="{{isLoading}}" class="rise-in">
+    <loading-panel rows="3" appearance-page-class="{{appearancePageClass}}" />
+  </view>
+
+  <block wx:else>
+    <view class="hero rise-in entitlements-hero">
+      <view class="hero-actions entitlements-hero-actions">
+        <view class="btn-secondary entitlements-hero-primary-btn" bindtap="handlePrimaryAction">{{primaryActionMeta.text}}</view>
+      </view>
+      <view class="entitlements-hero-grid">
+        <view class="entitlements-hero-metric" wx:for="{{heroMetrics}}" wx:key="key">
+          <view class="entitlements-hero-metric-label">{{item.label}}</view>
+          <view class="entitlements-hero-metric-value">{{item.value}}</view>
+        </view>
+      </view>
+    </view>
+
+    <view wx:if="{{entryGuide.visible}}" class="form-card section rise-in stagger-1 entitlements-entry-banner is-{{entryGuide.tone}}">
+      <view class="entitlements-entry-banner-title">{{entryGuide.title}}</view>
+    </view>
+
+    <view wx:if="{{effectiveAccessCard.visible}}" class="surface-card section rise-in stagger-2 entitlements-effective-card">
+      <view class="line-between entitlements-effective-head">
+        <view>
+          <view class="section-title">{{effectiveAccessCard.title}}</view>
+        </view>
+      </view>
+      <view class="entitlements-grid">
+        <view class="entitlements-item" wx:for="{{effectiveAccessCard.rows}}" wx:key="key">
+          <view class="entitlements-item-label">{{item.label}}</view>
+          <view class="entitlements-item-value">{{item.value}}</view>
+        </view>
+      </view>
+    </view>
+
+    <view class="surface-card section rise-in stagger-2 entitlements-recent-card">
+      <view class="line-between entitlements-effective-head">
+        <view>
+          <view class="section-title">最近消耗</view>
+        </view>
+      </view>
+      <view wx:if="{{recentUsageRows.length}}" class="entitlements-recent-list">
+        <view class="entitlements-recent-item" wx:for="{{recentUsageRows}}" wx:key="key">
+          <view class="entitlements-recent-main">
+            <view class="entitlements-recent-title">{{item.title}}</view>
+            <view class="entitlements-recent-meta">
+              <text>{{item.occurredAtText || '刚刚'}}</text>
+              <text wx:if="{{item.projectName}}"> · {{item.projectName}}</text>
+            </view>
+          </view>
+          <view class="entitlements-recent-delta {{item.isConsume ? 'is-consume' : 'is-grant'}}">{{item.deltaText}}</view>
+        </view>
+      </view>
+      <view wx:else class="helper-text">暂无额度记录。</view>
+    </view>
+
+    <view class="section rise-in stagger-3">
+      <view class="section-header entitlements-section-header">
+        <view>
+          <view class="section-title">能力边界</view>
+        </view>
+      </view>
+      <view class="entitlements-capability-grid">
+        <view class="surface-card entitlements-capability-card" wx:for="{{capabilityRows}}" wx:key="key">
+          <view class="line-between entitlements-capability-head">
+            <view class="entitlements-capability-title">{{item.title}}</view>
+            <view class="status-badge {{item.statusClass}}">{{item.statusText}}</view>
+          </view>
+          <view class="card-subtitle entitlements-capability-desc">{{item.desc}}</view>
+          <view class="compact-inline-metrics entitlements-capability-pills">
+            <view class="compact-inline-item">{{item.detailText}}</view>
+          </view>
+        </view>
+      </view>
+    </view>
+  </block>
+</view>

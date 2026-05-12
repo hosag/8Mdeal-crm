@@ -1,10 +1,25 @@
-const { loadProjectsData, updateTaskStatusData } = require('../../services/data')
+const {
+  loadProjectsData,
+  updateTaskStatusData,
+  requestDormantProjectWakeData,
+  requestProjectReviewData,
+  requestSpeechToTextData,
+  flowProjectData
+} = require('../../services/data')
 const { buildTaskCompletionFeedback, getTaskCompletionToastTitle } = require('../../services/task-feedback')
 const { buildProjectsEntryContext } = require('../../utils/navigation-context')
 const { touchNotificationSync } = require('../../utils/notification-sync')
 const { syncPageAppearance } = require('../../utils/appearance')
+const { ensureActionAllowed, getEntitlementSnapshot, buildEntitlementPagePrompt } = require('../../utils/entitlement-guard')
 
 const STAGES = ['全部阶段', '线索', '洽谈', '方案', '商务', '成交', '流失']
+const ACTIVE_STAGES = ['全部阶段', '线索', '洽谈', '方案', '商务']
+const STATUS_FILTERS = [
+  { key: 'all', label: '全部' },
+  { key: 'active', label: '待推进' },
+  { key: 'deal', label: '已成交' },
+  { key: 'lost', label: '已流失' }
+]
 const QUICK_FILTERS = [
   { key: 'all', label: '全部项目' },
   { key: 'today', label: '今天推进' },
@@ -38,6 +53,21 @@ const SHARE_ACTION_OPTIONS = [
   }
 ]
 const HIGH_VALUE_THRESHOLD = 500000
+const MAX_RECORD_DURATION = 60000
+const PROJECT_AI_MODEL_SOURCE_DEFAULTS = {
+  sourceType: 'model',
+  sourceLabel: '云端模型',
+  providerLabel: 'CloudBase AI',
+  modelName: 'hunyuan-exp / hunyuan-turbos-latest',
+  canRegenerate: true
+}
+const PROJECT_AI_FALLBACK_SOURCE_DEFAULTS = {
+  sourceType: 'fallback',
+  sourceLabel: '系统基础建议',
+  providerLabel: '',
+  modelName: '',
+  canRegenerate: true
+}
 
 function normalizeQuickFilter(value) {
   if (value === 'todo') {
@@ -65,6 +95,10 @@ function normalizeQuickFilter(value) {
   }
 
   return QUICK_FILTERS.some((item) => item.key === value) ? value : 'all'
+}
+
+function normalizeStatusFilter(value) {
+  return STATUS_FILTERS.some((item) => item.key === value) ? value : 'active'
 }
 
 function normalizeSortMode(value) {
@@ -169,6 +203,126 @@ function normalizeTextList(values) {
   return Array.isArray(values)
     ? values.map((item) => String(item || '').trim()).filter(Boolean)
     : []
+}
+
+function padNumber(value) {
+  return `${value}`.padStart(2, '0')
+}
+
+function getSpeechRecorderManager() {
+  if (!wx || typeof wx.getRecorderManager !== 'function') {
+    return null
+  }
+
+  return wx.getRecorderManager()
+}
+
+function normalizeText(value) {
+  return String(value || '').trim()
+}
+
+function normalizeRecognizedText(value) {
+  return String(value || '').replace(/\s+/g, ' ').trim()
+}
+
+function getVoiceFileExtension(filePath = '') {
+  const matched = /\.([^.\\/]+)$/.exec(String(filePath || '').trim().toLowerCase())
+  const extension = matched ? matched[1] : 'mp3'
+  if (['mp3', 'm4a', 'wav', 'aac', 'amr'].includes(extension)) {
+    return extension
+  }
+
+  return 'mp3'
+}
+
+function formatAiGeneratedTime(value) {
+  const date = value instanceof Date ? value : new Date(value)
+  if (Number.isNaN(date.getTime())) {
+    return ''
+  }
+
+  return `${padNumber(date.getMonth() + 1)}-${padNumber(date.getDate())} ${padNumber(date.getHours())}:${padNumber(date.getMinutes())}`
+}
+
+function normalizeProjectAiSourceMeta(value) {
+  const payload = value && typeof value === 'object' ? value : {}
+  const sourceType = String(payload.sourceType || (payload.fallback ? 'fallback' : 'model')).trim() === 'fallback'
+    ? 'fallback'
+    : 'model'
+  const defaults = sourceType === 'fallback'
+    ? PROJECT_AI_FALLBACK_SOURCE_DEFAULTS
+    : PROJECT_AI_MODEL_SOURCE_DEFAULTS
+  const modelName = String(payload.modelName || defaults.modelName).trim()
+  const sourceLabel = String(payload.sourceLabel || defaults.sourceLabel).trim()
+  const generatedAt = String(payload.generatedAt || '').trim()
+  const generatedAtText = formatAiGeneratedTime(payload.generatedAt)
+  const sourceMetaParts = [sourceLabel]
+  if (sourceType !== 'fallback' && modelName) {
+    sourceMetaParts.push(modelName)
+  }
+  if (generatedAtText) {
+    sourceMetaParts.push(`生成于 ${generatedAtText}`)
+  }
+
+  return {
+    sourceType,
+    sourceLabel,
+    providerLabel: String(payload.providerLabel || defaults.providerLabel).trim(),
+    modelName,
+    canRegenerate: payload.canRegenerate !== false,
+    generatedAt,
+    generatedAtText,
+    sourceMetaText: sourceMetaParts.join(' · '),
+    sourceDisplayText: sourceType === 'fallback'
+      ? '来自：系统基础建议'
+      : `来自：云端模型${modelName ? ` · ${modelName}` : ''}`,
+    regenerateLabel: sourceType === 'fallback' ? '获取云端复盘' : 'AI重新复盘'
+  }
+}
+
+function normalizeProjectWakeResult(value) {
+  const payload = value && typeof value === 'object' ? value : {}
+  return {
+    ...payload,
+    ...normalizeProjectAiSourceMeta(payload),
+    dormantDays: Number(payload.dormantDays || 0),
+    lastActiveText: String(payload.lastActiveText || '').trim(),
+    wakeSummary: String(payload.wakeSummary || '').trim(),
+    suggestedAction: String(payload.suggestedAction || '').trim(),
+    suggestedContact: String(payload.suggestedContact || '').trim()
+  }
+}
+
+function normalizeStringArray(value) {
+  if (!Array.isArray(value)) {
+    return []
+  }
+
+  return value.map((item) => String(item || '').trim()).filter(Boolean)
+}
+
+function normalizeProjectReviewResult(value) {
+  const payload = value && typeof value === 'object' ? value : {}
+  return {
+    ...payload,
+    ...normalizeProjectAiSourceMeta(payload),
+    stage: String(payload.stage || '').trim(),
+    reviewOverview: String(payload.reviewOverview || '').trim(),
+    turningPoints: normalizeStringArray(payload.turningPoints),
+    effectiveActions: normalizeStringArray(payload.effectiveActions),
+    reusableLessons: normalizeStringArray(payload.reusableLessons),
+    slowdownPoints: normalizeStringArray(payload.slowdownPoints),
+    lossReasons: normalizeStringArray(payload.lossReasons),
+    reactivationAdvice: String(payload.reactivationAdvice || '').trim()
+  }
+}
+
+function cloneSnapshot(value) {
+  if (!value || typeof value !== 'object') {
+    return null
+  }
+
+  return JSON.parse(JSON.stringify(value))
 }
 
 function containsKeyword(value, keyword) {
@@ -374,8 +528,10 @@ function buildSearchExplain(project, keyword) {
   return null
 }
 
-function buildResultSummaryText({ count, total, stageFilter, quickFilter, sortMode, keyword }) {
-  const parts = [`共 ${count} 个结果 / ${total} 个项目`]
+function buildResultSummaryText({ count, total, statusFilter, stageFilter, quickFilter, sortMode, keyword, showStageFilter }) {
+  const activeStatusFilter = STATUS_FILTERS.find((item) => item.key === statusFilter)
+  const statusLabel = activeStatusFilter ? activeStatusFilter.label : '待推进'
+  const parts = [`${statusLabel} ${count} 个结果 / ${total} 个项目`]
   const activeQuickFilter = QUICK_FILTERS.find((item) => item.key === quickFilter)
   const currentSort = SORT_OPTIONS.find((item) => item.key === sortMode)
 
@@ -383,7 +539,7 @@ function buildResultSummaryText({ count, total, stageFilter, quickFilter, sortMo
     parts.push(`搜索“${keyword}”`)
   }
 
-  if (stageFilter !== '全部阶段') {
+  if (showStageFilter && stageFilter !== '全部阶段') {
     parts.push(`阶段：${stageFilter}`)
   }
 
@@ -403,6 +559,10 @@ function getStageFocus(stage, ownerType) {
     return '接手后先确认共享历史，再继续推进'
   }
 
+  if (ownerType === 'shared_out_readonly') {
+    return '项目已转交，当前页仅保留只读追踪'
+  }
+
   const focusMap = {
     线索: '先确认客户背景、真实需求和决策链路',
     洽谈: '把需求边界和关键联系人补完整',
@@ -418,32 +578,10 @@ function getStageFocus(stage, ownerType) {
 function getPrimaryTaskStatusMeta(project, nextTaskDate, today) {
   const hasOpenTask = Number(project.openTaskCount || 0) > 0
   if (!hasOpenTask) {
-    const nextFollowDate = parseDateTime(project.nextFollowUpAt || project.nextFollowUpDate || project.next)
-    if (project.dueStatus === 'overdue') {
-      return {
-        text: '优先处理',
-        badgeClass: 'is-danger'
-      }
-    }
-
-    if (project.dueStatus === 'today') {
-      return {
-        text: '今天处理',
-        badgeClass: 'is-brand'
-      }
-    }
-
-    if (nextFollowDate && Math.round((startOfDay(nextFollowDate).getTime() - today.getTime()) / 86400000) === 1) {
-      return {
-        text: '提前准备',
-        badgeClass: 'is-soft'
-      }
-    }
-
     return {
       text: project.dueStatus === 'closed'
         ? (project.stage === '成交' ? '已成交' : '已流失')
-        : '待处理',
+        : '待补动作',
       badgeClass: project.dueStatus === 'closed'
         ? (project.stage === '成交' ? 'is-success' : '')
         : ''
@@ -477,17 +615,29 @@ function getPrimaryTaskStatusMeta(project, nextTaskDate, today) {
   }
 }
 
+function getReadonlyProjectToast(project = {}) {
+  const handoverToName = String(project.handoverToName || '').trim()
+  if (handoverToName) {
+    return `该项目已转交给 ${handoverToName}，当前仅保留查看`
+  }
+
+  return '该项目已转交给接手方，当前仅保留查看'
+}
+
 function normalizeProject(project, index) {
-  const nextDate = parseDateTime(project.nextFollowUpAt || project.nextFollowUpDate || project.next)
   const nextTaskDate = parseDateTime(project.nextTaskDueAt)
   const updatedAt = parseDateTime(project.updatedAtRaw || project.updatedAt || project.latest)
+  const lastActiveAt = parseDateTime(project.lastActiveAt || project.updatedAtRaw || project.updatedAt || project.latest)
   const contactNames = normalizeTextList(project.contactNames)
   const tagNames = normalizeTextList(project.tags)
   const openTaskTypes = normalizeTextList(project.openTaskTypes)
   const stage = project.stage || '线索'
-  const isClosed = stage === '成交' || stage === '流失'
+  const isClosed = project.isClosedProject === true || project.isClosed === true || stage === '成交' || stage === '流失'
+  const closedStageText = String(project.closedStageText || (stage === '成交' ? '已成交' : (stage === '流失' ? '已流失' : '已关闭'))).trim()
   const today = startOfDay()
-  const nextDiff = nextDate ? Math.round((startOfDay(nextDate).getTime() - today.getTime()) / 86400000) : null
+  const now = new Date()
+  const openTaskCount = isClosed ? 0 : Number(project.openTaskCount || 0)
+  const overdueTaskCount = isClosed ? 0 : Number(project.overdueTaskCount || 0)
 
   let dueStatus = isClosed ? 'closed' : (project.nextStatus || '')
   let dueStatusText = project.nextStatusText || ''
@@ -495,54 +645,105 @@ function normalizeProject(project, index) {
     if (isClosed) {
       dueStatus = 'closed'
       dueStatusText = stage === '成交' ? '已成交' : '已流失'
-    } else if (!nextDate) {
+    } else if (!openTaskCount) {
       dueStatus = 'unplanned'
-      dueStatusText = '待安排'
-    } else if (nextDiff < 0) {
+      dueStatusText = '待补动作'
+    } else if (overdueTaskCount > 0 || (nextTaskDate && nextTaskDate.getTime() < now.getTime())) {
       dueStatus = 'overdue'
-      dueStatusText = '已逾期'
-    } else if (nextDiff === 0) {
+      dueStatusText = '优先处理'
+    } else if (nextTaskDate && startOfDay(nextTaskDate).getTime() === today.getTime()) {
       dueStatus = 'today'
-      dueStatusText = '今天跟进'
+      dueStatusText = '今天处理'
     } else {
       dueStatus = 'upcoming'
-      dueStatusText = '待跟进'
+      dueStatusText = '待处理'
     }
   }
 
   const ownerType = project.ownerType || (project.tag === '外发给我' ? 'shared_in' : 'owned')
+  const canAdvanceProject = !isClosed && project.canAdvanceProject !== false
+  const canShareProject = project.canShareProject !== false
+  const canMarkDealPermission = project.canMarkDeal !== false
+  const isReadOnlySharedOut = project.isReadOnlySharedOut === true || ownerType === 'shared_out_readonly'
+  const canReviewProject = !isReadOnlySharedOut && isClosed && project.canReviewProject !== false
   const primaryTaskStatus = getPrimaryTaskStatusMeta(project, nextTaskDate, today)
   const contactCount = Number(project.contactCount || contactNames.length || 0)
   const amountValue = Number(project.amountValue || parseAmountValue(project.amount))
-  const latestSummary = String(project.latestSummary || '暂无跟进摘要').trim()
+  const aiReview = project.aiReview && typeof project.aiReview === 'object'
+    ? normalizeProjectReviewResult(project.aiReview)
+    : null
+  const closedSummaryText = String(project.closedSummaryText || project.latestSummary || `${closedStageText}，${aiReview ? '已复盘' : '待复盘'}`).trim()
+  const latestSummary = String(isClosed ? closedSummaryText : (project.latestSummary || '暂无跟进摘要')).trim()
   const description = String(project.description || '').trim()
-  const nextTaskTitle = String(project.nextTaskTitle || '').trim()
-  const hasQuoteTask = openTaskTypes.includes('send_quote') || containsKeyword(nextTaskTitle, '报价')
+  const nextTaskTitle = isClosed ? '' : String(project.nextTaskTitle || '').trim()
+  const nextTaskDueText = isClosed ? '' : String(project.nextTaskDueText || '').trim()
+  const hasQuoteTask = openTaskTypes.includes('send_quote')
+    || openTaskTypes.includes('report_solution')
+    || containsKeyword(nextTaskTitle, '报价')
+    || containsKeyword(nextTaskTitle, '方案')
   const hasCallbackTask = openTaskTypes.includes('callback') || containsKeyword(nextTaskTitle, '回访')
   const isTodayFollowUp = dueStatus === 'today'
   const isOverdueFollowUp = dueStatus === 'overdue'
+  let footerPrimaryText = ''
+
+  if (isClosed) {
+    footerPrimaryText = ''
+  } else if (nextTaskTitle) {
+    footerPrimaryText = `推进任务：${nextTaskTitle}${nextTaskDueText ? ` · 截止 ${nextTaskDueText}` : ''}`
+  } else if (overdueTaskCount > 0) {
+    footerPrimaryText = `优先处理：${overdueTaskCount} 条任务`
+  } else if (openTaskCount > 0) {
+    footerPrimaryText = `推进任务：${openTaskCount} 条`
+  }
+
+  const footerMetaParts = [`最近更新：${project.latest || '最近更新'}`]
+  if (tagNames.length) {
+    footerMetaParts.push(`标签：${tagNames.join(' / ')}`)
+  }
+
   return {
     id: project.id || `project-${index}`,
     name: project.name || '未命名项目',
     client: project.client || '未填写客户',
     stage,
     isClosed,
-    canMarkDeal: !isClosed,
-    dealStatusText: stage === '成交' ? '已成交' : (stage === '流失' ? '已流失' : '登记成交'),
-    nextDisplay: project.next || '暂无下次跟进',
+    isClosedProject: isClosed,
+    closedStageText,
+    closedCardClass: isClosed ? (stage === '成交' ? 'is-closed is-closed-deal' : 'is-closed is-closed-lost') : '',
+    reviewStatusText: String(project.reviewStatusText || (aiReview ? '已复盘' : '待复盘')).trim(),
+    canAdvanceProject,
+    canShareProject,
+    canMarkDeal: canMarkDealPermission && !isClosed,
+    canReviewProject,
+    reviewActionText: String(project.reviewActionText || (aiReview ? '查看复盘' : 'AI复盘')).trim(),
+    dealStatusText: !canMarkDealPermission
+      ? '当前只读'
+      : (stage === '成交' ? '已成交' : (stage === '流失' ? '已流失' : '登记成交')),
+    nextDisplay: isClosed
+      ? closedStageText
+      : (nextTaskTitle
+        ? `推进任务 ${nextTaskTitle}${nextTaskDueText ? ` · 截止 ${nextTaskDueText}` : ''}`
+        : '暂无推进任务'),
     amount: project.amount || '0',
     amountValue,
     commission: project.commission || '0',
     commissionValue: Number(project.commissionValue || parseAmountValue(project.commission)),
     latest: project.latest || '最近更新',
     updatedAt,
+    lastActiveAt,
+    lastActiveText: String(project.lastActiveText || project.latest || '刚刚更新').trim(),
+    dormantDays: Number(project.dormantDays || 0),
+    showAiWakeAction: !!project.showAiWakeAction,
     progress: Number(project.progress || 0),
     tag: project.tag || (ownerType === 'shared_in' ? '外发给我' : '我创建'),
     ownerType,
     ownerLabel: project.ownerLabel || (ownerType === 'shared_in'
       ? `${project.sharedFromName || '分享方'} 外发给我`
       : '我负责推进'),
-    ownerBadgeClass: ownerType === 'shared_in' ? 'is-brand' : '',
+    aiReview,
+    ownerBadgeClass: ownerType === 'shared_in'
+      ? 'is-brand'
+      : (ownerType === 'shared_out_readonly' ? 'is-soft' : ''),
     dueStatus,
     dueStatusText,
     dueBadgeClass: dueStatus === 'overdue'
@@ -550,10 +751,10 @@ function normalizeProject(project, index) {
       : (dueStatus === 'today'
         ? 'is-brand'
         : (dueStatus === 'closed' && stage === '成交' ? 'is-success' : '')),
-    nextDate,
+    nextDate: nextTaskDate,
     nextSortWeight: dueStatus === 'closed'
       ? Number.MAX_SAFE_INTEGER - 1
-      : ((nextTaskDate || nextDate) ? (nextTaskDate || nextDate).getTime() : Number.MAX_SAFE_INTEGER),
+      : (nextTaskDate ? nextTaskDate.getTime() : Number.MAX_SAFE_INTEGER),
     contactNames,
     contactCount,
     contactText: contactCount
@@ -562,14 +763,18 @@ function normalizeProject(project, index) {
     contactSummary: contactNames.length ? contactNames.join(' / ') : '',
     tags: tagNames,
     tagsText: tagNames.join(' / '),
-    focusText: project.focusText || getStageFocus(stage, ownerType),
+    focusText: isClosed ? `${closedStageText}，${aiReview ? '已复盘' : '待复盘'}` : (project.focusText || getStageFocus(stage, ownerType)),
     latestSummary,
+    isReadOnlySharedOut,
+    handoverToName: String(project.handoverToName || '').trim(),
+    primarySummaryLabel: isClosed ? '项目状态' : (openTaskCount ? '推进任务' : '当前重点'),
+    secondarySummaryLabel: isClosed ? (aiReview ? '复盘摘要' : '复盘状态') : (openTaskCount ? '任务说明' : '最新摘要'),
     description,
     openTaskTypes,
-    openTaskCount: Number(project.openTaskCount || 0),
-    overdueTaskCount: Number(project.overdueTaskCount || 0),
-    hasOpenTask: Number(project.openTaskCount || 0) > 0,
-    hasOverdueTask: Number(project.overdueTaskCount || 0) > 0,
+    openTaskCount,
+    overdueTaskCount,
+    hasOpenTask: openTaskCount > 0,
+    hasOverdueTask: overdueTaskCount > 0,
     hasQuoteTask,
     hasCallbackTask,
     isHighValue: amountValue >= HIGH_VALUE_THRESHOLD,
@@ -580,14 +785,26 @@ function normalizeProject(project, index) {
     primaryTaskStatusBadgeClass: primaryTaskStatus.badgeClass,
     nextTaskId: String(project.nextTaskId || '').trim(),
     nextTaskTitle,
-    nextTaskDueText: String(project.nextTaskDueText || '').trim(),
-    taskSummaryText: String(project.nextTaskDueText || '').trim()
-      ? `截止 ${String(project.nextTaskDueText || '').trim()}`
+    nextTaskDueText,
+    taskSummaryText: nextTaskDueText
+      ? `截止 ${nextTaskDueText}`
       : '暂无截止时间',
-    primaryTaskSortWeight: Number(project.openTaskCount || 0)
-      ? ((nextTaskDate ? nextTaskDate.getTime() : Number.MAX_SAFE_INTEGER) - (Number(project.overdueTaskCount || 0) ? 86400000 : 0))
+    footerPrimaryText,
+    footerMetaText: footerMetaParts.join(' · '),
+    primaryTaskSortWeight: openTaskCount
+      ? ((nextTaskDate ? nextTaskDate.getTime() : Number.MAX_SAFE_INTEGER) - (overdueTaskCount ? 86400000 : 0))
       : Number.MAX_SAFE_INTEGER,
-    taskActionText: Number(project.openTaskCount || 0) ? '完成动作' : '新增跟进',
+    showFollowUpAction: !isClosed && canAdvanceProject,
+    showTaskAction: !isClosed && openTaskCount > 0,
+    taskActionText: isClosed
+      ? ''
+      : (!canAdvanceProject
+      ? '当前只读'
+      : '推进任务'),
+    taskActionBadgeText: canAdvanceProject && openTaskCount
+      ? String(openTaskCount)
+      : '',
+    taskActionButtonClass: canAdvanceProject ? 'btn-secondary' : 'btn-ghost',
     searchText: [
       project.name,
       project.client,
@@ -614,8 +831,11 @@ Page({
     searchKeyword: '',
     quickFilter: 'all',
     sortMode: 'updated',
+    statusFilter: 'active',
     stageFilter: '全部阶段',
     stages: STAGES,
+    activeStages: ACTIVE_STAGES,
+    statusFilterOptions: STATUS_FILTERS,
     sortOptions: SORT_OPTIONS,
     projectCards: [],
     filteredProjects: [],
@@ -628,6 +848,10 @@ Page({
     nextTaskTemplates: [
       { type: 'send_solution', label: '待发方案' },
       { type: 'send_quote', label: '待报价' },
+      { type: 'demo', label: '待演示' },
+      { type: 'report_solution', label: '待汇报方案' },
+      { type: 'business_negotiation', label: '待商务谈判' },
+      { type: 'research', label: '待调研' },
       { type: 'callback', label: '待回访' },
       { type: 'meeting', label: '待约会面' },
       { type: 'contract', label: '待签约' },
@@ -649,15 +873,51 @@ Page({
     taskCompleteBodyStyle: '',
     taskCompleteActionsStyle: '',
     isTaskCompletionEditing: false,
+    isTaskCompletionVoiceSupported: true,
+    isTaskCompletionVoiceRecording: false,
+    isTaskCompletionVoiceRecognizing: false,
     taskFeedback: {
       title: '',
       detail: ''
+    },
+    entitlementPrompt: {
+      visible: false,
+      tone: 'neutral',
+      title: '',
+      desc: '',
+      actionText: '',
+      actionType: '',
+      actionUrl: ''
     },
     showShareSheet: false,
     shareActionOptions: SHARE_ACTION_OPTIONS,
     selectedShareProjectId: '',
     selectedShareProjectName: '',
     selectedShareProjectMeta: null,
+    showTransferSheet: false,
+    transferMode: 'transfer_original',
+    transferProjectName: '',
+    isTransferOpening: false,
+    copyProjectId: '',
+    showProjectWakeSheet: false,
+    selectedWakeProjectId: '',
+    selectedWakeProjectName: '',
+    selectedWakeProjectStage: '',
+    selectedWakeProjectDormantText: '',
+    selectedWakeProjectLastActiveText: '',
+    isProjectWakeLoading: false,
+    projectWakeError: '',
+    projectWakeResult: null,
+    projectWakeResultBackup: null,
+    showProjectReviewSheet: false,
+    selectedReviewProjectId: '',
+    selectedReviewProjectName: '',
+    selectedReviewProjectStage: '',
+    selectedReviewProjectAmount: '',
+    isProjectReviewLoading: false,
+    projectReviewError: '',
+    projectReviewResult: null,
+    projectReviewResultBackup: null,
     taskActionId: '',
     isLoading: true,
     isLoadFailed: false,
@@ -666,14 +926,20 @@ Page({
   },
 
   async onLoad(options) {
+    this.isPageActive = true
     syncPageAppearance(this)
     const quickFilter = normalizeQuickFilter(options && options.quickFilter)
     const sortMode = normalizeSortMode(options && options.sortMode)
-    const stageFilter = normalizeStageFilter(options && options.stageFilter ? decodeURIComponent(options.stageFilter) : '全部阶段')
+    const rawStageFilter = options && options.stageFilter ? decodeURIComponent(options.stageFilter) : '全部阶段'
+    const statusFilter = rawStageFilter === '成交'
+      ? 'deal'
+      : (rawStageFilter === '流失' ? 'lost' : normalizeStatusFilter(options && options.statusFilter))
+    const stageFilter = normalizeStageFilter(rawStageFilter)
     this.setData({
       quickFilter,
       sortMode,
-      stageFilter,
+      statusFilter,
+      stageFilter: statusFilter === 'deal' || statusFilter === 'lost' ? '全部阶段' : stageFilter,
       entryContextText: buildProjectsEntryContext(
         options && options.source,
         quickFilter,
@@ -682,23 +948,32 @@ Page({
     })
 
     this.initTaskCompletionKeyboard()
-    await this.fetchProjects()
+    await Promise.all([
+      this.fetchProjects(),
+      this.refreshEntitlementPrompt({ refresh: true })
+    ])
   },
 
   async onShow() {
+    this.isPageActive = true
     syncPageAppearance(this)
     this.initTaskCompletionKeyboard()
+    await this.refreshEntitlementPrompt({ refresh: true })
     if (!this.data.isLoading) {
       await this.fetchProjects()
     }
   },
 
   onHide() {
+    this.isPageActive = false
+    this.stopTaskCompletionVoiceInput({ silent: true })
     this.clearTaskFeedbackTimer()
     this.destroyTaskCompletionKeyboard()
   },
 
   onUnload() {
+    this.isPageActive = false
+    this.stopTaskCompletionVoiceInput({ silent: true })
     this.clearTaskFeedbackTimer()
     this.destroyTaskCompletionKeyboard()
   },
@@ -708,6 +983,30 @@ Page({
       clearTimeout(this.taskFeedbackTimer)
       this.taskFeedbackTimer = null
     }
+  },
+
+  async refreshEntitlementPrompt(options = {}) {
+    const snapshot = await getEntitlementSnapshot({
+      refresh: options.refresh === true
+    })
+    if (!this.isPageActive) {
+      return
+    }
+
+    this.setData({
+      entitlementPrompt: buildEntitlementPagePrompt(snapshot, 'projects')
+    })
+  },
+
+  handleEntitlementPromptAction() {
+    const { actionUrl } = this.data.entitlementPrompt || {}
+    if (!actionUrl) {
+      return
+    }
+
+    wx.navigateTo({
+      url: actionUrl
+    })
   },
 
   showTaskFeedback(feedback) {
@@ -808,6 +1107,19 @@ Page({
     }, () => this.applyFilters())
   },
 
+  setStatusFilter(event) {
+    const statusFilter = normalizeStatusFilter(event.currentTarget.dataset.status)
+    const nextData = {
+      statusFilter
+    }
+
+    if (statusFilter === 'deal' || statusFilter === 'lost') {
+      nextData.stageFilter = '全部阶段'
+    }
+
+    this.setData(nextData, () => this.applyFilters())
+  },
+
   setStage(event) {
     const stageFilter = event.currentTarget.dataset.stage
     this.setData({
@@ -818,14 +1130,52 @@ Page({
   applyFilters() {
     const rawKeyword = String(this.data.searchKeyword || '').trim()
     const keyword = rawKeyword.toLowerCase()
+    const statusFilter = this.data.statusFilter
     const stageFilter = this.data.stageFilter
     const quickFilter = this.data.quickFilter
     const sortMode = this.data.sortMode
+    const showStageFilter = statusFilter === 'all' || statusFilter === 'active'
+    const effectiveStageFilter = showStageFilter ? stageFilter : '全部阶段'
+    const shouldApplyQuickFilter = statusFilter === 'all' || statusFilter === 'active'
 
     const allProjects = this.data.projectCards.slice()
+    const statusMatchedProjects = allProjects.filter((project) => {
+      if (statusFilter === 'active') {
+        return !project.isClosed
+      }
+
+      if (statusFilter === 'deal') {
+        return project.stage === '成交'
+      }
+
+      if (statusFilter === 'lost') {
+        return project.stage === '流失'
+      }
+
+      return true
+    })
     const filteredProjects = allProjects
-      .filter((project) => (stageFilter === '全部阶段' ? true : project.stage === stageFilter))
       .filter((project) => {
+        if (statusFilter === 'active') {
+          return !project.isClosed
+        }
+
+        if (statusFilter === 'deal') {
+          return project.stage === '成交'
+        }
+
+        if (statusFilter === 'lost') {
+          return project.stage === '流失'
+        }
+
+        return true
+      })
+      .filter((project) => (effectiveStageFilter === '全部阶段' ? true : project.stage === effectiveStageFilter))
+      .filter((project) => {
+        if (!shouldApplyQuickFilter) {
+          return true
+        }
+
         if (quickFilter === 'today') {
           return project.hasTodayTask || project.isTodayFollowUp
         }
@@ -900,34 +1250,56 @@ Page({
     const totalCount = allProjects.length
     const activeCount = allProjects.filter((project) => !project.isClosed).length
     const dealCount = allProjects.filter((project) => project.stage === '成交').length
+    const lostCount = allProjects.filter((project) => project.stage === '流失').length
+    const statusFilterOptions = STATUS_FILTERS.map((item) => {
+      const countMap = {
+        all: totalCount,
+        active: activeCount,
+        deal: dealCount,
+        lost: lostCount
+      }
+
+      return {
+        ...item,
+        count: countMap[item.key] || 0
+      }
+    })
     const summaryCards = [
       { label: '全部项目', value: String(totalCount), note: '当前项目池' },
       { label: '待推进', value: String(activeCount), note: '仍在持续跟进' },
-      { label: '已成交', value: String(dealCount), note: '已完成签约' }
+      { label: '已成交', value: String(dealCount), note: `已流失 ${lostCount}` }
     ]
 
-    const hasCustomFilter = Boolean(keyword) || quickFilter !== 'all' || stageFilter !== '全部阶段'
-    const emptyTitle = keyword
-      ? '没有找到匹配项目'
-      : (quickFilter === 'overdue'
-        ? '暂无优先处理项目'
-        : '当前筛选下暂无项目')
-    const emptyDesc = keyword
-      ? '可以换项目名、客户名、联系人、摘要关键词或任务关键词再试一次。'
-      : (quickFilter === 'overdue'
-        ? '当前没有逾期项目，可切回全部项目继续查看。'
-        : '你可以调整筛选条件，或直接新建项目。')
+    const hasCustomFilter = Boolean(keyword) || statusFilter !== 'active' || quickFilter !== 'all' || effectiveStageFilter !== '全部阶段'
+    let emptyTitle = '当前筛选下暂无项目'
+    let emptyDesc = '你可以调整筛选条件，或直接新建项目。'
+    if (keyword) {
+      emptyTitle = '没有找到匹配项目'
+      emptyDesc = '可以换项目名、客户名、联系人、摘要关键词或任务关键词再试一次。'
+    } else if (statusFilter === 'deal') {
+      emptyTitle = '暂无已成交项目'
+      emptyDesc = '可以切回待推进或全部项目继续查看。'
+    } else if (statusFilter === 'lost') {
+      emptyTitle = '暂无已流失项目'
+      emptyDesc = '可以切回待推进或全部项目继续查看。'
+    } else if (quickFilter === 'overdue') {
+      emptyTitle = '暂无优先处理项目'
+      emptyDesc = '当前没有逾期推进动作，可切回全部项目继续查看。'
+    }
 
     this.setData({
       filteredProjects,
+      statusFilterOptions,
       summaryCards,
       resultSummaryText: buildResultSummaryText({
         count: filteredProjects.length,
-        total: totalCount,
-        stageFilter,
+        total: statusMatchedProjects.length,
+        statusFilter,
+        stageFilter: effectiveStageFilter,
         quickFilter,
         sortMode,
-        keyword: rawKeyword
+        keyword: rawKeyword,
+        showStageFilter
       }),
       emptyTitle,
       emptyDesc,
@@ -939,6 +1311,7 @@ Page({
     this.setData({
       searchKeyword: '',
       quickFilter: 'all',
+      statusFilter: 'active',
       stageFilter: '全部阶段',
       sortMode: 'task'
     }, () => this.applyFilters())
@@ -953,7 +1326,12 @@ Page({
     this.openProjectForm()
   },
 
-  openProjectForm() {
+  async openProjectForm() {
+    const decision = await ensureActionAllowed('create_project', { guide: true })
+    if (!decision.allowed) {
+      return
+    }
+
     wx.navigateTo({
       url: '/pages/project-form/project-form'
     })
@@ -972,6 +1350,15 @@ Page({
       return
     }
 
+    const currentProject = (this.data.projectCards || []).find((item) => item.id === projectId)
+    if (currentProject && !currentProject.canAdvanceProject) {
+      wx.showToast({
+        title: getReadonlyProjectToast(currentProject),
+        icon: 'none'
+      })
+      return
+    }
+
     wx.navigateTo({
       url: `/pages/follow-up/follow-up?projectId=${projectId}&entry=projects`
     })
@@ -980,6 +1367,15 @@ Page({
   openTaskPrimaryAction(event) {
     const { taskId, projectId, hasTask } = event.currentTarget.dataset
     const hasOpenTask = hasTask === true || hasTask === 'true'
+    const currentProject = (this.data.projectCards || []).find((item) => item.id === projectId)
+
+    if (currentProject && !currentProject.canAdvanceProject) {
+      wx.showToast({
+        title: getReadonlyProjectToast(currentProject),
+        icon: 'none'
+      })
+      return
+    }
 
     if (hasOpenTask) {
       if (!taskId) {
@@ -1015,6 +1411,13 @@ Page({
       return
     }
     const currentProject = (this.data.projectCards || []).find((item) => item.id === projectId)
+    if (currentProject && !currentProject.canShareProject) {
+      wx.showToast({
+        title: getReadonlyProjectToast(currentProject),
+        icon: 'none'
+      })
+      return
+    }
 
     this.setData({
       showShareSheet: true,
@@ -1031,19 +1434,352 @@ Page({
     })
   },
 
+  async openDormantWakeSheet(event) {
+    const projectId = String(event.currentTarget.dataset.projectId || '').trim()
+    if (!projectId || this.data.isProjectWakeLoading) {
+      return
+    }
+
+    const currentProject = (this.data.projectCards || []).find((item) => item.id === projectId)
+    if (!currentProject || !currentProject.canAdvanceProject) {
+      if (currentProject && !currentProject.canAdvanceProject) {
+        wx.showToast({
+          title: getReadonlyProjectToast(currentProject),
+          icon: 'none'
+        })
+      }
+      return
+    }
+
+    const decision = await ensureActionAllowed('ai', { guide: true })
+    if (!decision.allowed) {
+      return
+    }
+
+    this.setData({
+      showProjectWakeSheet: true,
+      selectedWakeProjectId: projectId,
+      selectedWakeProjectName: currentProject.name || '',
+      selectedWakeProjectStage: currentProject.stage || '',
+      selectedWakeProjectDormantText: currentProject.dormantDays ? `沉默 ${currentProject.dormantDays} 天` : '',
+      selectedWakeProjectLastActiveText: currentProject.lastActiveText || '',
+      projectWakeError: '',
+      projectWakeResult: null,
+      projectWakeResultBackup: null
+    })
+
+    this.generateDormantWake(projectId)
+  },
+
+  closeProjectWakeSheet() {
+    if (this.data.isProjectWakeLoading) {
+      return
+    }
+
+    this.setData({
+      showProjectWakeSheet: false,
+      selectedWakeProjectId: '',
+      selectedWakeProjectName: '',
+      selectedWakeProjectStage: '',
+      selectedWakeProjectDormantText: '',
+      selectedWakeProjectLastActiveText: '',
+      isProjectWakeLoading: false,
+      projectWakeError: '',
+      projectWakeResult: null,
+      projectWakeResultBackup: null
+    })
+  },
+
+  async generateDormantWake(projectId, forceRefresh = false) {
+    const currentProjectId = String(projectId || this.data.selectedWakeProjectId || '').trim()
+    if (!currentProjectId || this.data.isProjectWakeLoading) {
+      return
+    }
+
+    if (!forceRefresh && this.data.projectWakeResult) {
+      return
+    }
+
+    this.setData({
+      isProjectWakeLoading: true,
+      projectWakeError: '',
+      ...(forceRefresh && this.data.projectWakeResult
+        ? { projectWakeResultBackup: cloneSnapshot(this.data.projectWakeResult) }
+        : {})
+    })
+
+    try {
+      const currentProject = (this.data.projectCards || []).find((item) => item.id === currentProjectId)
+      const result = await requestDormantProjectWakeData({
+        projectId: currentProjectId,
+        dormantDays: currentProject ? currentProject.dormantDays : 0,
+        lastActiveText: currentProject ? currentProject.lastActiveText : ''
+      })
+
+      if (!result || !result.ok) {
+        throw new Error(result && result.message ? result.message : '当前无法生成项目唤醒')
+      }
+
+      const nextResult = normalizeProjectWakeResult({
+        ...result,
+        generatedAt: result.generatedAt || new Date().toISOString()
+      })
+      const hadPreviousVersion = !!this.data.projectWakeResult
+
+      this.setData({
+        projectWakeResult: nextResult
+      })
+
+      if (hadPreviousVersion) {
+        wx.showToast({
+          title: '新唤醒结果已生成，可恢复上一版',
+          icon: 'none'
+        })
+      }
+    } catch (error) {
+      this.setData({
+        projectWakeError: error.message || '当前无法生成项目唤醒，请稍后重试'
+      })
+    } finally {
+      this.setData({
+        isProjectWakeLoading: false
+      })
+    }
+  },
+
+  async regenerateDormantWake() {
+    const decision = await ensureActionAllowed('ai', { guide: true })
+    if (!decision.allowed) {
+      return
+    }
+
+    this.generateDormantWake(this.data.selectedWakeProjectId, true)
+  },
+
+  restoreDormantWakeVersion() {
+    if (!this.data.projectWakeResultBackup) {
+      return
+    }
+
+    this.setData({
+      projectWakeResult: cloneSnapshot(this.data.projectWakeResultBackup),
+      projectWakeResultBackup: cloneSnapshot(this.data.projectWakeResult),
+      projectWakeError: ''
+    })
+
+    wx.showToast({
+      title: '已恢复上一版唤醒结果',
+      icon: 'success'
+    })
+  },
+
+  openWakeProjectDetail() {
+    const projectId = String(this.data.selectedWakeProjectId || '').trim()
+    if (!projectId) {
+      return
+    }
+
+    this.closeProjectWakeSheet()
+    wx.navigateTo({
+      url: `/pages/project-detail/project-detail?projectId=${projectId}&view=projects-ai-wake`
+    })
+  },
+
+  openWakeFollowUp() {
+    const projectId = String(this.data.selectedWakeProjectId || '').trim()
+    if (!projectId) {
+      return
+    }
+
+    this.closeProjectWakeSheet()
+    wx.navigateTo({
+      url: `/pages/follow-up/follow-up?projectId=${projectId}&entry=projects-ai-wake`
+    })
+  },
+
+  async openProjectReviewSheet(event) {
+    const projectId = String(event.currentTarget.dataset.projectId || '').trim()
+    if (!projectId || this.data.isProjectReviewLoading) {
+      return
+    }
+
+    const currentProject = (this.data.projectCards || []).find((item) => item.id === projectId)
+    if (!currentProject || !currentProject.canReviewProject) {
+      return
+    }
+
+    const cachedReview = currentProject.aiReview
+      ? normalizeProjectReviewResult(currentProject.aiReview)
+      : null
+
+    if (!cachedReview) {
+      const decision = await ensureActionAllowed('ai', { guide: true })
+      if (!decision.allowed) {
+        return
+      }
+    }
+
+    this.setData({
+      showProjectReviewSheet: true,
+      selectedReviewProjectId: projectId,
+      selectedReviewProjectName: currentProject.name || '',
+      selectedReviewProjectStage: currentProject.stage || '',
+      selectedReviewProjectAmount: currentProject.amountValue > 0 ? currentProject.amount : '',
+      projectReviewError: '',
+      projectReviewResult: cachedReview,
+      projectReviewResultBackup: null
+    })
+
+    if (!cachedReview) {
+      this.generateProjectReview(projectId)
+    }
+  },
+
+  closeProjectReviewSheet() {
+    if (this.data.isProjectReviewLoading) {
+      return
+    }
+
+    this.setData({
+      showProjectReviewSheet: false,
+      selectedReviewProjectId: '',
+      selectedReviewProjectName: '',
+      selectedReviewProjectStage: '',
+      selectedReviewProjectAmount: '',
+      isProjectReviewLoading: false,
+      projectReviewError: '',
+      projectReviewResult: null,
+      projectReviewResultBackup: null
+    })
+  },
+
+  async generateProjectReview(projectId, forceRefresh = false) {
+    const currentProjectId = String(projectId || this.data.selectedReviewProjectId || '').trim()
+    if (!currentProjectId || this.data.isProjectReviewLoading) {
+      return
+    }
+
+    if (!forceRefresh && this.data.projectReviewResult) {
+      return
+    }
+
+    this.setData({
+      isProjectReviewLoading: true,
+      projectReviewError: '',
+      ...(forceRefresh && this.data.projectReviewResult
+        ? { projectReviewResultBackup: cloneSnapshot(this.data.projectReviewResult) }
+        : {})
+    })
+
+    try {
+      const result = await requestProjectReviewData({
+        projectId: currentProjectId
+      })
+
+      if (!result || !result.ok) {
+        throw new Error(result && result.message ? result.message : '当前无法生成项目复盘')
+      }
+
+      const nextResult = normalizeProjectReviewResult({
+        ...result,
+        generatedAt: result.generatedAt || new Date().toISOString()
+      })
+      const hadPreviousVersion = !!this.data.projectReviewResult
+
+      const projectCards = (this.data.projectCards || []).map((item) => item.id === currentProjectId
+        ? { ...item, aiReview: nextResult }
+        : item)
+      const filteredProjects = (this.data.filteredProjects || []).map((item) => item.id === currentProjectId
+        ? { ...item, aiReview: nextResult }
+        : item)
+
+      this.setData({
+        projectCards,
+        filteredProjects,
+        projectReviewResult: nextResult,
+        projectReviewError: ''
+      })
+
+      if (hadPreviousVersion) {
+        wx.showToast({
+          title: '新复盘已生成，可恢复上一版',
+          icon: 'none'
+        })
+      }
+    } catch (error) {
+      this.setData({
+        projectReviewError: error.message || '当前无法生成项目复盘，请稍后重试'
+      })
+    } finally {
+      this.setData({
+        isProjectReviewLoading: false
+      })
+    }
+  },
+
+  async regenerateProjectReview() {
+    const decision = await ensureActionAllowed('ai', { guide: true })
+    if (!decision.allowed) {
+      return
+    }
+
+    this.generateProjectReview(this.data.selectedReviewProjectId, true)
+  },
+
+  restoreProjectReviewVersion() {
+    if (!this.data.projectReviewResultBackup) {
+      return
+    }
+
+    this.setData({
+      projectReviewResult: cloneSnapshot(this.data.projectReviewResultBackup),
+      projectReviewResultBackup: cloneSnapshot(this.data.projectReviewResult),
+      projectReviewError: ''
+    })
+
+    wx.showToast({
+      title: '已恢复上一版复盘',
+      icon: 'success'
+    })
+  },
+
   closeShareSheet() {
     this.setData({
       showShareSheet: false,
       selectedShareProjectId: '',
       selectedShareProjectName: '',
-      selectedShareProjectMeta: null
+      selectedShareProjectMeta: null,
+      showTransferSheet: false,
+      transferMode: 'transfer_original',
+      transferProjectName: '',
+      isTransferOpening: false
     })
   },
 
-  openShareFlow(event) {
+  async openShareFlow(event) {
     const projectId = String(this.data.selectedShareProjectId || '').trim()
-    const mode = String(event.currentTarget.dataset.mode || 'info').trim() || 'info'
+    const mode = String(
+      event && event.detail && event.detail.mode
+        ? event.detail.mode
+        : event.currentTarget && event.currentTarget.dataset
+          ? event.currentTarget.dataset.mode
+          : 'info'
+    ).trim() || 'info'
     if (!projectId) {
+      return
+    }
+
+    if (mode === 'outbound') {
+      const currentProject = (this.data.projectCards || []).find((item) => item.id === projectId)
+      const clientName = currentProject && currentProject.client && currentProject.client !== '未填写客户'
+        ? currentProject.client
+        : ''
+      this.setData({
+        showShareSheet: false,
+        showTransferSheet: true,
+        transferMode: 'transfer_original',
+        transferProjectName: clientName ? `${clientName} · 新需求` : '新需求项目'
+      })
       return
     }
 
@@ -1054,9 +1790,147 @@ Page({
       selectedShareProjectMeta: null
     })
 
-    wx.navigateTo({
-      url: `/pages/share-config/share-config?projectId=${projectId}&mode=${mode}`
+    const decision = await ensureActionAllowed(mode === 'outbound' ? 'share_out' : 'share_record', {
+      refresh: true,
+      guide: true
     })
+    if (!decision.allowed) {
+      return
+    }
+
+    wx.navigateTo({
+      url: `/pages/share-card/share-card?projectId=${projectId}&mode=${mode}&entry=sender`
+    })
+  },
+
+  setTransferMode(event) {
+    const mode = String(event.currentTarget.dataset.mode || 'transfer_original').trim()
+    this.setData({
+      transferMode: mode === 'clone_seed' ? 'clone_seed' : 'transfer_original'
+    })
+  },
+
+  onTransferProjectNameInput(event) {
+    this.setData({
+      transferProjectName: String(event.detail.value || '')
+    })
+  },
+
+  closeTransferSheet() {
+    this.setData({
+      showTransferSheet: false,
+      selectedShareProjectId: '',
+      selectedShareProjectName: '',
+      selectedShareProjectMeta: null,
+      transferMode: 'transfer_original',
+      transferProjectName: '',
+      isTransferOpening: false
+    })
+  },
+
+  async confirmTransferFlow() {
+    const projectId = String(this.data.selectedShareProjectId || '').trim()
+    const transferMode = this.data.transferMode === 'clone_seed' ? 'clone_seed' : 'transfer_original'
+    const seedProjectName = String(this.data.transferProjectName || '').trim()
+    if (!projectId || this.data.isTransferOpening) {
+      return
+    }
+
+    if (transferMode === 'clone_seed' && !seedProjectName) {
+      wx.showToast({
+        title: '请先填写新项目名称',
+        icon: 'none'
+      })
+      return
+    }
+
+    this.setData({
+      isTransferOpening: true
+    })
+
+    try {
+      const decision = await ensureActionAllowed('share_out', {
+        refresh: true,
+        guide: true
+      })
+      if (!decision.allowed) {
+        return
+      }
+
+      const params = [
+        `projectId=${projectId}`,
+        'mode=outbound',
+        'entry=sender',
+        `flowMode=${transferMode}`
+      ]
+      if (transferMode === 'clone_seed') {
+        params.push(`seedProjectName=${encodeURIComponent(seedProjectName)}`)
+        params.push('historyScope=none')
+      }
+
+      this.setData({
+        showTransferSheet: false,
+        selectedShareProjectId: '',
+        selectedShareProjectName: '',
+        selectedShareProjectMeta: null,
+        transferMode: 'transfer_original',
+        transferProjectName: ''
+      })
+
+      wx.navigateTo({
+        url: `/pages/share-card/share-card?${params.join('&')}`
+      })
+    } finally {
+      this.setData({
+        isTransferOpening: false
+      })
+    }
+  },
+
+  async copyProject(event) {
+    const projectId = String(event.currentTarget.dataset.projectId || '').trim()
+    if (!projectId || this.data.copyProjectId) {
+      return
+    }
+
+    const decision = await ensureActionAllowed('create_project', {
+      refresh: true,
+      guide: true
+    })
+    if (!decision.allowed) {
+      return
+    }
+
+    this.setData({
+      copyProjectId: projectId
+    })
+
+    try {
+      const result = await flowProjectData({
+        projectId,
+        flowMode: 'clone_static'
+      })
+      if (!result || !result.ok || !result.projectId) {
+        throw new Error(result && result.message ? result.message : '复制项目失败')
+      }
+
+      wx.showToast({
+        title: '已复制为新项目',
+        icon: 'success'
+      })
+      wx.navigateTo({
+        url: `/pages/project-form/project-form?projectId=${result.projectId}&mode=edit&source=clone`
+      })
+    } catch (error) {
+      wx.showToast({
+        title: error.message || '复制项目失败',
+        icon: 'none'
+      })
+    } finally {
+      this.setData({
+        copyProjectId: ''
+      })
+    }
   },
 
   buildDefaultNextTaskDraft() {
@@ -1085,16 +1959,18 @@ Page({
     this.setData({
       showTaskCompleteSheet: true,
       taskCompletionTaskId: taskId,
-      taskCompletionTaskTitle: currentProject.nextTaskTitle || '当前动作',
+      taskCompletionTaskTitle: currentProject.nextTaskTitle || '当前任务',
       taskCompletionText: '',
       taskCompletionCreateNextTask: false,
       taskCompletionNextTaskTitle: '',
       taskCompletionNextTaskType: 'callback',
       taskCompletionNextTaskDate: defaultNextTaskDraft.dueDate,
       taskCompletionNextTaskTime: defaultNextTaskDraft.dueTime,
-      taskCompletionNextTaskDescription: ''
+      taskCompletionNextTaskDescription: '',
+      isTaskCompletionVoiceRecognizing: false
     })
     this.syncTaskCompletionLayout(0, false)
+    this.initTaskCompletionVoiceRecognition()
   },
 
   closeTaskCompleteSheet(force = false) {
@@ -1102,6 +1978,7 @@ Page({
       return
     }
 
+    this.stopTaskCompletionVoiceInput({ silent: true })
     this.setData({
       showTaskCompleteSheet: false,
       taskCompletionTaskId: '',
@@ -1112,7 +1989,9 @@ Page({
       taskCompletionNextTaskType: 'callback',
       taskCompletionNextTaskDate: '',
       taskCompletionNextTaskTime: '',
-      taskCompletionNextTaskDescription: ''
+      taskCompletionNextTaskDescription: '',
+      isTaskCompletionVoiceRecording: false,
+      isTaskCompletionVoiceRecognizing: false
     })
     this.syncTaskCompletionLayout(0, false)
   },
@@ -1121,6 +2000,313 @@ Page({
     this.setData({
       taskCompletionText: String(event.detail.value || '')
     })
+  },
+
+  openTaskCompletionVoiceGuide() {
+    wx.showModal({
+      title: '语音服务未就绪',
+      content: '当前设备暂不支持原生录音，或云端语音识别服务尚未完成配置。请先确认真机环境与云函数配置。',
+      showCancel: false,
+      confirmText: '知道了'
+    })
+  },
+
+  openTaskCompletionRecordSettingGuide() {
+    wx.showModal({
+      title: '需要麦克风权限',
+      content: '语音录入需要使用麦克风。请允许录音权限后再试。',
+      confirmText: '去设置',
+      cancelText: '取消',
+      success: (result) => {
+        if (result.confirm) {
+          wx.openSetting({})
+        }
+      }
+    })
+  },
+
+  getSetting() {
+    return new Promise((resolve, reject) => {
+      wx.getSetting({
+        success: resolve,
+        fail: reject
+      })
+    })
+  },
+
+  authorizeRecordScope() {
+    return new Promise((resolve, reject) => {
+      wx.authorize({
+        scope: 'scope.record',
+        success: resolve,
+        fail: reject
+      })
+    })
+  },
+
+  async ensureTaskCompletionRecordScope() {
+    try {
+      const setting = await this.getSetting()
+      if (setting && setting.authSetting && setting.authSetting['scope.record']) {
+        return true
+      }
+
+      await this.authorizeRecordScope()
+      return true
+    } catch (error) {
+      this.openTaskCompletionRecordSettingGuide()
+      return false
+    }
+  },
+
+  initTaskCompletionVoiceRecognition() {
+    if (this.taskCompletionVoiceManager) {
+      return true
+    }
+
+    const manager = getSpeechRecorderManager()
+    if (!manager || typeof manager.onStart !== 'function') {
+      this.setData({
+        isTaskCompletionVoiceSupported: false,
+        isTaskCompletionVoiceRecording: false,
+        isTaskCompletionVoiceRecognizing: false
+      })
+      return false
+    }
+
+    manager.onStart(() => {
+      if (!this.isPageActive) {
+        return
+      }
+
+      this.skipTaskCompletionVoiceCommit = false
+      this.setData({
+        isTaskCompletionVoiceSupported: true,
+        isTaskCompletionVoiceRecording: true,
+        isTaskCompletionVoiceRecognizing: false
+      })
+    })
+
+    manager.onStop(async (result) => {
+      if (this.skipTaskCompletionVoiceCommit) {
+        this.skipTaskCompletionVoiceCommit = false
+        this.setData({
+          isTaskCompletionVoiceRecording: false,
+          isTaskCompletionVoiceRecognizing: false
+        })
+        return
+      }
+
+      if (!this.isPageActive || !this.data.showTaskCompleteSheet) {
+        return
+      }
+
+      this.setData({
+        isTaskCompletionVoiceRecording: false,
+        isTaskCompletionVoiceRecognizing: true
+      })
+
+      await this.transcribeTaskCompletionVoiceFile(result)
+    })
+
+    manager.onError((error) => {
+      if (!this.isPageActive) {
+        return
+      }
+
+      const errMsg = error && (error.retmsg || error.msg || error.errMsg) ? (error.retmsg || error.msg || error.errMsg) : ''
+      this.setData({
+        isTaskCompletionVoiceRecording: false,
+        isTaskCompletionVoiceRecognizing: false
+      })
+
+      if (errMsg && (errMsg.includes('auth deny') || errMsg.includes('auth denied') || errMsg.includes('permission'))) {
+        this.openTaskCompletionRecordSettingGuide()
+        return
+      }
+
+      wx.showToast({
+        title: '语音录入失败',
+        icon: 'none'
+      })
+    })
+
+    this.taskCompletionVoiceManager = manager
+    this.setData({
+      isTaskCompletionVoiceSupported: true
+    })
+    return true
+  },
+
+  async handleTaskCompletionVoiceInput() {
+    if (this.data.isTaskCompletionVoiceRecognizing || this.data.taskActionId) {
+      return
+    }
+
+    if (this.data.isTaskCompletionVoiceRecording) {
+      this.stopTaskCompletionVoiceInput()
+      return
+    }
+
+    if (!this.initTaskCompletionVoiceRecognition()) {
+      this.openTaskCompletionVoiceGuide()
+      return
+    }
+
+    const decision = await ensureActionAllowed('speech', { guide: true })
+    if (!decision.allowed) {
+      return
+    }
+
+    const hasPermission = await this.ensureTaskCompletionRecordScope()
+    if (!hasPermission) {
+      return
+    }
+
+    try {
+      this.setData({
+        isTaskCompletionVoiceRecognizing: false
+      })
+
+      this.taskCompletionVoiceManager.start({
+        duration: MAX_RECORD_DURATION,
+        format: 'mp3',
+        sampleRate: 16000,
+        numberOfChannels: 1,
+        encodeBitRate: 32000
+      })
+    } catch (error) {
+      this.setData({
+        isTaskCompletionVoiceRecording: false,
+        isTaskCompletionVoiceRecognizing: false
+      })
+      wx.showToast({
+        title: '录音启动失败',
+        icon: 'none'
+      })
+    }
+  },
+
+  stopTaskCompletionVoiceInput(options = {}) {
+    if (!this.taskCompletionVoiceManager || !this.data.isTaskCompletionVoiceRecording) {
+      return
+    }
+
+    this.skipTaskCompletionVoiceCommit = Boolean(options.silent)
+
+    this.setData({
+      isTaskCompletionVoiceRecording: false,
+      isTaskCompletionVoiceRecognizing: !options.silent
+    })
+
+    try {
+      this.taskCompletionVoiceManager.stop()
+    } catch (error) {
+      this.setData({
+        isTaskCompletionVoiceRecognizing: false
+      })
+    }
+  },
+
+  async uploadTaskCompletionVoiceFile(filePath) {
+    if (!wx.cloud || typeof wx.cloud.uploadFile !== 'function') {
+      throw new Error('当前环境未连接云存储')
+    }
+
+    const extension = getVoiceFileExtension(filePath)
+    const taskId = normalizeText(this.data.taskCompletionTaskId) || 'task'
+    const cloudPath = `voiceInputs/task-completion/${taskId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${extension}`
+    const result = await wx.cloud.uploadFile({
+      cloudPath,
+      filePath
+    })
+
+    if (!result || !result.fileID) {
+      throw new Error('录音上传失败，请重新试一次')
+    }
+
+    return {
+      fileID: result.fileID,
+      extension
+    }
+  },
+
+  async transcribeTaskCompletionVoiceFile(result = {}) {
+    const filePath = normalizeText(result.tempFilePath)
+    if (!filePath) {
+      this.setData({
+        isTaskCompletionVoiceRecording: false,
+        isTaskCompletionVoiceRecognizing: false
+      })
+      wx.showToast({
+        title: '未生成有效音频',
+        icon: 'none'
+      })
+      return
+    }
+
+    try {
+      const uploadResult = await this.uploadTaskCompletionVoiceFile(filePath)
+      if (!this.isPageActive || !this.data.showTaskCompleteSheet) {
+        this.setData({
+          isTaskCompletionVoiceRecording: false,
+          isTaskCompletionVoiceRecognizing: false
+        })
+        return
+      }
+
+      const asrResult = await requestSpeechToTextData({
+        fileID: uploadResult.fileID,
+        voiceFormat: uploadResult.extension,
+        projectId: '',
+        taskId: this.data.taskCompletionTaskId || '',
+        scene: 'task_completion_result',
+        duration: Number(result.duration || 0) || 0
+      })
+
+      const recognizedText = normalizeRecognizedText(asrResult && asrResult.text)
+      if (!recognizedText) {
+        this.setData({
+          isTaskCompletionVoiceRecording: false,
+          isTaskCompletionVoiceRecognizing: false
+        })
+        wx.showToast({
+          title: '未识别出有效内容',
+          icon: 'none'
+        })
+        return
+      }
+
+      const currentContent = normalizeText(this.data.taskCompletionText)
+      const nextContent = currentContent ? `${currentContent}\n${recognizedText}` : recognizedText
+
+      this.setData({
+        taskCompletionText: nextContent,
+        isTaskCompletionVoiceRecording: false,
+        isTaskCompletionVoiceRecognizing: false
+      })
+
+      wx.showToast({
+        title: '语音已转文字',
+        icon: 'success'
+      })
+    } catch (error) {
+      const errMsg = error && error.message ? error.message : ''
+      this.setData({
+        isTaskCompletionVoiceRecording: false,
+        isTaskCompletionVoiceRecognizing: false
+      })
+
+      if (/密钥|SECRET|语音识别服务/.test(errMsg)) {
+        this.openTaskCompletionVoiceGuide()
+        return
+      }
+
+      wx.showToast({
+        title: '语音识别失败',
+        icon: 'none'
+      })
+    }
   },
 
   toggleTaskCompletionCreateNextTask() {
@@ -1206,9 +2392,7 @@ Page({
     const bodyStyle = keyboardHeight
       ? `padding-bottom: ${keyboardHeight + 188}px;`
       : ''
-    const actionsStyle = keyboardHeight
-      ? `margin-bottom: calc(${keyboardHeight}px + env(safe-area-inset-bottom));`
-      : ''
+    const actionsStyle = ''
 
     this.setData({
       taskCompletionKeyboardHeight: keyboardHeight,
@@ -1321,6 +2505,15 @@ Page({
       return
     }
 
+    const currentProject = (this.data.projectCards || []).find((item) => item.id === projectId)
+    if (currentProject && !currentProject.canMarkDeal) {
+      wx.showToast({
+        title: currentProject.isReadOnlySharedOut ? getReadonlyProjectToast(currentProject) : '该项目已成交',
+        icon: 'none'
+      })
+      return
+    }
+
     if (stage === '成交' || stage === '流失') {
       return
     }
@@ -1332,9 +2525,14 @@ Page({
 
   noop() {},
 
-  handleQuickEntryTap() {
-    wx.reLaunch({
-      url: '/pages/index/index?openQuickEntry=1'
+  async handleQuickEntryTap() {
+    const decision = await ensureActionAllowed('quick_entry', { guide: true })
+    if (!decision.allowed) {
+      return
+    }
+
+    wx.navigateTo({
+      url: '/pages/index/index?openQuickEntry=1&quickEntryStandalone=1'
     })
   },
 

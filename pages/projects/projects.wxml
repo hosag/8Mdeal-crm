@@ -7,10 +7,9 @@
     <view class="hero rise-in">
       <view class="eyebrow-row">
         <view class="eyebrow">我的项目</view>
-        <view class="source-badge">{{dataSource}}</view>
       </view>
       <view class="hero-title">把项目池收成一页可执行清单</view>
-      <view class="hero-subtitle">先搜项目，再按阶段、跟进状态和优先级排序，避免项目一多就找不到今天该推进哪几个。</view>
+      <view class="hero-subtitle">这里只显示当前仍由你推进或由你接手的项目；已转交项目请到“外发项目”查看后续进展。</view>
       <view class="hero-actions">
         <view class="btn-secondary hero-primary-btn" bindtap="openProjectForm">新建项目</view>
         <view class="btn-ghost hero-secondary-btn" data-url="/pages/shared-out/shared-out" bindtap="openPage">外发项目</view>
@@ -18,6 +17,12 @@
     </view>
 
     <view wx:if="{{entryContextText}}" class="source-banner section rise-in stagger-1">{{entryContextText}}</view>
+
+    <view wx:if="{{entitlementPrompt.visible}}" class="form-card section entitlement-banner rise-in stagger-1 is-{{entitlementPrompt.tone}}">
+      <view class="entitlement-banner-title">{{entitlementPrompt.title}}</view>
+      <view class="entitlement-banner-desc">{{entitlementPrompt.desc}}</view>
+      <view wx:if="{{entitlementPrompt.actionText}}" class="entitlement-banner-action" bindtap="handleEntitlementPromptAction">{{entitlementPrompt.actionText}}</view>
+    </view>
 
     <view wx:if="{{isLoadFailed}}" class="form-card section state-card rise-in stagger-1">
       <view class="form-card-title">当前无法同步云端数据</view>
@@ -32,11 +37,19 @@
         <input class="input-sim input-native projects-search-input" value="{{searchKeyword}}" bindinput="onSearchInput" placeholder="搜索项目 / 客户 / 联系人 / 摘要 / 任务" placeholder-class="input-placeholder" confirm-type="search" />
         <view wx:if="{{searchKeyword}}" class="search-clear" bindtap="clearSearch">清空</view>
       </view>
-      <view class="projects-control-block">
+      <view class="projects-control-block projects-status-block">
+        <view class="projects-status-row">
+          <view class="projects-status-chip {{statusFilter === item.key ? 'is-active' : ''}}" wx:for="{{statusFilterOptions}}" wx:key="key" data-status="{{item.key}}" bindtap="setStatusFilter">
+            <text>{{item.label}}</text>
+            <text class="projects-status-count">{{item.count}}</text>
+          </view>
+        </view>
+      </view>
+      <view wx:if="{{statusFilter === 'all' || statusFilter === 'active'}}" class="projects-control-block">
         <view class="projects-control-label">阶段</view>
         <scroll-view scroll-x class="projects-scroll-row projects-stage-scroll" enable-flex show-scrollbar="{{false}}">
           <view class="projects-stage-row">
-            <view class="chip projects-stage-chip {{stageFilter === item ? 'is-active' : ''}}" wx:for="{{stages}}" wx:key="*this" data-stage="{{item}}" bindtap="setStage">{{item}}</view>
+            <view class="chip projects-stage-chip {{stageFilter === item ? 'is-active' : ''}}" wx:for="{{activeStages}}" wx:key="*this" data-stage="{{item}}" bindtap="setStage">{{item}}</view>
           </view>
         </scroll-view>
       </view>
@@ -56,10 +69,6 @@
       </view>
     </view>
 
-    <view class="form-card section result-bar rise-in stagger-2">
-      <view class="result-bar-text">{{resultSummaryText}}</view>
-    </view>
-
     <view wx:if="{{taskFeedback.title}}" class="task-feedback-banner section rise-in stagger-2">
       <view class="task-feedback-main">
         <view class="task-feedback-title">{{taskFeedback.title}}</view>
@@ -69,7 +78,7 @@
     </view>
 
     <view class="section rise-in stagger-3">
-      <view class="project-card practical-project-card {{item.hasOpenTask ? 'has-task-focus' : ''}}" wx:for="{{filteredProjects}}" wx:key="id" data-project-id="{{item.id}}" bindtap="openProjectDetail">
+      <view class="project-card practical-project-card {{item.hasOpenTask ? 'has-task-focus' : ''}} {{item.closedCardClass}}" wx:for="{{filteredProjects}}" wx:key="id" data-project-id="{{item.id}}" bindtap="openProjectDetail">
         <view class="project-top">
           <view class="project-main">
             <view class="project-name">{{item.name}}</view>
@@ -99,39 +108,59 @@
 
         <view class="project-summary-compact">
           <view class="project-summary-row">
-            <view class="project-summary-label">重点</view>
-            <view class="project-summary-text">{{item.hasOpenTask ? item.nextTaskTitle : item.focusText}}</view>
+            <view class="project-summary-label">{{item.primarySummaryLabel}}</view>
+            <view class="project-summary-text">{{item.isClosedProject ? item.focusText : (item.hasOpenTask ? item.nextTaskTitle : item.focusText)}}</view>
           </view>
           <view class="project-summary-row" wx:if="{{!item.searchExplain}}">
-            <view class="project-summary-label">摘要</view>
-            <view class="project-summary-text">{{item.hasOpenTask ? item.taskSummaryText : item.latestSummary}}</view>
+            <view class="project-summary-label">{{item.secondarySummaryLabel}}</view>
+            <view class="project-summary-text">{{item.isClosedProject ? item.latestSummary : (item.hasOpenTask ? item.taskSummaryText : item.latestSummary)}}</view>
           </view>
         </view>
 
         <view class="compact-inline-metrics">
           <view class="compact-inline-item">预计金额 {{item.amount}}</view>
           <view class="compact-inline-item">预期提成 {{item.commission}}</view>
-          <view class="compact-inline-item">推进进度 {{item.progress}}%</view>
-          <view wx:if="{{item.openTaskCount}}" class="compact-inline-item">待处理动作 {{item.openTaskCount}} 条</view>
+          <view wx:if="{{!item.isClosedProject}}" class="compact-inline-item">推进进度 {{item.progress}}%</view>
+          <view wx:else class="compact-inline-item">{{item.reviewStatusText}}</view>
+          <view wx:if="{{item.openTaskCount}}" class="compact-inline-item">推进任务 {{item.openTaskCount}} 条</view>
         </view>
 
         <view class="project-footer compact-project-footer">
-          <view wx:if="{{item.nextTaskTitle}}" class="helper-text">动作：{{item.nextTaskTitle}}<text wx:if="{{item.nextTaskDueText}}"> · 截止 {{item.nextTaskDueText}}</text></view>
-          <view wx:if="{{item.overdueTaskCount}}" class="helper-text">优先处理：{{item.overdueTaskCount}} 条动作</view>
-          <view wx:if="{{item.hasOpenTask && !item.overdueTaskCount}}" class="helper-text">待处理动作：{{item.openTaskCount}} 条</view>
-          <view class="helper-text">最近更新：{{item.latest}}</view>
-          <view wx:if="{{item.tagsText}}" class="helper-text">标签：{{item.tagsText}}</view>
+          <view wx:if="{{item.footerPrimaryText}}" class="helper-text">{{item.footerPrimaryText}}</view>
+          <view class="helper-text">{{item.footerMetaText}}</view>
+          <view wx:if="{{!item.isClosedProject && item.showAiWakeAction && item.canAdvanceProject}}" class="project-ai-wake-entry" data-project-id="{{item.id}}" catchtap="openDormantWakeSheet">
+            <view class="helper-text project-ai-wake-meta">沉默 {{item.dormantDays}} 天 · 最近 {{item.lastActiveText}}</view>
+            <view class="section-link section-link-brand ai-entry ai-entry-chip">
+              <image class="ai-entry-icon" src="/assets/icons/ai-agent-dark.svg" mode="aspectFit" />
+              <view class="ai-entry-text">AI唤醒</view>
+            </view>
+          </view>
         </view>
 
         <view class="inline-actions compact-inline-actions">
           <view class="btn-ghost" data-project-id="{{item.id}}" catchtap="openProjectDetail">查看详情</view>
-          <view class="btn-secondary" data-task-id="{{item.nextTaskId}}" data-project-id="{{item.id}}" data-has-task="{{item.hasOpenTask}}" catchtap="openTaskPrimaryAction">{{item.taskActionText}}</view>
-          <view wx:if="{{item.canMarkDeal}}" class="btn-primary" data-project-id="{{item.id}}" data-stage="{{item.stage}}" catchtap="openDealPage">登记成交</view>
-          <view wx:else class="btn-ghost" catchtap="noop">{{item.dealStatusText}}</view>
+          <view wx:if="{{item.showFollowUpAction}}" class="btn-secondary" data-project-id="{{item.id}}" catchtap="openFollowUp">新增跟进</view>
+          <view wx:if="{{item.showTaskAction}}" class="{{item.taskActionButtonClass}} project-task-action-btn" data-task-id="{{item.nextTaskId}}" data-project-id="{{item.id}}" data-has-task="{{item.hasOpenTask}}" catchtap="openTaskPrimaryAction">
+            <text>{{item.taskActionText}}</text>
+            <text wx:if="{{item.taskActionBadgeText}}" class="project-task-action-badge">{{item.taskActionBadgeText}}</text>
+          </view>
+          <view wx:if="{{item.canReviewProject}}" class="btn-secondary ai-entry project-review-action-btn" data-project-id="{{item.id}}" catchtap="openProjectReviewSheet">
+            <image class="ai-entry-icon" src="/assets/icons/ai-agent-dark.svg" mode="aspectFit" />
+            <view class="ai-entry-text">{{item.reviewActionText}}</view>
+          </view>
+          <view wx:elif="{{item.isClosedProject}}" class="btn-ghost" catchtap="noop">{{item.dealStatusText}}</view>
         </view>
 
-        <view class="project-share-entry" data-project-id="{{item.id}}" catchtap="openProjectShareQuick">
-          <image class="project-share-entry-icon" src="/assets/icons/share-entry.svg" mode="aspectFit" />
+        <view class="project-card-icon-actions">
+          <view class="project-card-icon-action project-copy-entry {{copyProjectId === item.id ? 'is-busy' : ''}}" data-project-id="{{item.id}}" catchtap="copyProject">
+            <view class="project-copy-entry-icon">
+              <view class="project-copy-entry-back"></view>
+              <view class="project-copy-entry-front"></view>
+            </view>
+          </view>
+          <view wx:if="{{item.canShareProject}}" class="project-card-icon-action project-share-entry" data-project-id="{{item.id}}" catchtap="openProjectShareQuick">
+            <image class="project-share-entry-icon" src="/assets/icons/share-entry.svg" mode="aspectFit" />
+          </view>
         </view>
       </view>
 
@@ -150,44 +179,220 @@
   </block>
 </view>
 
-<view wx:if="{{showShareSheet}}">
-  <view class="sheet-mask" bindtap="closeShareSheet"></view>
-  <view class="sheet-panel share-entry-sheet {{appearancePageClass}}">
+<view wx:if="{{showProjectReviewSheet}}">
+  <view class="sheet-mask" bindtap="closeProjectReviewSheet"></view>
+  <view class="sheet-panel project-review-sheet {{appearancePageClass}}">
     <view class="sheet-handle"></view>
     <view class="sheet-header">
-      <view class="sheet-title">分享设置</view>
-      <view class="sheet-close" bindtap="closeShareSheet">关闭</view>
-    </view>
-
-    <view class="share-entry-project-card">
-      <view class="share-entry-project-name">{{selectedShareProjectName}}</view>
-      <view class="compact-inline-metrics share-entry-project-pills">
-        <view wx:if="{{selectedShareProjectMeta && selectedShareProjectMeta.client}}" class="compact-inline-item">客户 {{selectedShareProjectMeta.client}}</view>
-        <view wx:if="{{selectedShareProjectMeta && selectedShareProjectMeta.stage}}" class="compact-inline-item">阶段 {{selectedShareProjectMeta.stage}}</view>
-        <view wx:if="{{selectedShareProjectMeta && selectedShareProjectMeta.amount}}" class="compact-inline-item">预计 {{selectedShareProjectMeta.amount}}</view>
-        <view wx:if="{{selectedShareProjectMeta && selectedShareProjectMeta.nextDisplay}}" class="compact-inline-item">跟进 {{selectedShareProjectMeta.nextDisplay}}</view>
+      <view class="project-review-header-main">
+        <view class="sheet-title">项目复盘</view>
+        <view class="project-review-header-caption">{{selectedReviewProjectName}}</view>
       </view>
+      <view class="sheet-close" bindtap="closeProjectReviewSheet">关闭</view>
     </view>
+    <view class="pill-row project-review-meta-row">
+      <view wx:if="{{selectedReviewProjectStage}}" class="soft-badge">阶段 {{selectedReviewProjectStage}}</view>
+      <view wx:if="{{selectedReviewProjectAmount}}" class="field-pill">已签 {{selectedReviewProjectAmount}}</view>
+    </view>
+    <scroll-view scroll-y class="project-review-scroll" style="height: calc(70vh - 176rpx);">
+      <view wx:if="{{isProjectReviewLoading}}" class="surface-card project-review-state-card project-review-loading-card">
+        <view class="project-wake-spinner"></view>
+        <view class="form-card-title project-review-state-title">正在生成项目复盘</view>
+        <view class="form-card-desc project-review-state-desc">会结合关键时间线和推进动作，沉淀这条项目的结果经验。</view>
+      </view>
 
-    <view class="share-entry-list">
-      <view
-        class="mode-card share-entry-card"
-        wx:for="{{shareActionOptions}}"
-        wx:key="key"
-        data-mode="{{item.key}}"
-        bindtap="openShareFlow"
-      >
-        <view class="line-between share-entry-head">
-          <view>
-            <view class="mode-title">{{item.title}}</view>
-            <view class="mode-desc">{{item.desc}}</view>
+      <view wx:elif="{{projectReviewError && !projectReviewResult}}" class="surface-card project-review-state-card">
+        <view class="form-card-title project-review-state-title">当前无法生成项目复盘</view>
+        <view class="form-card-desc project-review-state-desc">{{projectReviewError}}</view>
+        <view class="inline-actions project-review-actions">
+          <view class="btn-ghost" bindtap="regenerateProjectReview">重新生成</view>
+        </view>
+      </view>
+
+      <block wx:elif="{{projectReviewResult}}">
+        <view class="project-review-result-wrap">
+          <view class="project-review-result-head">
+            <view class="project-review-origin">{{projectReviewResult.sourceMetaText}}</view>
+            <view class="inline-actions project-review-actions project-review-head-actions">
+              <view class="btn-ghost ai-entry ai-entry-button" bindtap="regenerateProjectReview">
+                <image wx:if="{{!isProjectReviewLoading}}" class="ai-entry-icon" src="/assets/icons/ai-agent-dark.svg" mode="aspectFit" />
+                <view wx:else class="ai-agent-loader">
+                  <view class="ai-agent-loader-antenna is-left"><view class="ai-agent-loader-dot"></view></view>
+                  <view class="ai-agent-loader-antenna is-right"><view class="ai-agent-loader-dot"></view></view>
+                  <view class="ai-agent-loader-cap"></view>
+                  <view class="ai-agent-loader-ear is-left"></view>
+                  <view class="ai-agent-loader-ear is-right"></view>
+                  <view class="ai-agent-loader-head">
+                    <view class="ai-agent-loader-eye is-left"></view>
+                    <view class="ai-agent-loader-eye is-right"></view>
+                    <view class="ai-agent-loader-mouth"></view>
+                  </view>
+                </view>
+                <view class="ai-entry-text">{{isProjectReviewLoading ? '生成中...' : projectReviewResult.regenerateLabel}}</view>
+              </view>
+              <view wx:if="{{projectReviewResultBackup}}" class="btn-ghost" bindtap="restoreProjectReviewVersion">恢复上一版</view>
+            </view>
           </view>
-          <view class="status-badge is-brand">{{item.badge}}</view>
+
+          <view class="project-review-panel">
+            <view class="project-review-label">过程简述</view>
+            <view class="project-review-text">{{projectReviewResult.reviewOverview}}</view>
+          </view>
+
+          <view class="project-review-panel" wx:if="{{selectedReviewProjectStage === '成交' ? projectReviewResult.turningPoints.length : projectReviewResult.slowdownPoints.length}}">
+            <view class="project-review-label">{{selectedReviewProjectStage === '成交' ? '关键转折点' : '关键失速点'}}</view>
+            <view class="project-review-list">
+              <view class="project-review-list-item" wx:for="{{selectedReviewProjectStage === '成交' ? projectReviewResult.turningPoints : projectReviewResult.slowdownPoints}}" wx:key="*this">{{item}}</view>
+            </view>
+          </view>
+
+          <view wx:if="{{selectedReviewProjectStage === '成交'}}" class="project-review-panel">
+            <view class="project-review-label">成功原因</view>
+            <view wx:if="{{projectReviewResult.effectiveActions.length}}" class="project-review-list">
+              <view class="project-review-list-item" wx:for="{{projectReviewResult.effectiveActions}}" wx:key="*this">{{item}}</view>
+            </view>
+            <view wx:else class="project-review-text">当前记录不足以判断明确成功原因，可能更多来自价格合适、品牌认可或客户窗口期。</view>
+          </view>
+
+          <view wx:if="{{selectedReviewProjectStage === '成交'}}" class="project-review-panel">
+            <view class="project-review-label">后续指导价值</view>
+            <view wx:if="{{projectReviewResult.reusableLessons.length}}" class="project-review-list">
+              <view class="project-review-list-item" wx:for="{{projectReviewResult.reusableLessons}}" wx:key="*this">{{item}}</view>
+            </view>
+            <view wx:else class="project-review-text">当前记录不足以提炼稳定经验。</view>
+          </view>
+
+          <view wx:if="{{selectedReviewProjectStage === '流失'}}" class="project-review-panel">
+            <view class="project-review-label">失败原因</view>
+            <view wx:if="{{projectReviewResult.lossReasons.length}}" class="project-review-list">
+              <view class="project-review-list-item is-blocker" wx:for="{{projectReviewResult.lossReasons}}" wx:key="*this">{{item}}</view>
+            </view>
+            <view wx:else class="project-review-text">当前记录不足以判断明确失败原因。</view>
+          </view>
+
+          <view wx:if="{{selectedReviewProjectStage === '流失'}}" class="project-review-panel">
+            <view class="project-review-label">后续指导价值</view>
+            <view class="project-review-text">{{projectReviewResult.reactivationAdvice || '当前记录不足以提炼稳定经验。'}}</view>
+          </view>
         </view>
-        <view class="pill-row share-entry-option-pills">
-          <view class="field-pill">{{item.note}}</view>
+      </block>
+    </scroll-view>
+  </view>
+</view>
+
+<view wx:if="{{showProjectWakeSheet}}">
+  <view class="sheet-mask" bindtap="closeProjectWakeSheet"></view>
+  <view class="sheet-panel project-wake-sheet {{appearancePageClass}}">
+    <view class="sheet-handle"></view>
+    <view class="sheet-header">
+      <view class="project-wake-header-main">
+        <view class="sheet-title">项目唤醒</view>
+        <view class="project-wake-header-caption">{{selectedWakeProjectName}}</view>
+      </view>
+      <view class="sheet-close" bindtap="closeProjectWakeSheet">关闭</view>
+    </view>
+    <view class="pill-row project-wake-meta-row">
+      <view wx:if="{{selectedWakeProjectStage}}" class="soft-badge">阶段 {{selectedWakeProjectStage}}</view>
+      <view wx:if="{{selectedWakeProjectDormantText}}" class="field-pill">{{selectedWakeProjectDormantText}}</view>
+      <view wx:if="{{selectedWakeProjectLastActiveText}}" class="field-pill">最近 {{selectedWakeProjectLastActiveText}}</view>
+    </view>
+    <scroll-view scroll-y class="project-wake-scroll">
+      <view wx:if="{{isProjectWakeLoading}}" class="surface-card project-wake-state-card project-wake-loading-card">
+        <view class="project-wake-spinner"></view>
+        <view class="form-card-title project-wake-state-title">正在生成项目唤醒</view>
+        <view class="form-card-desc project-wake-state-desc">会结合最近停在哪里、当前阶段和现有动作，给你一条轻量切入口。</view>
+      </view>
+
+      <view wx:elif="{{projectWakeError && !projectWakeResult}}" class="surface-card project-wake-state-card">
+        <view class="form-card-title project-wake-state-title">当前无法生成项目唤醒</view>
+        <view class="form-card-desc project-wake-state-desc">{{projectWakeError}}</view>
+        <view class="inline-actions project-wake-actions">
+          <view class="btn-ghost" bindtap="regenerateDormantWake">重新生成</view>
         </view>
       </view>
+
+      <block wx:elif="{{projectWakeResult}}">
+        <view class="project-wake-result-wrap">
+          <view class="project-wake-origin">{{projectWakeResult.sourceMetaText}}</view>
+
+          <view class="project-wake-panel">
+            <view class="project-wake-label">唤醒判断</view>
+            <view class="project-wake-text">{{projectWakeResult.wakeSummary}}</view>
+          </view>
+
+          <view class="project-wake-panel">
+            <view class="project-wake-label">建议动作</view>
+            <view class="project-wake-text">{{projectWakeResult.suggestedAction}}</view>
+          </view>
+
+          <view class="project-wake-panel">
+            <view class="project-wake-label">建议切入口</view>
+            <view class="project-wake-text">{{projectWakeResult.suggestedContact}}</view>
+          </view>
+
+          <view class="inline-actions project-wake-actions">
+            <view class="btn-ghost" bindtap="regenerateDormantWake">{{isProjectWakeLoading ? '生成中...' : projectWakeResult.regenerateLabel}}</view>
+            <view wx:if="{{projectWakeResultBackup}}" class="btn-ghost" bindtap="restoreDormantWakeVersion">恢复上一版</view>
+            <view class="btn-ghost" bindtap="openWakeProjectDetail">查看项目</view>
+            <view class="btn-primary" bindtap="openWakeFollowUp">新增跟进</view>
+          </view>
+        </view>
+      </block>
+    </scroll-view>
+  </view>
+</view>
+
+<share-entry-sheet
+  visible="{{showShareSheet}}"
+  appearance-page-class="{{appearancePageClass}}"
+  project-name="{{selectedShareProjectName}}"
+  project-meta="{{selectedShareProjectMeta}}"
+  options="{{shareActionOptions}}"
+  bind:close="closeShareSheet"
+  bind:select="openShareFlow"
+/>
+
+<view wx:if="{{showTransferSheet}}">
+  <view class="sheet-mask transfer-mode-mask" bindtap="closeTransferSheet"></view>
+  <view class="sheet-panel transfer-mode-sheet {{appearancePageClass}}">
+    <view class="sheet-handle"></view>
+    <view class="sheet-header">
+      <view>
+        <view class="sheet-title">转交项目</view>
+        <view class="transfer-mode-caption">{{selectedShareProjectName}}</view>
+      </view>
+      <view class="sheet-close" bindtap="closeTransferSheet">关闭</view>
+    </view>
+    <view class="transfer-mode-list">
+      <view class="mode-card transfer-mode-card {{transferMode === 'transfer_original' ? 'is-active' : ''}}" data-mode="transfer_original" bindtap="setTransferMode">
+        <view class="line-between">
+          <view>
+            <view class="mode-title">全部转交</view>
+            <view class="mode-desc">对方接手原项目，你保留只读查看。</view>
+          </view>
+          <view class="status-badge {{transferMode === 'transfer_original' ? 'is-brand' : ''}}">原项目</view>
+        </view>
+        <view wx:if="{{transferMode === 'transfer_original'}}" class="transfer-selected-mark">✓</view>
+      </view>
+      <view class="mode-card transfer-mode-card {{transferMode === 'clone_seed' ? 'is-active' : ''}}" data-mode="clone_seed" bindtap="setTransferMode">
+        <view class="line-between">
+          <view>
+            <view class="mode-title">新建转交</view>
+            <view class="mode-desc">只带客户和联系方式，你继续管理当前项目。</view>
+          </view>
+          <view class="status-badge {{transferMode === 'clone_seed' ? 'is-brand' : ''}}">新项目</view>
+        </view>
+        <view wx:if="{{transferMode === 'clone_seed'}}" class="transfer-selected-mark">✓</view>
+      </view>
+    </view>
+    <view wx:if="{{transferMode === 'clone_seed'}}" class="field-group transfer-name-field">
+      <view class="field-label">新项目名称</view>
+      <input class="input-sim input-native" value="{{transferProjectName}}" bindinput="onTransferProjectNameInput" placeholder="请输入给对方的新项目名称" placeholder-class="input-placeholder" />
+    </view>
+    <view class="helper-text transfer-mode-note">新建转交不会同步当前项目历史，双方后续独立推进。</view>
+    <view class="inline-actions transfer-mode-actions">
+      <view class="btn-ghost" bindtap="closeTransferSheet">取消</view>
+      <view class="btn-primary" bindtap="confirmTransferFlow">{{isTransferOpening ? '处理中...' : (transferMode === 'clone_seed' ? '新建转交' : '确认转交')}}</view>
     </view>
   </view>
 </view>
@@ -213,6 +418,11 @@
           placeholder-class="input-placeholder"
           maxlength="-1"
         ></textarea>
+        <view wx:if="{{isTaskCompletionVoiceSupported}}" class="task-complete-voice-row">
+          <view class="btn-ghost task-complete-voice-btn {{isTaskCompletionVoiceRecording ? 'is-recording' : ''}} {{isTaskCompletionVoiceRecognizing ? 'is-busy' : ''}}" bindtap="handleTaskCompletionVoiceInput">
+            {{isTaskCompletionVoiceRecording ? '结束录音' : (isTaskCompletionVoiceRecognizing ? '识别中...' : '语音录入')}}
+          </view>
+        </view>
       </view>
       <view class="task-complete-inline-entry">
         <view wx:if="{{!taskCompletionCreateNextTask}}" class="btn-ghost task-complete-inline-btn" bindtap="toggleTaskCompletionCreateNextTask">补下一步动作</view>
@@ -225,15 +435,14 @@
           <view class="section-link" bindtap="toggleTaskCompletionCreateNextTask">收起</view>
         </view>
         <view class="field-group task-complete-field is-inline-first">
-          <view class="field-label">下一步任务标题</view>
           <input
-            class="input-sim input-native"
+            class="input-sim input-native primary-title-input task-complete-title-input"
             value="{{taskCompletionNextTaskTitle}}"
             data-field="taskCompletionNextTaskTitle"
             bindinput="onTaskCompletionNextTaskInput"
             bindfocus="onTaskCompletionFieldFocus"
             cursor-spacing="{{taskCompletionCursorSpacing}}"
-            placeholder="例如：3天后回访报价反馈"
+            placeholder="填写下一步任务，例如：3天后回访报价反馈"
             placeholder-class="input-placeholder"
           />
         </view>
@@ -265,7 +474,7 @@
           </view>
         </view>
         <view class="field-group task-complete-field">
-          <view class="field-label">动作说明</view>
+          <view class="field-label">任务说明</view>
           <textarea
             class="textarea-sim textarea-native task-complete-next-textarea"
             value="{{taskCompletionNextTaskDescription}}"

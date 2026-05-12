@@ -18,3 +18,4 @@ pnpm-debug.log*
 # Local env files
 .env
 .env.*
+tengxuninfo.txt

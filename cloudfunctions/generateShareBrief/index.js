@@ -1,5 +1,9 @@
 const cloud = require('wx-server-sdk')
 const tcb = require('@cloudbase/node-sdk')
+const https = require('https')
+const http = require('http')
+const { URL } = require('url')
+const createAiUsageHelper = require('./usageHelper')
 
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 
@@ -7,19 +11,53 @@ const db = cloud.database()
 const _ = db.command
 const app = tcb.init({
   env: cloud.DYNAMIC_CURRENT_ENV,
-  timeout: 60000
+  timeout: 58000
 })
 const ai = app.ai()
 
 const MODEL_PROVIDER = 'hunyuan-exp'
 const MODEL_NAME = 'hunyuan-turbos-latest'
+const AI_MODEL_ROUTING_FLAG_KEY = 'ai_model_routing_v1'
+const AI_ROUTE_KEY = 'share_brief'
+const DEFAULT_PROVIDER_KEY = 'cloudbase_default'
+const DEFAULT_PROVIDER_CONFIG = {
+  providerKey: DEFAULT_PROVIDER_KEY,
+  providerType: 'cloudbase',
+  protocolMode: 'auto',
+  providerClass: 'fallback',
+  commercialTier: 'default',
+  visibleLabel: '腾讯云默认',
+  displayName: 'CloudBase 默认',
+  cloudbaseProvider: MODEL_PROVIDER,
+  baseURL: '',
+  defaultModel: MODEL_NAME,
+  apiKey: '',
+  enabled: true
+}
+const DEFAULT_AI_POLICY = {
+  quotaPolicy: 'local_quota',
+  providers: {
+    [DEFAULT_PROVIDER_KEY]: DEFAULT_PROVIDER_CONFIG
+  },
+  route: {
+    providerKey: DEFAULT_PROVIDER_KEY,
+    provider: MODEL_PROVIDER,
+    model: MODEL_NAME,
+    fallbackProviderKey: '',
+    fallbackModel: '',
+    enabled: true
+  }
+}
 
-function buildModelSourceMeta() {
+function buildModelSourceMeta(options = {}) {
+  const provider = safeText(options.provider || MODEL_PROVIDER)
+  const model = safeText(options.model || MODEL_NAME)
+  const providerLabel = safeText(options.providerLabel || 'CloudBase AI')
   return {
     sourceType: 'model',
-    sourceLabel: '大模型建议',
-    providerLabel: 'CloudBase AI',
-    modelName: `${MODEL_PROVIDER} / ${MODEL_NAME}`,
+    sourceLabel: '云端模型',
+    providerLabel,
+    modelName: `${provider} / ${model}`,
     canRegenerate: true
   }
 }
@@ -27,21 +65,17 @@ function buildModelSourceMeta() {
 const defaultShareTags = [
   {
     id: 't1',
-    name: '基础浏览',
-    desc: '隐藏电话、微信，仅展示项目基础信息与联系人姓名。',
+    mode: 'info',
+    name: '发送资料',
+    desc: '对方仅查看资料，项目仍由我维护。',
     fields: ['项目名称', '客户名称', '当前阶段', '预计金额', '联系人姓名', '项目描述']
   },
   {
     id: 't2',
-    name: '完整外发',
-    desc: '展示完整联系方式与下一步动作，适合项目接手。',
+    mode: 'outbound',
+    name: '转交项目',
+    desc: '对方接手后继续推进，我在外发项目查看进展。',
     fields: ['项目名称', '客户名称', '当前阶段', '预计金额', '项目描述', '联系人姓名', '联系人电话', '联系人微信', '下一步动作', '分享来源']
-  },
-  {
-    id: 't3',
-    name: '全量查看',
-    desc: '展示全部可分享字段，并附带来源说明。',
-    fields: ['全部字段']
   }
 ]
 
@@ -87,6 +121,608 @@ const ACTION_RULES = [
 function safeText(value, fallback = '') {
   const text = String(value || '').trim()
   return text || fallback
+}
+
+function toNumber(value, fallback = 0) {
+  const current = Number(value)
+  return Number.isFinite(current) ? current : fallback
+}
+
+function normalizeUrl(value) {
+  return safeText(value, '').replace(/\/+$/, '')
+}
+
+function isDeepSeekRuntime(runtimeConfig = {}) {
+  const baseURL = normalizeUrl(runtimeConfig.baseURL || '')
+  const providerKey = safeText(runtimeConfig.providerKey || '')
+  const providerLabel = safeText(runtimeConfig.providerLabel || '')
+  const model = safeText(runtimeConfig.model || '')
+  return baseURL.includes('deepseek.com')
+    || providerKey.includes('deepseek')
+    || providerLabel.toLowerCase().includes('deepseek')
+    || model.toLowerCase().includes('deepseek')
+}
+
+function useResponsesApi(runtimeConfig = {}) {
+  if (runtimeConfig.protocolMode === 'responses') {
+    return true
+  }
+  if (runtimeConfig.protocolMode === 'chat_completions') {
+    return false
+  }
+  const baseURL = normalizeUrl(runtimeConfig.baseURL || '').toLowerCase()
+  return baseURL.includes('tabcode')
+}
+
+function normalizeProtocolMode(value, fallback = 'auto') {
+  const current = safeText(value || fallback, fallback)
+  return ['auto', 'chat_completions', 'responses'].includes(current) ? current : 'auto'
+}
+
+async function safeGetOne(collectionName, query) {
+  try {
+    const result = await db.collection(collectionName).where(query).limit(1).get()
+    return result.data[0] || null
+  } catch (error) {
+    return null
+  }
+}
+
+async function resolveAiAccessContext(openid) {
+  const identityResult = await db.collection('accountIdentities').where({
+    provider: 'wechat_mp',
+    openid
+  }).limit(1).get()
+  const identity = identityResult.data[0] || null
+  const accountId = safeText(identity && identity.accountId)
+
+  if (!accountId) {
+    throw new Error('ACCOUNT_NOT_INITIALIZED: 当前账号尚未初始化，请重新进入小程序后再试')
+  }
+
+  const accountResult = await db.collection('accounts').where({
+    accountId
+  }).limit(1).get()
+  const entitlementsResult = await db.collection('entitlements').where({
+    accountId
+  }).limit(1).get()
+
+  return {
+    account: accountResult.data[0] || null,
+    entitlements: entitlementsResult.data[0] || null
+  }
+}
+
+function normalizeAiPolicy(payload = {}) {
+  const source = payload && typeof payload === 'object' ? payload : {}
+  const modelRouting = source.modelRouting && typeof source.modelRouting === 'object'
+    ? source.modelRouting
+    : {}
+  const providerSource = source.providers && typeof source.providers === 'object'
+    ? source.providers
+    : {}
+  const providerMap = {
+    [DEFAULT_PROVIDER_KEY]: {
+      ...DEFAULT_PROVIDER_CONFIG,
+      ...(providerSource[DEFAULT_PROVIDER_KEY] || {})
+    }
+  }
+  Object.keys(providerSource).forEach((providerKey) => {
+    providerMap[providerKey] = {
+      ...DEFAULT_PROVIDER_CONFIG,
+      ...(providerSource[providerKey] || {}),
+      providerKey,
+      providerType: safeText(providerSource[providerKey] && providerSource[providerKey].providerType, '') === 'openai_compatible'
+        ? 'openai_compatible'
+        : 'cloudbase',
+      protocolMode: normalizeProtocolMode(
+        providerSource[providerKey] && providerSource[providerKey].protocolMode,
+        DEFAULT_PROVIDER_CONFIG.protocolMode
+      ),
+      providerClass: safeText(providerSource[providerKey] && providerSource[providerKey].providerClass, DEFAULT_PROVIDER_CONFIG.providerClass),
+      commercialTier: safeText(providerSource[providerKey] && providerSource[providerKey].commercialTier, DEFAULT_PROVIDER_CONFIG.commercialTier),
+      visibleLabel: safeText(providerSource[providerKey] && providerSource[providerKey].visibleLabel, DEFAULT_PROVIDER_CONFIG.visibleLabel),
+      modelPricing: buildModelPricingObject(providerSource[providerKey]),
+      baseURL: normalizeUrl(providerSource[providerKey] && providerSource[providerKey].baseURL),
+      apiKey: safeText(providerSource[providerKey] && providerSource[providerKey].apiKey, ''),
+      enabled: providerSource[providerKey] && providerSource[providerKey].enabled !== false
+    }
+  })
+  const route = modelRouting[AI_ROUTE_KEY] && typeof modelRouting[AI_ROUTE_KEY] === 'object'
+    ? modelRouting[AI_ROUTE_KEY]
+    : {}
+  return {
+    quotaPolicy: safeText(source.quotaPolicy) === 'provider_plan' ? 'provider_plan' : 'local_quota',
+    providers: providerMap,
+    route: {
+      providerKey: safeText(route.providerKey || DEFAULT_AI_POLICY.route.providerKey || DEFAULT_PROVIDER_KEY, DEFAULT_PROVIDER_KEY),
+      provider: safeText(route.provider || DEFAULT_AI_POLICY.route.provider, MODEL_PROVIDER),
+      model: safeText(route.model || DEFAULT_AI_POLICY.route.model, MODEL_NAME),
+      fallbackProviderKey: safeText(route.fallbackProviderKey || DEFAULT_AI_POLICY.route.fallbackProviderKey || '', ''),
+      fallbackModel: safeText(route.fallbackModel || DEFAULT_AI_POLICY.route.fallbackModel || '', ''),
+      enabled: route.enabled !== false
+    }
+  }
+}
+
+function normalizeModelPricingEntries(value) {
+  const result = []
+  const seen = new Set()
+  const appendEntry = (modelName, rawValue) => {
+    const model = safeText(modelName)
+    if (!model || seen.has(model)) {
+      return
+    }
+    const node = rawValue && typeof rawValue === 'object' ? rawValue : {}
+    const multiplier = toNumber(
+      rawValue && typeof rawValue === 'number'
+        ? rawValue
+        : node.multiplier,
+      NaN
+    )
+    if (!Number.isFinite(multiplier) || multiplier <= 0) {
+      return
+    }
+    seen.add(model)
+    result.push({
+      model,
+      multiplier
+    })
+  }
+
+  if (Array.isArray(value)) {
+    value.forEach((item) => {
+      const source = item && typeof item === 'object' ? item : {}
+      appendEntry(source.model || source.modelName || source.key, source)
+    })
+    return result
+  }
+
+  const source = value && typeof value === 'object' ? value : {}
+  Object.keys(source).forEach((modelName) => {
+    appendEntry(modelName, source[modelName])
+  })
+  return result
+}
+
+function buildModelPricingObject(providerConfig = {}) {
+  const source = providerConfig && typeof providerConfig === 'object'
+    ? (Array.isArray(providerConfig.modelPricingItems) ? providerConfig.modelPricingItems : providerConfig.modelPricing)
+    : {}
+  const result = {}
+  normalizeModelPricingEntries(source).forEach((item) => {
+    result[item.model] = {
+      multiplier: item.multiplier
+    }
+  })
+  return result
+}
+
+async function loadAiPolicy() {
+  const flag = await safeGetOne('featureFlags', {
+    flagKey: AI_MODEL_ROUTING_FLAG_KEY
+  })
+  if (!flag) {
+    return DEFAULT_AI_POLICY
+  }
+  return normalizeAiPolicy(flag.payload)
+}
+
+function getModelMultiplier(aiPolicy, runtimeConfig = {}) {
+  const providerKey = safeText(runtimeConfig.providerKey || DEFAULT_PROVIDER_KEY)
+  const model = safeText(runtimeConfig.model || MODEL_NAME)
+  const providers = aiPolicy && aiPolicy.providers ? aiPolicy.providers : DEFAULT_AI_POLICY.providers
+  const providerConfig = providers[providerKey] || {}
+  const modelPricing = providerConfig && providerConfig.modelPricing && typeof providerConfig.modelPricing === 'object'
+    ? providerConfig.modelPricing
+    : {}
+  const pricingItem = modelPricing[model] && typeof modelPricing[model] === 'object'
+    ? modelPricing[model]
+    : null
+  const multiplier = toNumber(pricingItem && pricingItem.multiplier, 1)
+  return multiplier > 0 ? multiplier : 1
+}
+
+function extractRawUsageTotals(usage = {}) {
+  const source = usage && typeof usage === 'object' ? usage : {}
+  const inputTokens = Math.max(0, toNumber(source.input_tokens, NaN))
+  const outputTokens = Math.max(0, toNumber(source.output_tokens, NaN))
+  const promptTokens = Math.max(0, toNumber(source.prompt_tokens, NaN))
+  const completionTokens = Math.max(0, toNumber(source.completion_tokens, NaN))
+  const totalTokens = Math.max(0, toNumber(
+    source.total_tokens,
+    Number.isFinite(inputTokens + outputTokens)
+      ? inputTokens + outputTokens
+      : (Number.isFinite(promptTokens + completionTokens) ? promptTokens + completionTokens : 0)
+  ))
+  return {
+    rawTotalTokens: totalTokens,
+    rawPromptTokens: Number.isFinite(promptTokens) ? promptTokens : Math.max(0, inputTokens),
+    rawCompletionTokens: Number.isFinite(completionTokens) ? completionTokens : Math.max(0, outputTokens)
+  }
+}
+
+function estimateTokensByChars(inputText = '', outputText = '') {
+  const inputChars = String(inputText || '').length
+  const outputChars = String(outputText || '').length
+  return Math.max(0, Math.ceil(inputChars * 1.2 + outputChars * 1.4))
+}
+
+const {
+  buildAiUsageTraceId,
+  buildUsageEventKey,
+  consumeAiUsage,
+  appendUsageEvent
+} = createAiUsageHelper({
+  db,
+  safeText,
+  toNumber,
+  extractRawUsageTotals,
+  estimateTokensByChars
+})
+
+function resolveRouteRuntimeConfig(aiPolicy) {
+  const route = aiPolicy && aiPolicy.route ? aiPolicy.route : DEFAULT_AI_POLICY.route
+  const providers = aiPolicy && aiPolicy.providers ? aiPolicy.providers : DEFAULT_AI_POLICY.providers
+  const providerKey = safeText(route.providerKey || DEFAULT_PROVIDER_KEY, DEFAULT_PROVIDER_KEY)
+  const providerConfig = providers[providerKey] || providers[DEFAULT_PROVIDER_KEY] || DEFAULT_PROVIDER_CONFIG
+
+  if (providerConfig.enabled === false) {
+    throw new Error(`MODEL_PROVIDER_DISABLED: 当前供应商(${providerKey})已停用`)
+  }
+
+  const model = safeText(route.model || providerConfig.defaultModel || MODEL_NAME, MODEL_NAME)
+  const protocolMode = normalizeProtocolMode(providerConfig.protocolMode, 'auto')
+  const fallbackProviderKey = safeText(route.fallbackProviderKey, '')
+  const fallbackProviderConfig = fallbackProviderKey ? (providers[fallbackProviderKey] || null) : null
+  const fallbackModel = safeText(route.fallbackModel || (fallbackProviderConfig && fallbackProviderConfig.defaultModel) || '', '')
+
+  if (safeText(providerConfig.providerType, '') === 'openai_compatible') {
+    const baseURL = normalizeUrl(providerConfig.baseURL)
+    const apiKey = safeText(providerConfig.apiKey, '')
+    if (!baseURL || !apiKey) {
+      throw new Error(`MODEL_PROVIDER_CONFIG_INVALID: 供应商(${providerKey})缺少 baseURL 或 apiKey`)
+    }
+    return {
+      engine: 'openai_compatible',
+      providerKey,
+      providerLabel: safeText(providerConfig.displayName || providerKey, providerKey),
+      provider: 'openai_compatible',
+      model,
+      protocolMode,
+      fallbackProviderKey,
+      fallbackModel,
+      baseURL,
+      apiKey
+    }
+  }
+
+  return {
+    engine: 'cloudbase',
+    providerKey,
+    providerLabel: safeText(providerConfig.displayName || 'CloudBase AI', 'CloudBase AI'),
+    provider: safeText(route.provider || providerConfig.cloudbaseProvider || MODEL_PROVIDER, MODEL_PROVIDER),
+    model,
+    protocolMode,
+    fallbackProviderKey,
+    fallbackModel
+  }
+}
+
+function buildFallbackRuntimeConfig(aiPolicy, routeRuntime) {
+  const fallbackProviderKey = safeText(routeRuntime && routeRuntime.fallbackProviderKey, '')
+  if (!fallbackProviderKey) {
+    return null
+  }
+  const providers = aiPolicy && aiPolicy.providers ? aiPolicy.providers : DEFAULT_AI_POLICY.providers
+  const providerConfig = providers[fallbackProviderKey]
+  if (!providerConfig || providerConfig.enabled === false) {
+    return null
+  }
+
+  const model = safeText(routeRuntime.fallbackModel || providerConfig.defaultModel || MODEL_NAME, MODEL_NAME)
+  const protocolMode = normalizeProtocolMode(providerConfig.protocolMode, 'auto')
+  if (safeText(providerConfig.providerType, '') === 'openai_compatible') {
+    const baseURL = normalizeUrl(providerConfig.baseURL)
+    const apiKey = safeText(providerConfig.apiKey, '')
+    if (!baseURL || !apiKey) {
+      return null
+    }
+    return {
+      engine: 'openai_compatible',
+      providerKey: fallbackProviderKey,
+      providerLabel: safeText(providerConfig.displayName || fallbackProviderKey, fallbackProviderKey),
+      provider: 'openai_compatible',
+      model,
+      protocolMode,
+      fallbackProviderKey: '',
+      fallbackModel: '',
+      baseURL,
+      apiKey
+    }
+  }
+
+  return {
+    engine: 'cloudbase',
+    providerKey: fallbackProviderKey,
+    providerLabel: safeText(providerConfig.displayName || 'CloudBase AI', 'CloudBase AI'),
+    provider: safeText(providerConfig.cloudbaseProvider || MODEL_PROVIDER, MODEL_PROVIDER),
+    model,
+    protocolMode,
+    fallbackProviderKey: '',
+    fallbackModel: ''
+  }
+}
+
+function shouldTryFallback(error) {
+  const message = safeText(error && error.message, '')
+  if (!message) {
+    return false
+  }
+  return [
+    'MODEL_PROVIDER_HTTP_',
+    'MODEL_PROVIDER_TIMEOUT',
+    'MODEL_PROVIDER_EMPTY_RESPONSE',
+    'MODEL_PROVIDER_RESPONSE_INVALID',
+    'MODEL_PROVIDER_CONFIG_INVALID',
+    'MODEL_PROVIDER_DISABLED'
+  ].some((item) => message.includes(item))
+}
+
+function requestJson(options = {}, payload = null, timeoutMs = 55000) {
+  return new Promise((resolve, reject) => {
+    const protocol = options.protocol === 'http:' ? http : https
+    const req = protocol.request(options, (res) => {
+      let raw = ''
+      res.on('data', (chunk) => {
+        raw += chunk
+      })
+      res.on('end', () => {
+        let parsed = {}
+        try {
+          parsed = raw ? JSON.parse(raw) : {}
+        } catch (error) {
+          reject(new Error(`MODEL_PROVIDER_RESPONSE_INVALID: ${raw.slice(0, 160)}`))
+          return
+        }
+        const statusCode = Number(res.statusCode || 0)
+        if (statusCode < 200 || statusCode >= 300) {
+          const errorMessage = safeText(parsed.error && parsed.error.message || parsed.message || raw || 'openai compatible request failed', 'openai compatible request failed')
+          reject(new Error(`MODEL_PROVIDER_HTTP_${statusCode}: ${errorMessage}`))
+          return
+        }
+        resolve(parsed)
+      })
+    })
+
+    req.setTimeout(timeoutMs, () => {
+      req.destroy(new Error('MODEL_PROVIDER_TIMEOUT'))
+    })
+    req.on('error', reject)
+    if (payload) {
+      req.write(payload)
+    }
+    req.end()
+  })
+}
+
+async function runOpenAiCompatibleGenerateText(runtimeConfig, payload = {}) {
+  if (useResponsesApi(runtimeConfig)) {
+    return runResponsesCompatibleGenerateText(runtimeConfig, payload)
+  }
+  const url = new URL(`${runtimeConfig.baseURL}/chat/completions`)
+  const requestPayload = {
+    model: runtimeConfig.model,
+    messages: Array.isArray(payload.messages) ? payload.messages : [],
+    temperature: Number.isFinite(Number(payload.temperature)) ? Number(payload.temperature) : 0.2
+  }
+  if (isDeepSeekRuntime(runtimeConfig)) {
+    requestPayload.thinking = { type: 'disabled' }
+  }
+  const requestBody = JSON.stringify(requestPayload)
+  const response = await requestJson({
+    protocol: url.protocol,
+    hostname: url.hostname,
+    port: url.port || (url.protocol === 'http:' ? 80 : 443),
+    path: `${url.pathname}${url.search || ''}`,
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Content-Length': Buffer.byteLength(requestBody),
+      Authorization: `Bearer ${runtimeConfig.apiKey}`
+    }
+  }, requestBody)
+
+  const firstChoice = Array.isArray(response.choices) ? response.choices[0] : null
+  const message = firstChoice && firstChoice.message ? firstChoice.message : {}
+  let text = safeText(message.content, '')
+  if (!text && Array.isArray(message.content)) {
+    text = message.content
+      .map((item) => safeText(item && (item.text || item.content), ''))
+      .filter(Boolean)
+      .join('\n')
+  }
+  if (!text) {
+    text = safeText(message.reasoning_content || response.reasoning_content, '')
+  }
+  if (!text) {
+    throw new Error('MODEL_PROVIDER_EMPTY_RESPONSE')
+  }
+  return {
+    text,
+    usage: response.usage || null
+  }
+}
+
+function buildResponsesInputFromMessages(messages = []) {
+  return messages.map((message) => ({
+    type: 'message',
+    role: safeText(message && message.role, 'user'),
+    content: [
+      {
+        type: 'input_text',
+        text: safeText(message && message.content, '')
+      }
+    ]
+  }))
+}
+
+function extractResponsesOutputText(response = {}) {
+  const directText = safeText(response.output_text, '')
+  if (directText) {
+    return directText
+  }
+  const outputItems = Array.isArray(response.output) ? response.output : []
+  const textParts = []
+  outputItems.forEach((item) => {
+    const contentItems = Array.isArray(item && item.content) ? item.content : []
+    contentItems.forEach((content) => {
+      const text = safeText(content && (content.text || content.output_text), '')
+      if (text) {
+        textParts.push(text)
+      }
+    })
+  })
+  return textParts.join('\n').trim()
+}
+
+async function runResponsesCompatibleGenerateText(runtimeConfig, payload = {}) {
+  const url = new URL(`${runtimeConfig.baseURL}/responses`)
+  const requestBody = JSON.stringify({
+    model: runtimeConfig.model,
+    instructions: '',
+    input: buildResponsesInputFromMessages(Array.isArray(payload.messages) ? payload.messages : []),
+    temperature: Number.isFinite(Number(payload.temperature)) ? Number(payload.temperature) : 0.2,
+    max_output_tokens: 2048
+  })
+  const response = await requestJson({
+    protocol: url.protocol,
+    hostname: url.hostname,
+    port: url.port || (url.protocol === 'http:' ? 80 : 443),
+    path: `${url.pathname}${url.search || ''}`,
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Content-Length': Buffer.byteLength(requestBody),
+      Authorization: `Bearer ${runtimeConfig.apiKey}`
+    }
+  }, requestBody)
+  const text = extractResponsesOutputText(response)
+  if (!text) {
+    throw new Error('MODEL_PROVIDER_EMPTY_RESPONSE')
+  }
+  return {
+    text,
+    usage: response.usage || null
+  }
+}
+
+async function runRoutedModelGenerateText(runtimeConfig, payload = {}) {
+  if (runtimeConfig.engine === 'openai_compatible') {
+    return runOpenAiCompatibleGenerateText(runtimeConfig, payload)
+  }
+  const model = ai.createModel(runtimeConfig.provider)
+  const result = await model.generateText({
+    model: runtimeConfig.model,
+    temperature: payload.temperature,
+    messages: payload.messages
+  })
+  return {
+    text: safeText(result && result.text, ''),
+    usage: result && result.usage ? result.usage : null
+  }
+}
+
+async function runWithFallback(aiPolicy, routeRuntime, payload = {}) {
+  try {
+    const result = await runRoutedModelGenerateText(routeRuntime, payload)
+    return {
+      result,
+      runtime: routeRuntime,
+      fallbackUsed: false
+    }
+  } catch (primaryError) {
+    const fallbackRuntime = buildFallbackRuntimeConfig(aiPolicy, routeRuntime)
+    if (!fallbackRuntime || !shouldTryFallback(primaryError)) {
+      throw primaryError
+    }
+    const result = await runRoutedModelGenerateText(fallbackRuntime, payload)
+    return {
+      result,
+      runtime: fallbackRuntime,
+      fallbackUsed: true,
+      primaryError: safeText(primaryError && primaryError.message, '')
+    }
+  }
+}
+
+function ensureAiAccess(context, aiPolicy) {
+  const account = context && context.account ? context.account : {}
+  const entitlements = context && context.entitlements ? context.entitlements : {}
+  const status = safeText(entitlements.status || account.status || 'trialing')
+
+  if (status === 'disabled') {
+    throw new Error('ACCOUNT_DISABLED: 当前账号已被禁用')
+  }
+
+  if (!entitlements || !Object.keys(entitlements).length) {
+    if (status === 'free_limited' || status === 'expired_readonly') {
+      throw new Error('ENTITLEMENT_WRITE_DISABLED: 当前账号为只读状态')
+    }
+    return
+  }
+
+  if (!entitlements.canUseAi) {
+    if (aiPolicy && aiPolicy.quotaPolicy === 'provider_plan') {
+      return
+    }
+    if (Number(entitlements.aiTokensRemaining) <= 0) {
+      throw new Error('ENTITLEMENT_AI_EXHAUSTED: 当前 AI 额度已用完')
+    }
+    throw new Error('ENTITLEMENT_WRITE_DISABLED: 当前账号为只读状态')
+  }
+}
+
+function normalizeCompactText(value, maxLength = 220) {
+  const text = safeText(value, '')
+    .replace(/\s+/g, ' ')
+    .replace(/[；;]+/g, '，')
+    .replace(/^(综合来看|整体来看|当前来看|从目前情况看|结合当前情况看|基于当前信息看)[，,:：]*/g, '')
+    .replace(/当前核心关注点是/g, '当前需关注')
+    .replace(/目前核心关注点是/g, '当前需关注')
+    .replace(/需要重点关注的是/g, '当前需关注')
+    .replace(/已提供交付能力/g, '已说明交付能力保障')
+    .replace(/提供了交付能力/g, '说明了交付能力保障')
+    .replace(/提供交付能力/g, '说明交付能力保障')
+    .replace(/还约了吃饭/g, '已约饭局')
+    .replace(/还约了饭局/g, '已约饭局')
+    .replace(/未提供相关联系人信息|未提供联系人信息/g, '')
+    .replace(/[，。]{2,}/g, '，')
+    .replace(/^[，。]+|[，。]+$/g, '')
+
+  if (!text) {
+    return ''
+  }
+
+  const segments = text
+    .split(/[。]/)
+    .map((item) => safeText(item))
+    .filter(Boolean)
+    .filter((item) => !/分享摘要|资料同步|转发说明/.test(item))
+
+  const result = []
+  const seen = new Set()
+  segments.forEach((item) => {
+    const current = item.replace(/\s+/g, '')
+    if (!current || seen.has(current)) {
+      return
+    }
+    seen.add(current)
+    result.push(item)
+  })
+
+  const compact = result.join('，')
+  return compact.length > maxLength ? `${compact.slice(0, maxLength)}...` : compact
 }
 
 function normalizeStringArray(value) {
@@ -425,9 +1061,9 @@ function buildModeRules(mode) {
     return {
       modeLabel: '项目外发',
       ruleText: [
-        '这是项目交接场景，重点输出项目现状、推进脉络、关键变化和当前判断。',
-        '可以指出项目风险、推进卡点和阶段状态，但不要替接手方做动作决策。',
-        '可以出现接手、交接等背景表述，但摘要主体必须是项目本身。'
+        '这是项目交接场景，摘要主体仍然必须是项目本身，不是交接动作说明。',
+        '重点输出项目现状、完整推进脉络、阶段变化和当前最需要关注的未闭环问题。',
+        '可以提到这是接手场景，但不要写成操作说明、提醒文案或动作建议。'
       ].join('\n')
     }
   }
@@ -435,8 +1071,8 @@ function buildModeRules(mode) {
   return {
     modeLabel: '分享信息',
     ruleText: [
-      '这是资料同步场景，不是项目交接。',
-      '重点输出项目背景、当前进展、最近时间线和当前判断。',
+      '这是资料同步场景，摘要主体必须是项目本身，而不是分享动作说明。',
+      '重点输出项目背景、当前进展、最近时间线和当前最需要关注的未闭环问题。',
       '禁止出现接手、转移管理权、继续维护项目等表述。'
     ].join('\n')
   }
@@ -551,10 +1187,10 @@ function validateShareBriefPayload(value, mode) {
   const normalizedSummaryText = summaryText || normalizeStringArray(overviewLines).concat(timelineInsight ? [timelineInsight] : []).join(' ')
 
   return {
-    title: safeText(value.title),
-    summaryText: normalizedSummaryText,
+    title: normalizeCompactText(value.title, 20) || '项目现状',
+    summaryText: normalizeCompactText(normalizedSummaryText, 220) || '当前项目已有基础资料，建议结合最新时间线进一步确认现状。',
     overviewLines: normalizeStringArray(overviewLines).slice(0, 4),
-    timelineInsight,
+    timelineInsight: normalizeCompactText(timelineInsight, 80),
     cta: safeText(value.cta),
     tone: normalizeTone(value.tone, mode)
   }
@@ -695,7 +1331,7 @@ function buildPrompt(context) {
 请根据以下信息生成项目摘要卡。
 
 分享模式：${modeRules.modeLabel}
-标签名称：${context.shareTagName}
+分享范围：${context.shareTagName}
 允许展示字段：${context.visibleFields.join('、') || '未提供'}
 项目上下文：
 ${contextLines.join('\n')}
@@ -704,7 +1340,7 @@ ${modeRules.ruleText}
 
 输出要求：
 1. title 是项目现状标题，不要写“分享摘要”“资料同步”“转发说明”
-2. summaryText 输出一段完整描述，必须把项目总体情况、时间线总结、核心关注点三部分自然融合成一段话
+2. summaryText 输出一段完整描述，控制在 120-220 字，必须把项目总体情况、时间线总结、核心关注点三部分自然融合成一段话
 3. 这段描述要像正式系统里的项目摘要，不要拆点，不要分段，不要使用标题或冒号罗列
 4. recentTimeline 按时间从早到晚排序，后续事实优先级高于前序计划；如果前面说“计划安排”，后面又出现“已经完成/已见面/已报价”，输出时只能保留最新事实，不能再把旧计划写成当前待办
 5. openTasks 才是当前仍未完成的待办；核心关注点只能写截至最后一条时间线仍未闭环的问题，不能把已完成事项再写成关注点
@@ -717,9 +1353,11 @@ ${modeRules.ruleText}
 12. cta 固定返回空字符串，不要输出建议动作
 13. 不要解释这次分享是什么，不要写“本次分享用于…”“适合转发…”“接手方需要…”
 14. 如果最近推进时间线为空，就只基于项目资料概括现状，不要虚构历史过程
-15. 文风要求：简洁、轻商务、明确，不夸张，尽量减少无效修饰
+15. 文风要求：简洁、轻商务、明确，不夸张，不要写成“AI总结”口吻，尽量减少无效修饰
 16. 对于字段可见性提醒中标注为“本次未开放”的信息，只能理解为分享范围限制，不能写成项目事实缺失或信息未知
-17. 只返回合法 JSON，不要输出 markdown 代码块
+17. 最后一句必须落到“当前真正需要关注的事项”，但不要写成动作建议或命令句
+18. 如果涉及饭局、见面、沟通对象，必须写清对象；对象不明确时宁可省略，不要出现“约了吃饭”“有人反馈”这类主语不清表述
+19. 只返回合法 JSON，不要输出 markdown 代码块
 
 返回 JSON，字段必须包含：
 title
@@ -745,6 +1383,22 @@ function normalizeAiError(error) {
     return 'AI 分享摘要暂时不可用'
   }
 
+  if (message.includes('ACCOUNT_NOT_INITIALIZED')) {
+    return '账号初始化失败，请退出后重试'
+  }
+
+  if (message.includes('ACCOUNT_DISABLED')) {
+    return '当前账号已被禁用，请联系管理员处理'
+  }
+
+  if (message.includes('ENTITLEMENT_AI_EXHAUSTED')) {
+    return '当前 AI 额度已用完，请补充额度后重试'
+  }
+
+  if (message.includes('ENTITLEMENT_WRITE_DISABLED')) {
+    return '当前账号为只读状态，暂时无法继续使用 AI 能力'
+  }
+
   if (message.includes('AI_EMPTY_RESPONSE') || message.includes('AI_INVALID_RESPONSE')) {
     return 'AI 返回结果异常，请重试'
   }
@@ -754,9 +1408,21 @@ function normalizeAiError(error) {
 
 exports.main = async (event) => {
   const wxContext = cloud.getWXContext()
-  const projectId = safeText(event.projectId)
-  const shareMode = safeText(event.shareMode, 'info')
-  const shareTagId = safeText(event.shareTagId)
+  const projectId = safeText(event && event.projectId)
+  const shareMode = safeText(event && event.shareMode, 'info')
+  const shareTagId = safeText(event && event.shareTagId)
+  const requestId = safeText(event && event.requestId)
+  const requestStartedAt = Date.now()
+  const occurredAt = new Date()
+  const generatedAt = occurredAt.toISOString()
+  let aiPolicy = null
+  let routeRuntime = null
+  let accessContext = null
+  let effectiveRuntime = null
+  let promptText = ''
+  let accountId = ''
+  let traceId = ''
+  let sourceId = requestId || `${projectId}:${shareTagId}:${generatedAt}`
 
   if (!projectId || !shareTagId) {
     return {
@@ -768,6 +1434,18 @@ exports.main = async (event) => {
 
   try {
     const startAt = Date.now()
+    aiPolicy = await loadAiPolicy()
+    if (!aiPolicy.route.enabled) {
+      throw new Error('MODEL_ROUTE_DISABLED: 当前外发摘要模型路由未启用')
+    }
+    routeRuntime = resolveRouteRuntimeConfig(aiPolicy)
+    accessContext = await resolveAiAccessContext(wxContext.OPENID)
+    ensureAiAccess(accessContext, aiPolicy)
+    accountId = safeText(
+      accessContext.account && accessContext.account.accountId,
+      safeText(accessContext.entitlements && accessContext.entitlements.accountId, '')
+    )
+    traceId = buildAiUsageTraceId('share_brief', accountId, requestId, `${projectId}:${shareTagId}`)
     const context = await getShareContext(projectId, wxContext.OPENID, shareTagId)
     if (!context) {
       return {
@@ -778,29 +1456,79 @@ exports.main = async (event) => {
     }
     const contextReadyAt = Date.now()
 
-    const model = ai.createModel(MODEL_PROVIDER)
-    const result = await model.generateText({
-      model: MODEL_NAME,
+    promptText = buildPrompt({
+      shareMode,
+      shareTagName: shareMode === 'outbound' ? '转交项目' : '发送资料',
+      visibleFields: context.visibleFields,
+      sanitizedProjectPayload: context.sanitizedPayload
+    })
+    const execution = await runWithFallback(aiPolicy, routeRuntime, {
       temperature: 0.2,
       messages: [
         {
           role: 'system',
-          content: '你是一个销售项目解读助手。你的任务是根据项目资料、当前阶段和最近推进时间线，生成准确的项目摘要，而不是解释分享动作本身。你只能使用提供给你的字段，不允许补充未给出的信息。若事实中的主语、对象、时间或结果不明确，宁可省略，不要硬补全。优先保留影响项目推进的关键信息，弱化泛社交表述。必须返回合法 JSON。'
+          content: '你是销售项目解读助手。你的任务是根据项目资料、当前阶段和最近推进时间线，生成准确的项目摘要，而不是解释分享动作本身。你只能使用提供给你的字段，不允许补充未给出的信息。若事实中的主语、对象、时间或结果不明确，宁可省略，不要硬补全。优先保留影响项目推进的关键信息，弱化泛社交表述，文风保持正式、克制、轻商务，只返回合法 JSON。'
         },
         {
           role: 'user',
-          content: buildPrompt({
-            shareMode,
-            shareTagName: context.shareTag.name,
-            visibleFields: context.visibleFields,
-            sanitizedProjectPayload: context.sanitizedPayload
-          })
+          content: promptText
         }
       ]
     })
+    const result = execution.result
+    effectiveRuntime = execution.runtime
     const modelDoneAt = Date.now()
 
     const parsed = validateShareBriefPayload(extractJson(result.text), shareMode)
+    const usageRecord = await consumeAiUsage({
+      accountId,
+      entitlements: accessContext.entitlements,
+      usage: result.usage || null,
+      inputText: promptText,
+      outputText: result.text,
+      multiplier: getModelMultiplier(aiPolicy, effectiveRuntime),
+      runtime: effectiveRuntime,
+      sourceType: 'share_brief',
+      sourceId,
+      traceId,
+      routeKey: AI_ROUTE_KEY,
+      fallbackUsed: execution.fallbackUsed === true,
+      primaryError: execution.primaryError || '',
+      providerRequestId: '',
+      pageKey: 'pages/share-card/share-card',
+      projectId,
+      occurredAt
+    })
+
+    await appendUsageEvent({
+      accountId,
+      sourceType: 'share_brief',
+      sourceId,
+      traceId,
+      eventKey: buildUsageEventKey('share_brief', traceId, accountId, `${projectId}:${shareTagId}`, 'success'),
+      eventStatus: 'success',
+      projectId,
+      pageKey: 'pages/share-card/share-card',
+      routeKey: AI_ROUTE_KEY,
+      plannedRuntime: routeRuntime,
+      runtime: effectiveRuntime,
+      fallbackUsed: execution.fallbackUsed === true,
+      primaryError: execution.primaryError || '',
+      billingMethod: usageRecord.billingMethod || '',
+      rawTotalTokens: usageRecord.rawTotalTokens || 0,
+      rawPromptTokens: usageRecord.rawPromptTokens || 0,
+      rawCompletionTokens: usageRecord.rawCompletionTokens || 0,
+      billedTokens: usageRecord.billedTokens || 0,
+      multiplier: usageRecord.multiplier || getModelMultiplier(aiPolicy, effectiveRuntime),
+      inputChars: usageRecord.inputChars || promptText.length,
+      outputChars: usageRecord.outputChars || String(result.text || '').length,
+      durationMs: Date.now() - requestStartedAt,
+      usageRecorded: usageRecord.skipped !== true,
+      usageReused: usageRecord.reused === true,
+      clientRequestId: requestId,
+      providerRequestId: '',
+      occurredAt
+    })
     console.log('generateShareBrief timing', {
       projectId,
       shareMode,
@@ -820,7 +1548,12 @@ exports.main = async (event) => {
 
     return {
       ok: true,
-      ...buildModelSourceMeta(),
+      ...buildModelSourceMeta({
+        provider: effectiveRuntime.provider,
+        model: effectiveRuntime.model,
+        providerLabel: effectiveRuntime.providerLabel
+      }),
+      generatedAt,
       title: parsed.title,
       summaryText: parsed.summaryText,
       overviewLines: parsed.overviewLines,
@@ -829,9 +1562,44 @@ exports.main = async (event) => {
       shareGoal: parsed.timelineInsight || parsed.summaryText,
       cta: parsed.cta,
       tone: parsed.tone,
-      usage: result.usage || null
+      usage: result.usage || null,
+      billedTokens: usageRecord.billedTokens || 0,
+      usageRecorded: usageRecord.skipped !== true,
+      usageReused: usageRecord.reused === true,
+      fallbackUsed: execution.fallbackUsed === true,
+      primaryError: execution.primaryError || ''
     }
   } catch (error) {
+    await appendUsageEvent({
+      accountId,
+      sourceType: 'share_brief',
+      sourceId,
+      traceId,
+      eventKey: buildUsageEventKey('share_brief', traceId, accountId, `${projectId}:${shareTagId}`, 'failed'),
+      eventStatus: 'failed',
+      projectId,
+      pageKey: 'pages/share-card/share-card',
+      routeKey: AI_ROUTE_KEY,
+      plannedRuntime: routeRuntime,
+      runtime: error && error.fallbackAttempted === true ? (error.fallbackRuntime || routeRuntime) : routeRuntime,
+      fallbackUsed: error && error.fallbackAttempted === true,
+      primaryError: safeText(error && error.primaryErrorMessage),
+      errorMessage: normalizeAiError(error),
+      billingMethod: '',
+      rawTotalTokens: 0,
+      rawPromptTokens: 0,
+      rawCompletionTokens: 0,
+      billedTokens: 0,
+      multiplier: aiPolicy && routeRuntime ? getModelMultiplier(aiPolicy, routeRuntime) : 1,
+      inputChars: promptText.length,
+      outputChars: 0,
+      durationMs: Date.now() - requestStartedAt,
+      usageRecorded: false,
+      usageReused: false,
+      clientRequestId: requestId,
+      providerRequestId: '',
+      occurredAt
+    })
     return {
       ok: false,
       message: normalizeAiError(error),

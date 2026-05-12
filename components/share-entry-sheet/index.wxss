@@ -1,0 +1,243 @@
+.share-entry-mask,
+.share-entry-sheet {
+  --theme-sheet-mask: rgba(16, 28, 36, 0.38);
+  --theme-sheet-bg: rgba(247, 243, 236, 0.98);
+  --theme-sheet-shadow: 0 -16rpx 46rpx rgba(20, 34, 45, 0.12);
+  --theme-sheet-handle: rgba(61, 82, 95, 0.18);
+  --theme-soft-block-bg: rgba(255, 255, 255, 0.48);
+  --theme-project-card-bg: rgba(255, 255, 255, 0.72);
+  --theme-state-card-shadow: 0 14rpx 30rpx rgba(24, 39, 51, 0.08);
+  --theme-divider: rgba(24, 39, 51, 0.08);
+  --theme-title: #182733;
+  --theme-text-secondary: #51616d;
+  --theme-text-soft: #6f7d86;
+}
+
+.share-entry-mask {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  background: var(--theme-sheet-mask);
+  backdrop-filter: blur(10rpx);
+}
+
+.share-entry-sheet {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 81;
+  top: 42vh;
+  padding: 20rpx 24rpx calc(24rpx + env(safe-area-inset-bottom));
+  border-radius: 34rpx 34rpx 0 0;
+  padding-bottom: calc(24rpx + env(safe-area-inset-bottom));
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  background: var(--theme-sheet-bg);
+  box-shadow: var(--theme-sheet-shadow);
+}
+
+.sheet-handle {
+  width: 88rpx;
+  height: 8rpx;
+  margin: 0 auto 22rpx;
+  border-radius: 999rpx;
+  background: var(--theme-sheet-handle);
+}
+
+.sheet-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.share-entry-sheet .sheet-header {
+  margin-bottom: 10rpx;
+}
+
+.sheet-title {
+  font-size: 30rpx;
+  font-weight: 700;
+  color: var(--theme-title);
+}
+
+.sheet-close {
+  font-size: 24rpx;
+  color: var(--theme-text-soft);
+}
+
+.line-between {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18rpx;
+}
+
+.compact-inline-metrics,
+.pill-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.compact-inline-item {
+  border-radius: 999rpx;
+  color: var(--theme-text-secondary);
+  background: rgba(255, 255, 255, 0.58);
+  box-shadow: inset 0 0 0 1rpx var(--theme-divider);
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999rpx;
+  white-space: nowrap;
+}
+
+.field-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999rpx;
+  color: var(--theme-text-secondary);
+  background: rgba(255, 255, 255, 0.58);
+  box-shadow: inset 0 0 0 1rpx var(--theme-divider);
+}
+
+.share-entry-project-card {
+  margin-bottom: 12rpx;
+  padding: 16rpx 18rpx;
+  border-radius: 24rpx;
+  background: var(--theme-soft-block-bg);
+  box-shadow: inset 0 0 0 1rpx var(--theme-divider);
+}
+
+.share-entry-project-name {
+  font-size: 28rpx;
+  font-weight: 700;
+  line-height: 1.4;
+  color: var(--theme-title);
+}
+
+.share-entry-project-pills {
+  margin-top: 8rpx;
+  gap: 6rpx;
+}
+
+.share-entry-project-pills .compact-inline-item {
+  padding: 6rpx 10rpx;
+  font-size: 20rpx;
+}
+
+.share-entry-list {
+  margin-top: 0;
+}
+
+.share-entry-card {
+  padding: 14rpx 16rpx 16rpx;
+  border-radius: 22rpx;
+  background: var(--theme-project-card-bg);
+  box-shadow: var(--theme-state-card-shadow);
+}
+
+.share-entry-card + .share-entry-card {
+  margin-top: 10rpx;
+}
+
+.share-entry-head {
+  align-items: flex-start;
+}
+
+.share-entry-copy {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.share-entry-head .mode-title {
+  font-size: 30rpx;
+}
+
+.share-entry-head .mode-desc {
+  margin-top: 4rpx;
+  font-size: 23rpx;
+  line-height: 1.5;
+  color: var(--theme-text-secondary);
+}
+
+.share-entry-option-pills {
+  margin-top: 8rpx;
+  gap: 6rpx;
+}
+
+.share-entry-option-pills .field-pill {
+  min-height: 40rpx;
+  padding: 0 12rpx;
+  font-size: 19rpx;
+}
+
+.share-entry-head .status-badge {
+  flex: 0 0 auto;
+  margin-top: 2rpx;
+  min-height: 40rpx;
+  padding: 0 12rpx;
+  font-size: 19rpx;
+  color: var(--theme-text-secondary);
+  background: rgba(255, 255, 255, 0.58);
+  box-shadow: inset 0 0 0 1rpx var(--theme-divider);
+}
+
+.share-entry-sheet.appearance-font-large .sheet-title,
+.share-entry-sheet.appearance-font-large .sheet-close {
+  font-size: 30rpx;
+}
+
+.share-entry-sheet.appearance-font-large .mode-title {
+  font-size: 34rpx;
+}
+
+.share-entry-sheet.appearance-font-large .mode-desc,
+.share-entry-sheet.appearance-font-large .status-badge {
+  font-size: 27rpx;
+}
+
+.share-entry-sheet.appearance-font-large .share-entry-project-name {
+  font-size: 34rpx;
+}
+
+.share-entry-sheet.appearance-font-large {
+  top: 34vh;
+}
+
+.share-entry-sheet.appearance-font-large .share-entry-project-pills .compact-inline-item,
+.share-entry-sheet.appearance-font-large .share-entry-option-pills .field-pill {
+  font-size: 24rpx;
+}
+
+.share-entry-sheet.appearance-font-readable .sheet-title,
+.share-entry-sheet.appearance-font-readable .sheet-close {
+  font-size: 38rpx;
+}
+
+.share-entry-sheet.appearance-font-readable .mode-title {
+  font-size: 42rpx;
+}
+
+.share-entry-sheet.appearance-font-readable .mode-desc,
+.share-entry-sheet.appearance-font-readable .status-badge {
+  font-size: 34rpx;
+}
+
+.share-entry-sheet.appearance-font-readable .share-entry-project-name {
+  font-size: 42rpx;
+}
+
+.share-entry-sheet.appearance-font-readable {
+  top: 24vh;
+}
+
+.share-entry-sheet.appearance-font-readable .share-entry-project-pills .compact-inline-item,
+.share-entry-sheet.appearance-font-readable .share-entry-option-pills .field-pill {
+  font-size: 30rpx;
+}

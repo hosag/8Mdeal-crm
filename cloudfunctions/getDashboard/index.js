@@ -10,12 +10,6 @@ function startOfDay(date = new Date()) {
   return value
 }
 
-function endOfDay(date = new Date()) {
-  const value = new Date(date)
-  value.setHours(23, 59, 59, 999)
-  return value
-}
-
 function startOfMonth(date = new Date()) {
   return new Date(date.getFullYear(), date.getMonth(), 1)
 }
@@ -89,15 +83,6 @@ function formatTime(value) {
   return `${hour}:${minute}`
 }
 
-function formatTodoTime(value, now = new Date()) {
-  const date = value instanceof Date ? value : new Date(value)
-  if (Number.isNaN(date.getTime())) {
-    return '暂无下次跟进'
-  }
-
-  return `${formatDateLabel(date, now)} ${formatTime(date)}`
-}
-
 function parseDateTime(value) {
   if (!value) {
     return null
@@ -117,70 +102,13 @@ function parseDateTime(value) {
   return Number.isNaN(date.getTime()) ? null : date
 }
 
-function computeTodoBadge(nextDate, now = new Date()) {
-  if (!nextDate) {
-    return '待安排'
-  }
-
-  const diff = Math.round((startOfDay(nextDate).getTime() - startOfDay(now).getTime()) / 86400000)
-  if (diff < 0) {
-    return '优先处理'
-  }
-  if (diff === 0) {
-    return '今天处理'
-  }
-  return diff === 1 ? '提前准备' : '待处理'
-}
-
-function buildTodoSteps(project) {
-  const steps = []
-
-  if (project.sharedFromName) {
-    steps.push(`先同步 ${project.sharedFromName} 的历史判断，避免信息断层`)
-  } else {
-    steps.push('先回看上次跟进摘要，确认今天的推进目标')
-  }
-
-  if (project.stage) {
-    steps.push(`当前阶段为「${project.stage}」，先补齐该阶段最关键的信息`)
-  }
-
-  if (project.nextFollowUpDate) {
-    steps.push('跟进结束后立即回填结果，并更新下一次跟进时间')
-  } else {
-    steps.push('本次推进后补上下一次跟进时间，避免首页待办断档')
-  }
-
-  return steps.slice(0, 3)
-}
-
-function buildTodoPriority(project, nextDate, now = new Date()) {
-  const badge = computeTodoBadge(nextDate, now)
-  if (badge === '优先处理') {
-    return '优先动作：先补这条逾期待办，避免客户节奏失联'
-  }
-
-  if (project.isSharedProject) {
-    return '优先动作：作为接收方继续推进，并把关键结果回填时间线'
-  }
-
-  return '优先动作：锁定本次跟进目标，并在结束后立即回填结果'
-}
-
-function buildTodoOwnerLabel(project) {
-  if (project.isSharedProject) {
-    return `${project.sharedFromName || '分享方'} 外发给我`
-  }
-
-  if (project.handoverStatus === 'handed_over') {
-    return `已外发给 ${project.handoverToName || '接收方'}`
-  }
-
-  return '我负责推进'
-}
-
 function isTaskClosed(status) {
   return status === 'done' || status === 'canceled'
+}
+
+function isClosedProject(project) {
+  const stage = String(project && project.stage || '').trim()
+  return stage === '成交' || stage === '流失' || !!(project && project.isClosed)
 }
 
 function buildTaskStats(tasks, now = new Date()) {
@@ -214,6 +142,10 @@ function getTaskTypeLabel(type) {
   const labelMap = {
     send_solution: '待发方案',
     send_quote: '待报价',
+    demo: '待演示',
+    report_solution: '待汇报方案',
+    business_negotiation: '待商务谈判',
+    research: '待调研',
     callback: '待回访',
     meeting: '待约会面',
     contract: '待签约',
@@ -305,7 +237,7 @@ function buildTaskFocus(task, project, urgency) {
     return '这条动作已过计划时间，当前处于逾期状态。'
   }
 
-  if (task.type === 'contract') {
+  if (task.type === 'contract' || task.type === 'business_negotiation') {
     return '当前已经进入签约动作，可同步确认条款、金额和落款时间。'
   }
 
@@ -313,8 +245,16 @@ function buildTaskFocus(task, project, urgency) {
     return '当前是报价动作，确认版本后发出并留存回执。'
   }
 
-  if (task.type === 'send_solution') {
+  if (task.type === 'send_solution' || task.type === 'report_solution') {
     return '方案类动作最好一次发全，避免客户来回追问版本差异。'
+  }
+
+  if (task.type === 'demo') {
+    return '演示类动作重点在场景和决策人，演示后及时记录真实反馈。'
+  }
+
+  if (task.type === 'research') {
+    return '调研类动作先把需求边界、预算口径和关键人补清楚。'
   }
 
   if (task.type === 'callback') {
@@ -336,7 +276,7 @@ function buildTaskBoard(taskMap, projectMap, now = new Date()) {
     const list = Array.isArray(taskMap[projectId]) ? taskMap[projectId] : []
 
     list.forEach((task) => {
-      if (!project || isTaskClosed(task.status)) {
+      if (!project || isClosedProject(project) || isTaskClosed(task.status)) {
         return
       }
 
@@ -360,7 +300,7 @@ function buildTaskBoard(taskMap, projectMap, now = new Date()) {
         ownerBadgeClass: project.isSharedProject ? 'is-brand' : '',
         stage: project.stage || '线索',
         amount: formatAmount(project.estimatedAmount),
-        nextFollowUpText: project.nextFollowUpDate ? formatTodoTime(parseDateTime(project.nextFollowUpDate), now) : '暂无下次跟进',
+        nextFollowUpText: task.dueDateText || formatDateTime(dueAt),
         focusText: buildTaskFocus(task, project, urgency),
         summaryText: String(task.description || '').trim() || '可补充结果说明，用于后续复盘。',
         canFollowUp: true,
@@ -383,7 +323,7 @@ function buildTaskBoard(taskMap, projectMap, now = new Date()) {
       overdueCount,
       todayCount
     },
-    cards: cards.slice(0, 4)
+    cards: cards.slice(0, 10)
   }
 }
 
@@ -408,7 +348,6 @@ function pushTimelineEvent(events, dateValue, time, title, desc, projectId) {
 exports.main = async () => {
   const wxContext = cloud.getWXContext()
   const now = new Date()
-  const todayStart = startOfDay(now)
   const monthStart = startOfMonth(now)
   const prevMonthStart = startOfPrevMonth(now)
   const prevMonthEnd = endOfPrevMonth(now)
@@ -421,6 +360,7 @@ exports.main = async () => {
     .get()
 
   const visibleProjects = (projectsResult.data || []).filter((item) => !(item.handoverStatus === 'handed_over' && !item.isSharedProject))
+  const activeProjects = visibleProjects.filter((item) => !isClosedProject(item))
   const projectIds = visibleProjects.map((item) => item._id)
   const projectMap = {}
   visibleProjects.forEach((item) => {
@@ -505,61 +445,18 @@ exports.main = async () => {
     return isClosed ? sum : sum + Number(item.estimatedAmount || 0)
   }, 0)
 
-  const overdueCount = visibleProjects.filter((item) => {
-    const nextDate = parseDateTime(item.nextFollowUpDate)
-    return nextDate && startOfDay(nextDate).getTime() < todayStart.getTime()
-  }).length
+  const activeProjectIdSet = new Set(activeProjects.map((item) => item._id))
   const taskDueCount = Object.keys(taskMap).reduce((count, projectId) => {
+    if (!activeProjectIdSet.has(projectId)) {
+      return count
+    }
+
     const stats = buildTaskStats(taskMap[projectId], now)
     return count + stats.openCount
   }, 0)
   const taskBoard = buildTaskBoard(taskMap, projectMap, now)
-
-  const upcomingCount = visibleProjects.filter((item) => {
-    const nextDate = parseDateTime(item.nextFollowUpDate)
-    return nextDate && startOfDay(nextDate).getTime() <= endOfDay(now).getTime()
-  }).length
-
-  const sortedTodos = visibleProjects
-    .map((item) => {
-      const nextDate = parseDateTime(item.nextFollowUpDate)
-      const latestFollow = latestFollowMap[item._id] || null
-      const latestSummary = String((latestFollow && (latestFollow.aiSummary || latestFollow.content)) || '').trim()
-      const taskStats = buildTaskStats(taskMap[item._id], now)
-      const primaryActionAt = taskStats.topTask && taskStats.topTask.dueAt
-        ? taskStats.topTask.dueAt
-        : nextDate
-      return {
-        id: item._id,
-        projectId: item._id,
-        title: item.projectName || '未命名项目',
-        client: item.clientName || '未填写客户',
-        stage: item.stage || '线索',
-        estimatedAmount: formatAmount(item.estimatedAmount),
-        contactCount: Array.isArray(item.contacts) ? item.contacts.length : 0,
-        ownerLabel: buildTodoOwnerLabel(item),
-        focusText: taskStats.topTask
-          ? `当前动作：${taskStats.topTask.title}`
-          : (item.isSharedProject
-            ? '接手后先确认共享历史，再继续推进'
-            : `当前阶段重点：${item.stage || '线索'}阶段继续推进`),
-        latestSummary: latestSummary || '当前还没有跟进摘要',
-        time: formatTodoTime(nextDate, now),
-        priority: taskStats.topTask
-          ? `优先动作：${taskStats.topTask.title}${taskStats.topTask.dueText ? `，截止 ${taskStats.topTask.dueText}` : ''}`
-          : buildTodoPriority(item, nextDate, now),
-        steps: buildTodoSteps(item),
-        badge: computeTodoBadge(nextDate, now),
-        openTaskCount: taskStats.openCount,
-        overdueTaskCount: taskStats.overdueCount,
-        topTaskTitle: taskStats.topTask ? taskStats.topTask.title : '',
-        topTaskDueText: taskStats.topTask ? taskStats.topTask.dueText : '',
-        sortWeight: primaryActionAt ? primaryActionAt.getTime() : Number.MAX_SAFE_INTEGER
-      }
-    })
-    .sort((left, right) => left.sortWeight - right.sortWeight)
-    .slice(0, 3)
-    .map(({ sortWeight, ...item }) => item)
+  const overdueCount = taskBoard.summary.overdueCount
+  const upcomingCount = activeProjects.filter((item) => buildTaskStats(taskMap[item._id], now).openCount > 0).length
 
   const timelineEvents = []
 
@@ -633,10 +530,10 @@ exports.main = async () => {
     metrics: [
       { label: '本月新增', value: String(currentMonthNewCount), note: formatMonthDelta(currentMonthNewCount, prevMonthNewCount) },
       { label: '成交金额', value: formatAmount(closedAmount), note: `在谈池 ${formatAmount(pipelineAmount)}` },
-      { label: '待跟进', value: String(upcomingCount), note: `逾期 ${overdueCount} 个 · 动作 ${taskDueCount} 条` }
+      { label: '推进动作', value: String(taskDueCount), note: `逾期 ${overdueCount} 条 · 涉及 ${upcomingCount} 个项目` }
     ],
     taskBoard,
-    todos: sortedTodos,
+    todos: [],
     timeline
   }
 }

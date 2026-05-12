@@ -12,19 +12,148 @@
   color: rgba(255, 245, 233, 0.8);
 }
 
-.mine-hero .hero-title {
-  margin-top: 12rpx;
-  font-size: 36rpx;
-}
-
 .mine-hero .hero-subtitle {
   margin-top: 6rpx;
   font-size: 22rpx;
   line-height: 1.45;
 }
 
+.mine-hero-profile {
+  display: flex;
+  align-items: center;
+  gap: 18rpx;
+  margin-top: 18rpx;
+}
+
+.mine-hero-avatar {
+  flex: 0 0 auto;
+  width: 84rpx;
+  height: 84rpx;
+  border-radius: 999rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.14);
+  box-shadow: inset 0 0 0 1rpx rgba(255, 255, 255, 0.16);
+  color: rgba(255, 246, 235, 0.96);
+  font-size: 34rpx;
+  font-weight: 700;
+}
+
+.mine-hero-profile-main {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.mine-hero-profile-main .hero-title {
+  margin-top: 0;
+  font-size: 36rpx;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .mine-overview-card {
   padding: 18rpx 20rpx 20rpx;
+}
+
+.mine-access-card {
+  padding: 18rpx 20rpx 20rpx;
+}
+
+.mine-name-form {
+  margin-top: 14rpx;
+}
+
+.mine-name-input {
+  width: 100%;
+  min-height: 82rpx;
+  padding: 0 22rpx;
+  border-radius: 20rpx;
+  background: var(--theme-surface-bg);
+  box-shadow: inset 0 0 0 2rpx rgba(24, 39, 51, 0.06);
+  font-size: 26rpx;
+  color: var(--theme-title);
+}
+
+.mine-name-tip {
+  margin-top: 10rpx;
+}
+
+.mine-name-sheet {
+  padding-top: 22rpx;
+}
+
+.mine-name-sheet-body {
+  padding-top: 2rpx;
+}
+
+.mine-name-sheet-meta {
+  padding: 14rpx 16rpx 12rpx;
+  border-radius: 20rpx;
+  background: var(--theme-soft-block-bg);
+  box-shadow: inset 0 0 0 1rpx rgba(24, 39, 51, 0.05);
+}
+
+.mine-name-sheet-meta + .mine-name-sheet-meta {
+  margin-top: 10rpx;
+}
+
+.mine-name-sheet-actions {
+  margin-top: 16rpx;
+}
+
+.mine-access-caption {
+  margin-top: 6rpx;
+}
+
+.mine-access-loading {
+  margin-top: 16rpx;
+}
+
+.mine-access-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10rpx;
+  margin-top: 16rpx;
+}
+
+.mine-access-item {
+  padding: 14rpx 14rpx 12rpx;
+  border-radius: 20rpx;
+  background: var(--theme-soft-block-bg);
+  box-shadow: inset 0 0 0 1rpx rgba(24, 39, 51, 0.05);
+}
+
+.mine-access-label {
+  font-size: 20rpx;
+  color: var(--theme-text-muted);
+}
+
+.mine-access-value {
+  margin-top: 6rpx;
+  font-size: 24rpx;
+  font-weight: 700;
+  color: var(--theme-title);
+  line-height: 1.4;
+}
+
+.mine-access-notice {
+  margin-top: 14rpx;
+  font-size: 21rpx;
+  line-height: 1.6;
+  color: var(--theme-text-soft);
+}
+
+.mine-access-actions {
+  margin-top: 14rpx;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12rpx;
+}
+
+.mine-access-action {
+  min-width: 188rpx;
 }
 
 .mine-section-head {
@@ -39,12 +168,13 @@
 .mine-overview-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8rpx;
+  gap: 6rpx;
   margin-top: 14rpx;
 }
 
 .mine-overview-metric {
-  padding: 14rpx 12rpx 12rpx;
+  min-width: 0;
+  padding: 12rpx 8rpx 10rpx;
   border-radius: 20rpx;
   background: var(--theme-soft-block-bg);
   box-shadow: inset 0 0 0 1rpx rgba(24, 39, 51, 0.05);
@@ -54,19 +184,30 @@
 .mine-overview-metric .metric-label {
   font-size: 18rpx;
   color: var(--theme-text-muted);
+  white-space: nowrap;
 }
 
 .mine-overview-metric .metric-value {
   margin-top: 4rpx;
-  font-size: 28rpx;
+  font-size: 26rpx;
   font-weight: 700;
   color: var(--theme-title);
+  line-height: 1.25;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .mine-entry-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   gap: 10rpx;
+}
+
+@media (max-width: 520px) {
+  .mine-access-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 .mine-entry-card {
@@ -350,6 +491,12 @@
   font-size: 46rpx;
 }
 
+.page-shell.mine-page.appearance-font-large .mine-hero-avatar {
+  width: 98rpx;
+  height: 98rpx;
+  font-size: 40rpx;
+}
+
 .page-shell.mine-page.appearance-font-large .mine-hero .hero-subtitle {
   font-size: 28rpx;
   line-height: 1.62;
@@ -391,6 +538,16 @@
 .page-shell.mine-page.appearance-font-readable .mine-hero .hero-title {
   font-size: 56rpx;
   line-height: 1.34;
+}
+
+.page-shell.mine-page.appearance-font-readable .mine-hero-profile {
+  align-items: flex-start;
+}
+
+.page-shell.mine-page.appearance-font-readable .mine-hero-avatar {
+  width: 112rpx;
+  height: 112rpx;
+  font-size: 46rpx;
 }
 
 .page-shell.mine-page.appearance-font-readable .mine-hero .hero-subtitle {

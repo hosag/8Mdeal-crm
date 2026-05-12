@@ -37,6 +37,16 @@ function getNotificationCategoryMeta(type) {
     }
   }
 
+  if (currentType === 'project_silent') {
+    return {
+      key: 'todo',
+      label: '项目回看',
+      hintText: '项目较久没有推进痕迹，可进入详情回看后自行决定是否补跟进或建任务。',
+      fallbackActionLabel: '查看项目',
+      autoResolveOnOpen: true
+    }
+  }
+
   if (currentType === 'shared_opened' || currentType === 'shared_imported' || currentType === 'shared_followed' || currentType === 'project_taken_over') {
     return {
       key: 'shared',

@@ -1,5 +1,21 @@
 const { loadTagEditorData, saveShareTagData } = require('../../services/data')
 const { syncPageAppearance } = require('../../utils/appearance')
+const { resolveShareTags } = require('../../services/share')
+
+const SCOPE_META = {
+  info: {
+    title: '发送资料',
+    desc: '对方仅查看资料，项目仍由我维护。'
+  },
+  outbound: {
+    title: '转交项目',
+    desc: '对方接手后继续推进，我在外发项目查看进展。'
+  }
+}
+
+function normalizeMode(value) {
+  return value === 'outbound' ? 'outbound' : 'info'
+}
 
 function buildVisibleFieldOptions(visibleFields, selected) {
   const selectedFields = Array.isArray(selected) ? selected : []
@@ -13,9 +29,10 @@ function buildVisibleFieldOptions(visibleFields, selected) {
 Page({
   data: {
     appearancePageClass: '',
+    mode: 'info',
     tagId: '',
-    tagName: '',
-    tagDesc: '',
+    scopeTitle: '发送资料',
+    scopeDesc: '对方仅查看资料，项目仍由我维护。',
     visibleFields: [],
     visibleFieldOptions: [],
     selected: [],
@@ -27,14 +44,23 @@ Page({
   async onLoad(options) {
     syncPageAppearance(this)
     try {
+      const mode = normalizeMode(options.mode)
       const { data, source } = await loadTagEditorData(options.tagId || '')
+      const scopes = resolveShareTags(data.shareTags)
+      const matchedScope = scopes.find((item) => item.mode === mode)
+      const scopeMeta = SCOPE_META[mode] || SCOPE_META.info
+      const scope = matchedScope || {
+        id: mode === 'outbound' ? 't2' : 't1',
+        fields: []
+      }
       this.setData({
-        tagId: data.tag.id || '',
-        tagName: data.tag.name,
-        tagDesc: data.tag.desc,
+        mode,
+        tagId: scope.id || '',
+        scopeTitle: scopeMeta.title,
+        scopeDesc: scopeMeta.desc,
         visibleFields: data.visibleFields,
-        visibleFieldOptions: buildVisibleFieldOptions(data.visibleFields, data.tag.fields),
-        selected: data.tag.fields,
+        visibleFieldOptions: buildVisibleFieldOptions(data.visibleFields, scope.fields),
+        selected: scope.fields,
         isLoading: false,
         dataSource: source
       })
@@ -70,28 +96,8 @@ Page({
     })
   },
 
-  onTagNameInput(event) {
-    this.setData({
-      tagName: event.detail.value
-    })
-  },
-
-  onTagDescInput(event) {
-    this.setData({
-      tagDesc: event.detail.value
-    })
-  },
-
   async handleSave() {
     if (this.data.isSaving) {
-      return
-    }
-
-    if (!String(this.data.tagName || '').trim()) {
-      wx.showToast({
-        title: '请先填写标签名称',
-        icon: 'none'
-      })
       return
     }
 
@@ -110,8 +116,9 @@ Page({
     try {
       const result = await saveShareTagData({
         tagId: this.data.tagId,
-        tagName: this.data.tagName,
-        tagDesc: this.data.tagDesc,
+        mode: this.data.mode,
+        tagName: this.data.scopeTitle,
+        tagDesc: this.data.scopeDesc,
         fields: this.data.selected
       })
 
@@ -120,7 +127,7 @@ Page({
       }
 
       wx.showToast({
-        title: '标签已保存',
+        title: '设置已保存',
         icon: 'success'
       })
 
@@ -131,7 +138,7 @@ Page({
       }, 320)
     } catch (error) {
       wx.showToast({
-        title: error.message || '当前无法保存标签，请稍后重试',
+        title: error.message || '当前无法保存设置，请稍后重试',
         icon: 'none'
       })
     } finally {

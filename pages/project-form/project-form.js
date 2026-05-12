@@ -1,5 +1,6 @@
 const { loadProjectFormData, saveProjectData, reportSystemFailureData, resolveNotificationData } = require('../../services/data')
 const { syncPageAppearance } = require('../../utils/appearance')
+const { ensureActionAllowed } = require('../../utils/entitlement-guard')
 
 Page({
   data: {
@@ -10,13 +11,21 @@ Page({
     isSaving: false,
     dataSource: 'Mock Demo',
     stages: ['线索', '洽谈', '方案', '商务', '成交', '流失'],
+    silenceReminderOptions: [
+      { value: 0, label: '不提醒' },
+      { value: 7, label: '7天' },
+      { value: 14, label: '14天' },
+      { value: 30, label: '30天' }
+    ],
     stageIndex: 0,
     form: {
       projectName: '',
       clientName: '',
+      voiceAliasesText: '',
       stage: '线索',
       estimatedAmount: '',
       expectedCommission: '',
+      followUpSilenceDays: 0,
       tagsText: '',
       description: '',
       contacts: [
@@ -92,6 +101,13 @@ Page({
     this.setData(update)
   },
 
+  setSilenceReminder(event) {
+    const value = Number(event.currentTarget.dataset.value || 0)
+    this.setData({
+      'form.followUpSilenceDays': Number.isFinite(value) ? value : 0
+    })
+  },
+
   onStageChange(event) {
     const stageIndex = Number(event.detail.value)
     this.setData({
@@ -151,9 +167,13 @@ Page({
       projectId: this.data.projectId,
       projectName: String(this.data.form.projectName || '').trim(),
       clientName: String(this.data.form.clientName || '').trim(),
+      voiceAliasesText: this.data.isEdit
+        ? String(this.data.form.voiceAliasesText || '').trim()
+        : '',
       stage: this.data.form.stage,
       estimatedAmount: this.data.form.estimatedAmount,
       expectedCommission: this.data.form.expectedCommission,
+      followUpSilenceDays: Number(this.data.form.followUpSilenceDays || 0),
       tagsText: this.data.form.tagsText,
       description: this.data.form.description,
       contacts: this.data.form.contacts
@@ -164,6 +184,15 @@ Page({
         title: '请先填写项目名称、客户名称和当前阶段',
         icon: 'none'
       })
+      return
+    }
+
+    const decision = await ensureActionAllowed('save_project', {
+      refresh: true,
+      isEdit: this.data.isEdit,
+      guide: true
+    })
+    if (!decision.allowed) {
       return
     }
 

@@ -1,18 +1,86 @@
+.project-detail-page .hero {
+  padding: 26rpx 28rpx 28rpx;
+  border-radius: 32rpx;
+  box-shadow: var(--theme-hero-shadow);
+}
+
+.project-detail-page .eyebrow-row {
+  gap: 12rpx;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.project-detail-page .eyebrow,
+.project-detail-page .source-badge {
+  min-height: 44rpx;
+  padding: 0 16rpx;
+  backdrop-filter: blur(12rpx);
+}
+
+.project-detail-page .hero-title {
+  margin-top: 18rpx;
+  font-size: 40rpx;
+  line-height: 1.18;
+}
+
 .project-detail-page .hero-summary-grid {
-  margin-top: 16rpx;
+  margin-top: 14rpx;
+  gap: 10rpx;
 }
 
 .project-detail-page .hero-subtitle {
-  margin-top: 10rpx;
+  margin-top: 8rpx;
+  max-width: 92%;
+  font-size: 21rpx;
+  line-height: 1.46;
+}
+
+.project-detail-page .pill-row {
+  margin-top: 14rpx;
+  gap: 8rpx;
+}
+
+.project-detail-page .hero-summary-grid .detail-box {
+  padding: 16rpx 16rpx 14rpx;
+  border-radius: 22rpx;
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: inset 0 0 0 1rpx rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(12rpx);
+}
+
+.project-detail-page .hero-summary-grid .detail-box-label {
+  font-size: 19rpx;
+  color: rgba(246, 240, 229, 0.72);
+}
+
+.project-detail-page .hero-summary-grid .detail-box-value {
+  margin-top: 6rpx;
+  font-size: 31rpx;
+  color: var(--theme-hero-text);
 }
 
 .project-detail-page .hero-summary-grid .detail-box-note {
-  margin-top: 6rpx;
-  font-size: 20rpx;
+  margin-top: 5rpx;
+  font-size: 18rpx;
+  line-height: 1.45;
+  color: rgba(255, 241, 224, 0.66);
 }
 
 .project-detail-page .detail-section-card {
   padding: 26rpx;
+}
+
+.project-detail-page .section-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 18rpx;
+}
+
+.project-detail-page .section-link-brand {
+  font-weight: 700;
+  color: var(--theme-brand-text);
 }
 
 .project-detail-page .detail-overview-card {
@@ -21,6 +89,126 @@
 
 .project-detail-page .detail-overview-desc {
   margin-top: 4rpx;
+}
+
+.project-detail-page .alias-manager-card {
+  margin-top: 16rpx;
+  padding: 20rpx 22rpx;
+  border-radius: 24rpx;
+  background: var(--theme-project-card-bg);
+  box-shadow: var(--theme-project-card-shadow);
+}
+
+.project-detail-page .alias-manager-head {
+  align-items: flex-start;
+}
+
+.project-detail-page .alias-manager-inline-head {
+  align-items: flex-start;
+  gap: 12rpx;
+}
+
+.project-detail-page .alias-manager-priority-link {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+.project-detail-page .alias-manager-subtitle {
+  margin-top: 6rpx;
+}
+
+.project-detail-page .alias-manager-hint,
+.project-detail-page .alias-manager-empty {
+  margin-top: 10rpx;
+}
+
+.project-detail-page .alias-manager-recommend {
+  margin-top: 14rpx;
+  padding-top: 14rpx;
+  border-top: 1rpx dashed var(--theme-divider);
+}
+
+.project-detail-page .alias-manager-recommend.is-history-only {
+  margin-top: 12rpx;
+}
+
+.project-detail-page .alias-manager-row {
+  margin-top: 10rpx;
+}
+
+.project-detail-page .alias-manager-pill {
+  transition: transform 160ms ease, opacity 160ms ease, box-shadow 160ms ease;
+}
+
+.project-detail-page .alias-manager-pill.is-active {
+  background: var(--theme-summary-bg);
+  box-shadow: inset 0 0 0 1rpx var(--theme-brand-bg);
+  color: var(--theme-text-main);
+}
+
+.project-detail-page .alias-manager-pill.is-suggested {
+  background: var(--theme-soft-block-bg);
+  box-shadow: inset 0 0 0 1rpx var(--theme-divider);
+  color: var(--theme-brand-text);
+}
+
+.project-detail-page .alias-manager-pill.is-stale {
+  background: rgba(191, 71, 52, 0.08);
+  box-shadow: inset 0 0 0 1rpx rgba(191, 71, 52, 0.18);
+  color: #b24d3e;
+}
+
+.project-detail-page .alias-manager-pill.is-removable:active,
+.project-detail-page .alias-manager-pill.is-suggested:active,
+.project-detail-page .alias-manager-pill.is-stale:active {
+  transform: scale(0.98);
+}
+
+.project-detail-page .alias-manager-pill.is-disabled {
+  opacity: 0.56;
+}
+
+.project-detail-page .alias-hit-list {
+  margin-top: 10rpx;
+  display: flex;
+  flex-direction: column;
+  gap: 10rpx;
+}
+
+.project-detail-page .alias-hit-item {
+  padding: 16rpx 18rpx;
+  border-radius: 20rpx;
+  background: var(--theme-soft-block-bg);
+  box-shadow: inset 0 0 0 1rpx var(--theme-divider);
+}
+
+.project-detail-page .alias-hit-head {
+  align-items: flex-start;
+  gap: 12rpx;
+}
+
+.project-detail-page .alias-hit-title {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 23rpx;
+  font-weight: 700;
+  line-height: 1.5;
+  color: var(--theme-text-main);
+}
+
+.project-detail-page .alias-hit-time {
+  flex: 0 0 auto;
+}
+
+.project-detail-page .alias-hit-reason {
+  margin-top: 6rpx;
+}
+
+.project-detail-page .alias-hit-preview {
+  margin-top: 8rpx;
+  font-size: 22rpx;
+  line-height: 1.55;
+  color: var(--theme-text-secondary);
 }
 
 .project-detail-page .detail-overview-focus {
@@ -56,6 +244,61 @@
 
 .project-detail-page .detail-section-meta {
   margin-top: 14rpx;
+}
+
+.project-detail-page .project-assets-preview-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10rpx;
+  margin-top: 14rpx;
+}
+
+.project-detail-page .project-asset-preview {
+  position: relative;
+  aspect-ratio: 1;
+  border-radius: 20rpx;
+  overflow: hidden;
+  background: var(--theme-soft-block-bg);
+  box-shadow: inset 0 0 0 1rpx var(--theme-divider);
+}
+
+.project-detail-page .project-asset-thumb {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.project-detail-page .project-asset-file {
+  height: 100%;
+  box-sizing: border-box;
+  padding: 14rpx;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.project-detail-page .project-asset-file-type {
+  align-self: flex-start;
+  min-height: 36rpx;
+  padding: 0 10rpx;
+  border-radius: 999rpx;
+  display: inline-flex;
+  align-items: center;
+  font-size: 18rpx;
+  font-weight: 700;
+  color: var(--theme-brand-text);
+  background: var(--theme-brand-bg);
+}
+
+.project-detail-page .project-asset-file-name {
+  min-width: 0;
+  font-size: 20rpx;
+  line-height: 1.4;
+  color: var(--theme-text-main);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .project-detail-page .detail-section-meta .compact-inline-item {
@@ -208,6 +451,187 @@
   margin-top: 18rpx;
 }
 
+.project-ai-sheet,
+.project-review-sheet {
+  top: 18vh;
+  bottom: 0;
+  height: 82vh;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding-top: 20rpx;
+  padding-bottom: calc(24rpx + env(safe-area-inset-bottom));
+}
+
+.project-ai-sheet .sheet-header,
+.project-review-sheet .sheet-header {
+  margin-bottom: 10rpx;
+}
+
+.project-ai-sheet .project-ai-header-main,
+.project-review-sheet .project-ai-header-main {
+  min-width: 0;
+}
+
+.project-ai-sheet .project-ai-header-caption,
+.project-review-sheet .project-ai-header-caption {
+  margin-top: 6rpx;
+  font-size: 22rpx;
+  line-height: 1.5;
+  color: var(--theme-text-soft);
+}
+
+.project-ai-sheet .project-ai-meta-row,
+.project-review-sheet .project-ai-meta-row {
+  margin-bottom: 12rpx;
+  gap: 8rpx;
+}
+
+.project-ai-sheet .project-ai-scroll,
+.project-review-sheet .project-ai-scroll {
+  flex: 0 0 auto;
+  min-height: 0;
+  padding-right: 4rpx;
+  padding-bottom: calc(32rpx + env(safe-area-inset-bottom));
+  box-sizing: border-box;
+}
+
+.project-ai-sheet .project-ai-state-card,
+.project-review-sheet .project-ai-state-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 34rpx 28rpx;
+  border-radius: 26rpx;
+  text-align: center;
+  background: var(--theme-project-card-bg);
+  box-shadow: var(--theme-state-card-shadow);
+}
+
+.project-ai-sheet .project-ai-loading-card .ai-agent-loader.is-large,
+.project-review-sheet .project-ai-loading-card .ai-agent-loader.is-large {
+  margin-bottom: 18rpx;
+}
+
+.project-ai-sheet .project-ai-state-title,
+.project-review-sheet .project-ai-state-title {
+  margin-top: 18rpx;
+}
+
+.project-ai-sheet .project-ai-state-desc,
+.project-review-sheet .project-ai-state-desc {
+  margin-top: 8rpx;
+  text-align: center;
+}
+
+.project-ai-sheet .project-ai-result-wrap,
+.project-review-sheet .project-ai-result-wrap {
+  padding-bottom: 6rpx;
+}
+
+.project-review-sheet .project-ai-result-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16rpx;
+  margin-bottom: 12rpx;
+}
+
+.project-ai-sheet .project-ai-origin,
+.project-review-sheet .project-ai-origin {
+  margin-bottom: 12rpx;
+  font-size: 20rpx;
+  line-height: 1.6;
+  color: var(--theme-text-soft);
+}
+
+.project-review-sheet .project-ai-result-head .project-ai-origin {
+  flex: 1;
+  min-width: 0;
+  margin-bottom: 0;
+}
+
+.project-ai-sheet .project-ai-panel,
+.project-review-sheet .project-ai-panel {
+  padding: 20rpx 20rpx 22rpx;
+  border-radius: 24rpx;
+  background: var(--theme-project-card-bg);
+  box-shadow: var(--theme-state-card-shadow);
+}
+
+.project-ai-sheet .project-ai-panel + .project-ai-panel,
+.project-review-sheet .project-ai-panel + .project-ai-panel {
+  margin-top: 12rpx;
+}
+
+.project-ai-sheet .project-ai-label,
+.project-review-sheet .project-ai-label {
+  font-size: 20rpx;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--theme-text-soft);
+}
+
+.project-ai-sheet .project-ai-text,
+.project-review-sheet .project-ai-text {
+  margin-top: 8rpx;
+  font-size: 24rpx;
+  line-height: 1.7;
+  color: var(--theme-text-main);
+}
+
+.project-ai-sheet .project-ai-list,
+.project-review-sheet .project-ai-list {
+  margin-top: 8rpx;
+  display: flex;
+  flex-direction: column;
+  gap: 8rpx;
+}
+
+.project-ai-sheet .project-ai-list-item,
+.project-review-sheet .project-ai-list-item {
+  position: relative;
+  padding-left: 18rpx;
+  font-size: 24rpx;
+  line-height: 1.68;
+  color: var(--theme-text-main);
+}
+
+.project-ai-sheet .project-ai-list-item::before,
+.project-review-sheet .project-ai-list-item::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 14rpx;
+  width: 8rpx;
+  height: 8rpx;
+  border-radius: 50%;
+  background: var(--theme-brand-text);
+}
+
+.project-ai-sheet .project-ai-list-item.is-blocker::before,
+.project-review-sheet .project-ai-list-item.is-blocker::before {
+  background: var(--theme-soft-badge-text);
+}
+
+.project-ai-sheet .project-ai-actions,
+.project-review-sheet .project-ai-actions {
+  margin-top: 18rpx;
+}
+
+.project-review-sheet .project-ai-head-actions {
+  flex: 0 0 auto;
+  margin-top: 0;
+  justify-content: flex-end;
+}
+
+.project-review-sheet .project-ai-head-actions .btn-ghost {
+  min-height: 52rpx;
+  padding: 0 18rpx;
+  white-space: nowrap;
+}
+
 .project-detail-page .task-latest-done {
   margin-top: 10rpx;
 }
@@ -222,11 +646,19 @@
 
 .project-detail-page .task-card-head {
   align-items: flex-start;
+  gap: 16rpx;
 }
 
 .project-detail-page .task-card-main {
   flex: 1 1 auto;
   min-width: 0;
+}
+
+.project-detail-page .task-card-head .status-badge {
+  flex: 0 0 auto;
+  min-width: 96rpx;
+  box-sizing: border-box;
+  white-space: nowrap;
 }
 
 .project-detail-page .task-card-title {
@@ -248,98 +680,7 @@
 
 .project-detail-page .task-card-actions {
   margin-top: 14rpx;
-}
-
-.share-entry-sheet {
-  background: var(--theme-sheet-bg);
-  box-shadow: var(--theme-sheet-shadow);
-  top: 42vh;
-  padding-top: 20rpx;
-  padding-bottom: calc(24rpx + env(safe-area-inset-bottom));
-  display: flex;
-  flex-direction: column;
-  overflow-y: auto;
-}
-
-.share-entry-sheet .sheet-header {
-  margin-bottom: 10rpx;
-}
-
-.share-entry-project-card {
-  margin-bottom: 12rpx;
-  padding: 16rpx 18rpx;
-  border-radius: 24rpx;
-  background: var(--theme-soft-block-bg);
-  box-shadow: inset 0 0 0 1rpx var(--theme-divider);
-}
-
-.share-entry-project-name {
-  font-size: 28rpx;
-  font-weight: 700;
-  line-height: 1.4;
-  color: var(--theme-title);
-}
-
-.share-entry-project-pills {
-  margin-top: 8rpx;
-  gap: 6rpx;
-}
-
-.share-entry-project-pills .compact-inline-item {
-  padding: 6rpx 10rpx;
-  font-size: 20rpx;
-}
-
-.share-entry-list {
-  margin-top: 0;
-}
-
-.share-entry-card {
-  padding: 14rpx 16rpx 16rpx;
-  border-radius: 22rpx;
-  background: var(--theme-project-card-bg);
-  box-shadow: var(--theme-state-card-shadow);
-}
-
-.share-entry-card + .share-entry-card {
-  margin-top: 10rpx;
-}
-
-.share-entry-head {
-  align-items: flex-start;
-}
-
-.share-entry-head .mode-title {
-  font-size: 30rpx;
-}
-
-.share-entry-head .mode-desc {
-  margin-top: 4rpx;
-  font-size: 23rpx;
-  line-height: 1.5;
-  color: var(--theme-text-secondary);
-}
-
-.share-entry-option-pills {
-  margin-top: 8rpx;
-  gap: 6rpx;
-}
-
-.share-entry-option-pills .field-pill {
-  min-height: 40rpx;
-  padding: 0 12rpx;
-  font-size: 19rpx;
-}
-
-.share-entry-head .status-badge {
-  flex: 0 0 auto;
-  margin-top: 2rpx;
-  min-height: 40rpx;
-  padding: 0 12rpx;
-  font-size: 19rpx;
-  color: var(--theme-text-secondary);
-  background: rgba(255, 255, 255, 0.58);
-  box-shadow: inset 0 0 0 1rpx var(--theme-divider);
+  justify-content: flex-end;
 }
 
 .task-complete-mask {
@@ -386,6 +727,47 @@
 .task-complete-textarea {
   min-height: 48rpx;
   line-height: 1.65;
+}
+
+.task-complete-sheet .primary-title-input {
+  min-height: 76rpx;
+  height: 76rpx;
+  padding: 16rpx 22rpx;
+  border-radius: 20rpx;
+  background: var(--theme-card-bg);
+  box-shadow:
+    inset 0 0 0 2rpx rgba(23, 98, 96, 0.18),
+    0 6rpx 14rpx rgba(24, 39, 51, 0.04);
+  font-size: 26rpx;
+  font-weight: 700;
+  color: var(--theme-title);
+  line-height: 44rpx;
+}
+
+.task-complete-voice-row {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 12rpx;
+}
+
+.task-complete-voice-btn {
+  min-width: 168rpx;
+  height: 64rpx;
+  border-radius: 18rpx;
+  background: var(--theme-button-secondary-bg);
+  color: var(--theme-button-secondary-text);
+  box-shadow: inset 0 0 0 2rpx var(--theme-divider);
+}
+
+.task-complete-voice-btn.is-recording {
+  background: var(--theme-danger-bg);
+  color: var(--theme-danger-text);
+  box-shadow: inset 0 0 0 2rpx var(--theme-danger-bg);
+}
+
+.task-complete-voice-btn.is-busy {
+  color: var(--theme-text-soft);
+  background: var(--theme-inline-bg);
 }
 
 .task-complete-toggle-title {
@@ -620,6 +1002,42 @@
   box-shadow: inset 0 0 0 1rpx rgba(255, 255, 255, 0.18);
 }
 
+.project-ai-sheet.appearance-font-large .project-ai-header-caption,
+.project-ai-sheet.appearance-font-large .project-ai-origin,
+.project-ai-sheet.appearance-font-large .project-ai-generated,
+.project-ai-sheet.appearance-font-large .project-ai-label,
+.project-review-sheet.appearance-font-large .project-ai-header-caption,
+.project-review-sheet.appearance-font-large .project-ai-origin,
+.project-review-sheet.appearance-font-large .project-ai-generated,
+.project-review-sheet.appearance-font-large .project-ai-label {
+  font-size: 23rpx;
+}
+
+.project-ai-sheet.appearance-font-large .project-ai-text,
+.project-ai-sheet.appearance-font-large .project-ai-list-item,
+.project-review-sheet.appearance-font-large .project-ai-text,
+.project-review-sheet.appearance-font-large .project-ai-list-item {
+  font-size: 26rpx;
+}
+
+.project-ai-sheet.appearance-font-readable .project-ai-header-caption,
+.project-ai-sheet.appearance-font-readable .project-ai-origin,
+.project-ai-sheet.appearance-font-readable .project-ai-generated,
+.project-ai-sheet.appearance-font-readable .project-ai-label,
+.project-review-sheet.appearance-font-readable .project-ai-header-caption,
+.project-review-sheet.appearance-font-readable .project-ai-origin,
+.project-review-sheet.appearance-font-readable .project-ai-generated,
+.project-review-sheet.appearance-font-readable .project-ai-label {
+  font-size: 25rpx;
+}
+
+.project-ai-sheet.appearance-font-readable .project-ai-text,
+.project-ai-sheet.appearance-font-readable .project-ai-list-item,
+.project-review-sheet.appearance-font-readable .project-ai-text,
+.project-review-sheet.appearance-font-readable .project-ai-list-item {
+  font-size: 29rpx;
+}
+
 .footer-bar.footer-bar-detail .footer-tertiary-action {
   background: transparent;
   box-shadow: inset 0 0 0 1rpx var(--theme-divider);
@@ -629,18 +1047,45 @@
   opacity: 0.72;
 }
 
+.page-shell.project-detail-page.appearance-font-large .hero {
+  padding: 30rpx;
+}
+
+.page-shell.project-detail-page.appearance-font-large .hero-title {
+  font-size: 50rpx;
+}
+
+.page-shell.project-detail-page.appearance-font-large .hero-subtitle {
+  font-size: 28rpx;
+  line-height: 1.68;
+}
+
+.page-shell.project-detail-page.appearance-font-large .hero-summary-grid .detail-box {
+  border-radius: 24rpx;
+}
+
+.page-shell.project-detail-page.appearance-font-large .hero-summary-grid .detail-box-label {
+  font-size: 23rpx;
+}
+
+.page-shell.project-detail-page.appearance-font-large .hero-summary-grid .detail-box-value {
+  font-size: 36rpx;
+}
+
+.page-shell.project-detail-page.appearance-font-large .hero-summary-grid .detail-box-note {
+  font-size: 21rpx;
+}
+
 .footer-bar.appearance-font-large .btn-primary,
 .footer-bar.appearance-font-large .btn-secondary,
 .footer-bar.appearance-font-large .btn-ghost,
 .project-detail-contact-sheet.appearance-font-large .sheet-close,
-.share-entry-sheet.appearance-font-large .sheet-close,
 .task-complete-sheet.appearance-font-large .sheet-close {
   font-size: 30rpx;
 }
 
 .project-detail-contact-sheet.appearance-font-large .sheet-title,
 .project-detail-add-contact-sheet.appearance-font-large .sheet-title,
-.share-entry-sheet.appearance-font-large .sheet-title,
 .task-complete-sheet.appearance-font-large .sheet-title,
 .task-complete-sheet.appearance-font-large .task-complete-toggle-title {
   font-size: 30rpx;
@@ -648,7 +1093,6 @@
 
 .project-detail-contact-sheet.appearance-font-large .contact-name,
 .project-detail-add-contact-sheet.appearance-font-large .field-label,
-.share-entry-sheet.appearance-font-large .mode-title,
 .task-complete-sheet.appearance-font-large .field-label {
   font-size: 28rpx;
 }
@@ -657,23 +1101,8 @@
 .project-detail-contact-sheet.appearance-font-large .contact-sheet-label,
 .project-detail-contact-sheet.appearance-font-large .contact-sheet-banner,
 .project-detail-add-contact-sheet.appearance-font-large .contact-sheet-banner,
-.share-entry-sheet.appearance-font-large .mode-desc,
 .task-complete-sheet.appearance-font-large .helper-text {
   font-size: 26rpx;
-}
-
-.share-entry-sheet.appearance-font-large .share-entry-project-name {
-  font-size: 32rpx;
-}
-
-.share-entry-sheet.appearance-font-large {
-  top: 38vh;
-}
-
-.share-entry-sheet.appearance-font-large .share-entry-project-pills .compact-inline-item,
-.share-entry-sheet.appearance-font-large .share-entry-option-pills .field-pill {
-  min-height: 48rpx;
-  font-size: 23rpx;
 }
 
 .project-detail-page.appearance-font-large .share-history-top .status-badge {
@@ -685,7 +1114,6 @@
   font-size: 30rpx;
 }
 
-.share-entry-sheet.appearance-font-large .status-badge,
 .task-complete-sheet.appearance-font-large .chip {
   font-size: 24rpx;
 }
@@ -700,14 +1128,12 @@
 .footer-bar.appearance-font-readable .btn-secondary,
 .footer-bar.appearance-font-readable .btn-ghost,
 .project-detail-contact-sheet.appearance-font-readable .sheet-close,
-.share-entry-sheet.appearance-font-readable .sheet-close,
 .task-complete-sheet.appearance-font-readable .sheet-close {
   font-size: 38rpx;
 }
 
 .project-detail-contact-sheet.appearance-font-readable .sheet-title,
 .project-detail-add-contact-sheet.appearance-font-readable .sheet-title,
-.share-entry-sheet.appearance-font-readable .sheet-title,
 .task-complete-sheet.appearance-font-readable .sheet-title,
 .task-complete-sheet.appearance-font-readable .task-complete-toggle-title {
   font-size: 38rpx;
@@ -715,7 +1141,6 @@
 
 .project-detail-contact-sheet.appearance-font-readable .contact-name,
 .project-detail-add-contact-sheet.appearance-font-readable .field-label,
-.share-entry-sheet.appearance-font-readable .mode-title,
 .task-complete-sheet.appearance-font-readable .field-label {
   font-size: 34rpx;
 }
@@ -724,23 +1149,8 @@
 .project-detail-contact-sheet.appearance-font-readable .contact-sheet-label,
 .project-detail-contact-sheet.appearance-font-readable .contact-sheet-banner,
 .project-detail-add-contact-sheet.appearance-font-readable .contact-sheet-banner,
-.share-entry-sheet.appearance-font-readable .mode-desc,
 .task-complete-sheet.appearance-font-readable .helper-text {
   font-size: 34rpx;
-}
-
-.share-entry-sheet.appearance-font-readable .share-entry-project-name {
-  font-size: 38rpx;
-}
-
-.share-entry-sheet.appearance-font-readable {
-  top: 30vh;
-}
-
-.share-entry-sheet.appearance-font-readable .share-entry-project-pills .compact-inline-item,
-.share-entry-sheet.appearance-font-readable .share-entry-option-pills .field-pill {
-  min-height: 56rpx;
-  font-size: 28rpx;
 }
 
 .project-detail-page.appearance-font-readable .share-history-top .status-badge {
@@ -752,7 +1162,6 @@
   font-size: 38rpx;
 }
 
-.share-entry-sheet.appearance-font-readable .status-badge,
 .task-complete-sheet.appearance-font-readable .chip {
   font-size: 30rpx;
 }
@@ -761,4 +1170,100 @@
 .task-complete-sheet.appearance-font-readable .textarea-sim,
 .task-complete-sheet.appearance-font-readable .picker-sim {
   font-size: 38rpx;
+}
+
+.page-shell.project-detail-page.appearance-font-readable .hero {
+  padding: 34rpx;
+}
+
+.page-shell.project-detail-page.appearance-font-readable .hero-title {
+  font-size: 60rpx;
+  line-height: 1.34;
+}
+
+.page-shell.project-detail-page.appearance-font-readable .hero-subtitle {
+  font-size: 36rpx;
+  line-height: 1.76;
+}
+
+.page-shell.project-detail-page.appearance-font-readable .hero-summary-grid .detail-box {
+  border-radius: 26rpx;
+}
+
+.page-shell.project-detail-page.appearance-font-readable .hero-summary-grid .detail-box-label {
+  font-size: 28rpx;
+}
+
+.page-shell.project-detail-page.appearance-font-readable .hero-summary-grid .detail-box-value {
+  font-size: 42rpx;
+}
+
+.page-shell.project-detail-page.appearance-font-readable .hero-summary-grid .detail-box-note {
+  font-size: 26rpx;
+}
+
+.transfer-mode-sheet {
+  max-height: 82vh;
+  padding-bottom: calc(28rpx + env(safe-area-inset-bottom));
+}
+
+.transfer-mode-caption {
+  margin-top: 6rpx;
+  max-width: 520rpx;
+  font-size: 22rpx;
+  line-height: 1.4;
+  color: var(--theme-text-soft);
+}
+
+.transfer-mode-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14rpx;
+  margin-top: 18rpx;
+}
+
+.transfer-mode-card {
+  position: relative;
+  overflow: hidden;
+  padding: 22rpx;
+  border-radius: 24rpx;
+  background: var(--theme-project-card-bg);
+  box-shadow: inset 0 0 0 1rpx var(--theme-divider);
+}
+
+.transfer-mode-card.is-active {
+  background: var(--theme-summary-bg);
+  box-shadow: inset 0 0 0 2rpx var(--theme-brand-bg);
+}
+
+.transfer-selected-mark {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 58rpx;
+  height: 46rpx;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4rpx 2rpx 0 8rpx;
+  border-top-left-radius: 22rpx;
+  background: rgba(49, 112, 92, 0.08);
+  color: rgba(49, 112, 92, 0.72);
+  box-shadow: inset 1rpx 1rpx 0 rgba(49, 112, 92, 0.1);
+  font-size: 21rpx;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.transfer-name-field {
+  margin-top: 18rpx;
+}
+
+.transfer-mode-note {
+  margin-top: 14rpx;
+}
+
+.transfer-mode-actions {
+  margin-top: 20rpx;
 }

@@ -1,0 +1,6 @@
+{
+  "navigationBarTitleText": "套餐与加购",
+  "usingComponents": {
+    "loading-panel": "/components/loading-panel/index"
+  }
+}

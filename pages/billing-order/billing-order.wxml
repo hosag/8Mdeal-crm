@@ -1,0 +1,105 @@
+<view class="page-shell billing-order-page {{appearancePageClass}}">
+  <view wx:if="{{isLoading}}" class="rise-in">
+    <loading-panel rows="3" appearance-page-class="{{appearancePageClass}}" />
+  </view>
+
+  <block wx:else>
+    <view class="hero rise-in billing-order-hero">
+      <view class="eyebrow-row">
+        <view class="eyebrow">订单详情</view>
+      </view>
+      <view class="hero-title">{{order.title || '待确认订单'}}</view>
+      <view class="hero-subtitle">{{order.statusLabel}} · {{order.billingCycleLabel}}</view>
+      <view class="billing-order-hero-price-row">
+        <view class="billing-order-hero-price">{{order.pricingSnapshot.priceText || order.amountText}}</view>
+        <view wx:if="{{order.originalPriceText}}" class="billing-order-hero-price-note">原价 {{order.originalPriceText}}</view>
+      </view>
+      <view class="hero-actions">
+        <view class="btn-secondary" bindtap="handlePrimaryAction">{{isSubmitting ? '处理中...' : primaryActionMeta.actionText}}</view>
+        <view class="btn-ghost" bindtap="openPlansPage">回到套餐页</view>
+      </view>
+    </view>
+
+    <view wx:if="{{entryGuide.visible}}" class="form-card section rise-in stagger-1 billing-order-entry-banner is-{{entryGuide.tone}}">
+      <view class="billing-order-entry-banner-title">{{entryGuide.title}}</view>
+      <view class="billing-order-entry-banner-desc">{{entryGuide.desc}}</view>
+    </view>
+
+    <view class="form-card section rise-in stagger-1 billing-order-callout-card">
+      <view class="section-title">{{primaryActionMeta.title}}</view>
+      <view class="card-subtitle billing-order-callout-desc">{{primaryActionMeta.desc}}</view>
+    </view>
+
+    <view class="form-card section rise-in stagger-2">
+      <view class="section-header">
+        <view>
+          <view class="section-title">购买确认</view>
+        </view>
+      </view>
+      <view class="billing-order-purchase-card">
+        <view class="billing-order-purchase-head">
+          <view>
+            <view class="soft-badge">{{order.productTypeLabel}}</view>
+            <view class="billing-order-purchase-title">{{order.pricingSnapshot.productName || order.title}}</view>
+            <view class="billing-order-purchase-subtitle">{{order.pricingSnapshot.displayBillingText || order.billingCycleLabel}}</view>
+          </view>
+          <view class="status-badge {{order.statusClass}}">{{order.statusLabel}}</view>
+        </view>
+        <view class="billing-order-grid billing-order-summary-grid">
+          <view class="billing-order-item" wx:for="{{productSummaryRows}}" wx:key="key">
+            <view class="billing-order-label">{{item.label}}</view>
+            <view class="billing-order-value">{{item.value}}</view>
+          </view>
+        </view>
+        <view wx:if="{{order.capabilityLines.length}}" class="billing-order-capability-wrap">
+          <view class="billing-order-capability-title">包含能力</view>
+          <view class="compact-inline-metrics billing-order-capability-pills">
+            <view class="compact-inline-item" wx:for="{{order.capabilityLines}}" wx:key="*this">{{item}}</view>
+          </view>
+        </view>
+        <view wx:if="{{order.pricingSnapshot.featureLines.length}}" class="billing-order-feature-list">
+          <view class="billing-order-feature-row" wx:for="{{order.pricingSnapshot.featureLines}}" wx:key="*this">
+            <view class="billing-order-feature-dot"></view>
+            <view class="billing-order-feature-text">{{item}}</view>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <view class="form-card section rise-in stagger-3">
+      <view class="section-title">订单概览</view>
+      <view class="billing-order-grid">
+        <view class="billing-order-item" wx:for="{{overviewRows}}" wx:key="key">
+          <view class="billing-order-label">{{item.label}}</view>
+          <view class="billing-order-value">{{item.value}}</view>
+        </view>
+      </view>
+    </view>
+
+    <view wx:if="{{effectiveStatusCard.visible}}" class="form-card section rise-in stagger-4 billing-order-effective-card">
+      <view class="section-title">{{effectiveStatusCard.title}}</view>
+      <view class="card-subtitle billing-order-effective-desc">{{effectiveStatusCard.desc}}</view>
+      <view class="billing-order-grid">
+        <view class="billing-order-item" wx:for="{{effectiveStatusCard.rows}}" wx:key="key">
+          <view class="billing-order-label">{{item.label}}</view>
+          <view class="billing-order-value">{{item.value}}</view>
+        </view>
+      </view>
+    </view>
+
+    <view class="form-card section rise-in stagger-5">
+      <view class="section-header">
+        <view>
+          <view class="section-title">支付状态</view>
+        </view>
+      </view>
+      <view wx:if="{{paymentSummaryRows.length}}" class="billing-order-grid">
+        <view class="billing-order-item" wx:for="{{paymentSummaryRows}}" wx:key="key">
+          <view class="billing-order-label">{{item.label}}</view>
+          <view class="billing-order-value">{{item.value}}</view>
+        </view>
+      </view>
+      <view wx:else class="center-note billing-order-empty-copy">当前订单待支付。</view>
+    </view>
+  </block>
+</view>

@@ -4,6 +4,10 @@ cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 
 const db = cloud.database()
 
+function normalizeText(value) {
+  return String(value || '').trim()
+}
+
 function getDefaultReminderSettings() {
   return {
     followUpEnabled: true,
@@ -61,15 +65,105 @@ function normalizeAppearanceSettings(value) {
   }
 }
 
+function normalizeDisplayName(value) {
+  return normalizeText(value).slice(0, 24)
+}
+
+function maskPhone(value) {
+  const text = normalizeText(value)
+  if (!/^1\d{10}$/.test(text)) {
+    return ''
+  }
+  return `${text.slice(0, 3)}****${text.slice(-4)}`
+}
+
+function buildDisplayProfile(user = {}) {
+  const wechatNickname = normalizeText(user.wechatNickname || user.nickName)
+  const customDisplayName = normalizeDisplayName(user.customDisplayName)
+  if (customDisplayName) {
+    return {
+      wechatNickname,
+      customDisplayName,
+      displayName: customDisplayName,
+      displayNameSource: 'custom'
+    }
+  }
+  if (wechatNickname) {
+    return {
+      wechatNickname,
+      customDisplayName,
+      displayName: wechatNickname,
+      displayNameSource: 'wechat'
+    }
+  }
+  if (normalizeText(user.phoneMasked)) {
+    return {
+      wechatNickname,
+      customDisplayName,
+      displayName: normalizeText(user.phoneMasked),
+      displayNameSource: 'phone'
+    }
+  }
+  return {
+    wechatNickname,
+    customDisplayName,
+    displayName: '',
+    displayNameSource: ''
+  }
+}
+
+async function resolveAccountIdByOpenid(openid = '') {
+  const currentOpenid = normalizeText(openid)
+  if (!currentOpenid) {
+    return ''
+  }
+
+  try {
+    const result = await db.collection('accountIdentities').where({
+      provider: 'wechat_mp',
+      openid: currentOpenid
+    }).limit(1).get()
+    return normalizeText(result.data[0] && result.data[0].accountId)
+  } catch (error) {
+    return ''
+  }
+}
+
+async function loadUserProfile(openid, accountId) {
+  if (accountId) {
+    try {
+      const result = await db.collection('users').where({
+        accountId
+      }).limit(1).get()
+      if (result.data.length) {
+        return result.data[0]
+      }
+    } catch (error) {
+      // Fallback to openid lookup below.
+    }
+  }
+
+  const result = await db.collection('users').where({
+    _openid: openid
+  }).limit(1).get()
+  return result.data[0] || null
+}
+
 exports.main = async () => {
   const wxContext = cloud.getWXContext()
-  const result = await db.collection('users').where({
-    _openid: wxContext.OPENID
-  }).limit(1).get()
+  const openid = normalizeText(wxContext.OPENID)
+  const accountId = await resolveAccountIdByOpenid(openid)
+  const currentUser = await loadUserProfile(openid, accountId)
+  const displayProfile = buildDisplayProfile(currentUser || {})
 
   return {
     ok: true,
-    reminderSettings: normalizeReminderSettings(result.data[0] && result.data[0].reminderSettings),
-    appearanceSettings: normalizeAppearanceSettings(result.data[0] && result.data[0].appearanceSettings)
+    reminderSettings: normalizeReminderSettings(currentUser && currentUser.reminderSettings),
+    appearanceSettings: normalizeAppearanceSettings(currentUser && currentUser.appearanceSettings),
+    wechatNickname: displayProfile.wechatNickname,
+    customDisplayName: displayProfile.customDisplayName,
+    displayName: displayProfile.displayName,
+    displayNameSource: displayProfile.displayNameSource,
+    phoneMasked: normalizeText(currentUser && currentUser.phoneMasked) || maskPhone(currentUser && currentUser.phone)
   }
 }

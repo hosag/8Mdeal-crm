@@ -1,0 +1,55 @@
+<view class="page-shell project-assets-page {{appearancePageClass}}">
+  <view wx:if="{{isLoading}}" class="rise-in">
+    <loading-panel rows="3" appearance-page-class="{{appearancePageClass}}" />
+  </view>
+
+  <block wx:else>
+    <view class="hero rise-in">
+      <view class="eyebrow-row">
+        <view class="eyebrow">项目资料</view>
+      </view>
+      <view class="hero-title">{{projectName}}</view>
+    </view>
+
+    <view wx:if="{{isLoadFailed}}" class="form-card section state-card rise-in stagger-1">
+      <view class="form-card-title">当前无法加载项目资料</view>
+      <view class="form-card-desc">{{loadError}}</view>
+      <view class="inline-actions state-actions">
+        <view class="btn-primary state-btn" bindtap="retryFetch">重新加载</view>
+      </view>
+    </view>
+
+    <view wx:else class="form-card section project-assets-toolbar rise-in stagger-1">
+      <view class="project-assets-filter-row">
+        <view class="project-assets-filter {{activeFilter === item.key ? 'is-active' : ''}}" wx:for="{{filterOptions}}" wx:key="key" data-filter="{{item.key}}" bindtap="setFilter">
+          <text>{{item.label}}</text>
+          <text class="project-assets-filter-count">{{item.count}}</text>
+        </view>
+      </view>
+    </view>
+
+    <view wx:if="{{!isLoadFailed}}" class="section rise-in stagger-2">
+      <view wx:if="{{filteredAssets.length}}" class="project-assets-list">
+        <view class="project-asset-card" wx:for="{{filteredAssets}}" wx:key="id" data-id="{{item.id}}" bindtap="openAsset">
+          <view class="project-asset-cover {{item.type === 'image' ? 'is-image' : 'is-file'}}">
+            <image wx:if="{{item.type === 'image'}}" class="project-asset-thumb" src="{{item.previewUrl || item.url || item.fileId}}" mode="aspectFill" />
+            <view wx:else class="project-asset-file-type">{{item.extensionText}}</view>
+          </view>
+          <view class="project-asset-info">
+            <view class="project-asset-name">{{item.name}}</view>
+            <view class="project-asset-meta">{{item.sourceTitle}} · {{item.sourceTime || '最近'}}</view>
+            <view wx:if="{{item.sourceSummary}}" class="project-asset-summary">{{item.sourceSummary}}</view>
+          </view>
+        </view>
+      </view>
+
+      <empty-state
+        wx:else
+        appearance-page-class="{{appearancePageClass}}"
+        title="暂无项目资料"
+        desc="新增跟进时上传的图片和附件会自动汇总到这里。"
+        image="/assets/illustrations/empty-projects.svg"
+      />
+    </view>
+  </block>
+</view>

@@ -1,0 +1,130 @@
+.project-assets-page .hero {
+  padding: 26rpx 28rpx 28rpx;
+  border-radius: 32rpx;
+  box-shadow: var(--theme-hero-shadow);
+}
+
+.project-assets-page .hero-title {
+  margin-top: 18rpx;
+  font-size: 40rpx;
+  line-height: 1.22;
+}
+
+.project-assets-page .project-assets-toolbar,
+.project-assets-page .state-card {
+  padding: 16rpx 18rpx;
+}
+
+.project-assets-page .project-assets-filter-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10rpx;
+}
+
+.project-assets-page .project-assets-filter {
+  min-height: 58rpx;
+  padding: 0 12rpx;
+  border-radius: 18rpx;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8rpx;
+  background: var(--theme-chip-bg);
+  color: var(--theme-chip-text);
+  box-shadow: inset 0 0 0 1rpx var(--theme-divider);
+  font-size: 22rpx;
+  font-weight: 700;
+}
+
+.project-assets-page .project-assets-filter.is-active {
+  background: var(--theme-chip-active-bg);
+  color: var(--theme-chip-active-text);
+  box-shadow: inset 0 0 0 1rpx var(--theme-hero-primary-border);
+}
+
+.project-assets-page .project-assets-filter-count {
+  font-size: 19rpx;
+  opacity: 0.78;
+}
+
+.project-assets-page .project-assets-list {
+  display: grid;
+  gap: 12rpx;
+}
+
+.project-assets-page .project-asset-card {
+  display: flex;
+  gap: 16rpx;
+  padding: 16rpx;
+  border-radius: 24rpx;
+  background: var(--theme-project-card-bg);
+  box-shadow: var(--theme-project-card-shadow);
+}
+
+.project-assets-page .project-asset-cover {
+  flex: 0 0 112rpx;
+  width: 112rpx;
+  height: 112rpx;
+  border-radius: 18rpx;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--theme-soft-block-bg);
+  box-shadow: inset 0 0 0 1rpx var(--theme-divider);
+}
+
+.project-assets-page .project-asset-thumb {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.project-assets-page .project-asset-file-type {
+  min-width: 60rpx;
+  min-height: 42rpx;
+  padding: 0 12rpx;
+  border-radius: 999rpx;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--theme-brand-bg);
+  color: var(--theme-brand-text);
+  font-size: 20rpx;
+  font-weight: 700;
+}
+
+.project-assets-page .project-asset-info {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.project-assets-page .project-asset-name {
+  font-size: 26rpx;
+  line-height: 1.42;
+  font-weight: 700;
+  color: var(--theme-title);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.project-assets-page .project-asset-meta {
+  margin-top: 6rpx;
+  font-size: 21rpx;
+  line-height: 1.45;
+  color: var(--theme-text-soft);
+}
+
+.project-assets-page .project-asset-summary {
+  margin-top: 8rpx;
+  font-size: 22rpx;
+  line-height: 1.5;
+  color: var(--theme-text-secondary);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}

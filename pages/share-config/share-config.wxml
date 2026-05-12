@@ -6,8 +6,7 @@
   <block wx:else>
     <view class="hero rise-in share-config-hero">
       <view class="eyebrow-row">
-        <view class="eyebrow">分享设置</view>
-        <view class="source-badge">{{dataSource}}</view>
+        <view class="eyebrow">分享项目</view>
       </view>
       <view class="hero-title">{{purposeTitle}}</view>
       <view class="hero-subtitle">{{purposeDesc}}</view>

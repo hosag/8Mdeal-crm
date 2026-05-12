@@ -59,9 +59,15 @@ exports.main = async (event) => {
       projectId,
       projectName: project.projectName || '未命名项目',
       actualAmount: deal.actualAmount || project.actualAmount || '',
-      contractDate: deal.contractDate || formatDateOnly(new Date()),
+      contractDate: deal.contractDate ? formatDateOnly(deal.contractDate) : formatDateOnly(new Date()),
       paymentStatus: deal.paymentStatus || '未回款',
+      paidAmount: deal.paidAmount || project.paidAmount || '',
+      latestPaymentDate: deal.latestPaymentDate || '',
       expectedCommission: deal.expectedCommission || project.expectedCommission || '',
+      commissionStatus: deal.commissionStatus || project.commissionStatus || '待兑现',
+      settledCommission: deal.settledCommission || project.settledCommission || '',
+      commissionSettledDate: deal.commissionSettledDate || '',
+      revenueRecords: Array.isArray(deal.revenueRecords) ? deal.revenueRecords : [],
       note: deal.note || ''
     }
   }

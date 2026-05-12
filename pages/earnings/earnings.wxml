@@ -5,14 +5,14 @@
 
   <block wx:else>
     <view class="hero rise-in earnings-hero">
-      <view class="eyebrow-row earnings-hero-top">
-        <view class="eyebrow">收益统计</view>
-        <view class="source-badge">{{dataSource}}</view>
+      <view class="earnings-hero-main">
+        <view class="earnings-hero-main-label">{{earningsHero.periodLabel}}合同金额</view>
+        <view class="earnings-hero-main-value">{{earningsHero.mainValue}}</view>
       </view>
-      <view class="hero-metrics earnings-hero-metrics">
-        <view class="metric-card earnings-metric-card" wx:for="{{earnings.summary}}" wx:key="label">
-          <view class="metric-label">{{item.label}}</view>
-          <view class="metric-value">{{item.value}}</view>
+      <view class="earnings-hero-grid">
+        <view class="earnings-hero-metric" wx:for="{{earningsHero.metrics}}" wx:key="key">
+          <view class="earnings-hero-metric-label">{{item.label}}</view>
+          <view class="earnings-hero-metric-value">{{item.value}}</view>
         </view>
       </view>
     </view>
@@ -20,34 +20,55 @@
     <view class="section rise-in stagger-2">
       <view class="section-header earnings-section-header">
         <view class="section-title">成交明细</view>
-        <view class="chip earnings-month-chip">本月</view>
+        <view class="earnings-filter-row">
+          <view
+            class="chip earnings-filter-chip {{earningsFilter === item.key ? 'is-active' : ''}}"
+            wx:for="{{earningsFilters}}"
+            wx:key="key"
+            data-filter="{{item.key}}"
+            bindtap="setEarningsFilter"
+          >{{item.label}}</view>
+        </view>
       </view>
-      <view class="deal-card earnings-deal-card" wx:for="{{earnings.deals}}" wx:key="id" data-project-id="{{item.projectId}}" bindtap="openDealProject">
+      <view class="deal-card earnings-deal-card" wx:for="{{earnings.deals}}" wx:key="id">
         <view class="project-top earnings-deal-top">
           <view class="earnings-deal-main">
             <view class="project-name">{{item.name}}</view>
-            <view class="project-meta">{{item.date}}</view>
+            <view class="project-meta">{{item.client ? item.client + ' · ' : ''}}{{item.date}}</view>
           </view>
-          <view class="status-badge {{item.status === '全部回款' ? 'is-success' : item.status === '未回款' ? 'is-danger' : ''}}">{{item.status}}</view>
+          <view class="status-badge {{item.paymentStatusClass}}">{{item.paymentStatus}}</view>
         </view>
 
-        <view class="compact-inline-metrics earnings-inline-metrics">
-          <view class="compact-inline-item earnings-inline-item">成交金额 {{item.amount}}</view>
-          <view class="compact-inline-item earnings-inline-item">预期提成 {{item.commission}}</view>
+        <view class="earnings-amount-grid">
+          <view class="earnings-edit-item">
+            <view class="earnings-edit-label">合同金额</view>
+            <input class="earnings-edit-input" type="number" value="{{item.amountInput}}" data-deal-id="{{item.id}}" data-field="amountInput" bindinput="onDealAmountInput" placeholder="未记录" placeholder-class="input-placeholder" />
+          </view>
+          <view class="earnings-read-item">
+            <view class="earnings-edit-label">合同回款</view>
+            <view class="earnings-read-value">{{item.paidAmount}}</view>
+          </view>
+          <view class="earnings-edit-item">
+            <view class="earnings-edit-label">预期提成</view>
+            <input class="earnings-edit-input" type="number" value="{{item.commissionInput}}" data-deal-id="{{item.id}}" data-field="commissionInput" bindinput="onDealAmountInput" placeholder="未记录" placeholder-class="input-placeholder" />
+          </view>
+          <view class="earnings-read-item">
+            <view class="earnings-edit-label">提成兑现</view>
+            <view class="earnings-read-value">{{item.settledCommission}}</view>
+          </view>
         </view>
 
-        <view wx:if="{{item.note}}" class="project-summary-compact earnings-note-card">
-          <view class="project-summary-row">
-            <view class="project-summary-label">备注</view>
-            <view class="project-summary-text">{{item.note}}</view>
-          </view>
+        <view class="inline-actions compact-inline-actions earnings-card-actions">
+          <view class="btn-ghost" data-project-id="{{item.projectId}}" catchtap="openDealProject">查看项目</view>
+          <view class="btn-ghost" data-deal-id="{{item.id}}" catchtap="saveDealAmounts">{{isSavingRevenue ? '保存中...' : '保存金额'}}</view>
+          <view class="btn-primary" data-deal-id="{{item.id}}" catchtap="openRevenueSheet">回款与提成</view>
         </view>
       </view>
 
       <empty-state
         wx:if="{{!earnings.deals.length}}"
         appearance-page-class="{{appearancePageClass}}"
-        title="本月暂无成交记录"
+        title="{{earningsFilter === 'all' ? '暂无成交记录' : earningsHero.periodLabel + '暂无成交记录'}}"
         desc="登记成交后会自动汇总到这里。"
         image="/assets/illustrations/empty-projects.svg"
         actionText="查看我的项目"
@@ -56,4 +77,54 @@
       />
     </view>
   </block>
+</view>
+
+<view wx:if="{{showRevenueSheet}}" class="sheet-mask earnings-sheet-mask" bindtap="closeRevenueSheet"></view>
+<view wx:if="{{showRevenueSheet}}" class="sheet-panel earnings-sheet {{appearancePageClass}}">
+  <view class="sheet-header">
+    <view>
+      <view class="sheet-title">回款与提成</view>
+      <view class="sheet-meta">{{revenueForm.projectName}}</view>
+    </view>
+    <view class="sheet-close" bindtap="closeRevenueSheet">关闭</view>
+  </view>
+
+  <view class="earnings-sheet-tip">回款与提成可以录在一行，也可以只录其中一项。</view>
+
+  <scroll-view class="earnings-sheet-body" scroll-y>
+    <view class="earnings-record-card" wx:for="{{revenueForm.records}}" wx:key="id">
+      <view class="earnings-record-head">
+        <view class="earnings-record-title">收益记录 {{index + 1}}</view>
+        <view class="earnings-record-remove" data-index="{{index}}" bindtap="removeRevenueRecord">删除</view>
+      </view>
+      <view class="earnings-record-grid">
+        <view class="field-group">
+          <view class="field-label">回款</view>
+          <input class="input-sim input-native" type="digit" value="{{item.paymentAmount}}" data-index="{{index}}" data-field="paymentAmount" bindinput="onRevenueRecordInput" placeholder="可选" placeholder-class="input-placeholder" />
+        </view>
+        <view class="field-group">
+          <view class="field-label">提成</view>
+          <input class="input-sim input-native" type="digit" value="{{item.commissionAmount}}" data-index="{{index}}" data-field="commissionAmount" bindinput="onRevenueRecordInput" placeholder="可选" placeholder-class="input-placeholder" />
+        </view>
+        <view class="field-group">
+          <view class="field-label">时间</view>
+          <picker class="picker-block" mode="date" value="{{item.date}}" data-index="{{index}}" bindchange="onRevenueRecordDateChange">
+            <view class="picker-sim">
+              <view class="picker-value">{{item.date}}</view>
+            </view>
+          </picker>
+        </view>
+        <view class="field-group">
+          <view class="field-label">备注</view>
+          <input class="input-sim input-native" value="{{item.note}}" data-index="{{index}}" data-field="note" bindinput="onRevenueRecordInput" placeholder="可选" placeholder-class="input-placeholder" />
+        </view>
+      </view>
+    </view>
+    <view class="earnings-add-record" bindtap="addRevenueRecord">添加一行</view>
+  </scroll-view>
+
+  <view class="inline-actions earnings-sheet-actions">
+    <view class="btn-ghost" bindtap="closeRevenueSheet">取消</view>
+    <view class="btn-primary" bindtap="saveRevenueRecords">{{isSavingRevenue ? '保存中...' : '保存记录'}}</view>
+  </view>
 </view>

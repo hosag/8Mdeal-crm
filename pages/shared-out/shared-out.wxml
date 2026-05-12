@@ -7,10 +7,9 @@
     <view class="hero rise-in">
       <view class="eyebrow-row">
         <view class="eyebrow">外发项目</view>
-        <view class="source-badge">{{dataSource}}</view>
       </view>
-      <view class="hero-title">把外发项目收成一页追踪清单</view>
-      <view class="hero-subtitle">集中看对方是否打开、接手和继续推进。</view>
+      <view class="hero-title">外发进展</view>
+      <view class="hero-subtitle">这里专门查看已转交项目的打开、接手和继续推进状态。</view>
     </view>
 
     <view wx:if="{{isLoadFailed}}" class="form-card section state-card rise-in stagger-1">
@@ -61,34 +60,32 @@
         <view class="project-top">
           <view class="project-main">
             <view class="project-name">{{item.name}}</view>
-            <view class="project-meta shared-record-meta">{{item.mode}} · {{item.partner}} · {{item.createdAt}}</view>
-            <view class="project-meta">{{item.receiverSummary}}</view>
+            <view class="project-meta shared-record-meta">{{item.partner}} · {{item.createdAt}}</view>
           </view>
-          <view class="status-badge shared-status-badge {{item.progressBadgeClass}}">{{item.statusText}}</view>
+          <view class="status-badge shared-status-badge {{item.progressBadgeClass}}">
+            <text>{{item.statusText}}</text>
+            <text wx:if="{{item.unreadProgressBadgeText}}" class="shared-status-count">{{item.unreadProgressBadgeText}}</text>
+          </view>
         </view>
 
         <view class="pill-row project-pill-row shared-top-pills">
           <view class="soft-badge">接收方 {{item.receiverName}}</view>
+          <view class="field-pill">阶段 {{item.stageBadgeText}}</view>
           <view class="field-pill">{{item.viewed}}</view>
           <view wx:if="{{item.collaboratorFollowCount}}" class="field-pill">推进 {{item.collaboratorFollowCount}} 条</view>
         </view>
 
-        <view class="project-summary-compact shared-summary-card">
+        <view class="project-summary-compact shared-summary-card shared-core-card">
           <view class="project-summary-row">
-            <view class="project-summary-label">进展</view>
-            <view class="project-summary-text">{{item.trackingSummary}}</view>
-          </view>
-          <view class="project-summary-row">
-            <view class="project-summary-label">状态</view>
-            <view class="project-summary-text">{{item.statusSummary}}</view>
+            <view class="project-summary-label">当前</view>
+            <view class="project-summary-text">{{item.coreSummary}}</view>
           </view>
         </view>
 
         <view class="compact-inline-metrics shared-card-metrics">
-          <view class="compact-inline-item">外发 {{item.createdAt}}</view>
           <view class="compact-inline-item">首次 {{item.firstTouchText}}</view>
           <view class="compact-inline-item">更新 {{item.latestTrackingText}}</view>
-          <view wx:if="{{item.statusText === '已导入' || item.statusText === '已跟进'}}" class="compact-inline-item">接手 {{item.takeoverText}}</view>
+          <view wx:if="{{item.statusKey === 'taken_over' || item.statusKey === 'followed'}}" class="compact-inline-item">接手 {{item.takeoverText}}</view>
         </view>
 
         <view class="inline-actions compact-inline-actions">

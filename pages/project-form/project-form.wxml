@@ -7,19 +7,9 @@
   <view class="hero rise-in">
     <view class="eyebrow-row">
       <view class="eyebrow">{{isEdit ? '编辑项目' : '新建项目'}}</view>
-      <view class="source-badge">{{dataSource}}</view>
     </view>
     <view class="hero-title">{{isEdit ? '编辑项目，让关键信息保持最新' : '创建项目时，把后续动作一起铺好'}}</view>
     <view class="hero-subtitle">先把项目主信息录完整，后面再继续跟进、成交和分享。保存后会直接进入项目详情。</view>
-  </view>
-
-  <view class="form-card section rise-in stagger-1">
-    <view class="form-card-title">步骤指引</view>
-    <view class="step-row">
-      <view class="step-pill is-current">1. 基本信息</view>
-      <view class="step-pill">2. 联系人</view>
-      <view class="step-pill">3. 保存后看详情</view>
-    </view>
   </view>
 
   <view class="form-card section rise-in stagger-2">
@@ -56,6 +46,19 @@
     <view class="field-group">
       <view class="field-label">项目描述</view>
       <textarea class="textarea-sim textarea-native" value="{{form.description}}" data-field="description" bindinput="onFieldInput" placeholder="补充项目背景、当前重点和下一步判断" placeholder-class="input-placeholder" maxlength="-1"></textarea>
+    </view>
+    <view class="field-group">
+      <view class="field-label">沉默提醒</view>
+      <view class="project-silence-options">
+        <view
+          class="chip project-silence-chip {{form.followUpSilenceDays === item.value ? 'is-active' : ''}}"
+          wx:for="{{silenceReminderOptions}}"
+          wx:key="value"
+          data-value="{{item.value}}"
+          bindtap="setSilenceReminder"
+        >{{item.label}}</view>
+      </view>
+      <view class="helper-text">没有未完成任务，且超过设定天数没有新增跟进时，才会提醒回看项目。</view>
     </view>
   </view>
 
@@ -97,11 +100,6 @@
         <input class="input-sim input-native" value="{{item.company}}" data-index="{{index}}" data-field="company" bindinput="onContactInput" placeholder="请输入所属公司" placeholder-class="input-placeholder" />
       </view>
     </view>
-  </view>
-
-  <view class="form-card section">
-    <view class="form-card-title">保存后的结果</view>
-    <view class="form-card-desc">保存成功后会直接跳转到真实项目详情页；返回“我的项目”时，也会立即看到新纪录。</view>
   </view>
 
   <view class="bottom-space"></view>

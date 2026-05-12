@@ -7,7 +7,6 @@
     <view class="hero rise-in">
       <view class="eyebrow-row">
         <view class="eyebrow">消息中心</view>
-        <view class="source-badge">{{dataSource}}</view>
       </view>
       <view class="hero-title">提醒只保留真正需要你动作的事</view>
       <view class="hero-subtitle">这里沉淀今日待办、逾期动作和后续业务消息。完成动作后会自动收口，不再堆积成噪音。</view>

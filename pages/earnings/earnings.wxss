@@ -1,59 +1,85 @@
 .earnings-hero {
-  padding: 20rpx 28rpx 18rpx;
+  padding: 24rpx 28rpx 22rpx;
   border-radius: 28rpx;
 }
 
-.earnings-hero-top {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16rpx;
+.earnings-hero-main {
+  margin-top: 0;
 }
 
-.earnings-hero .eyebrow {
-  padding: 7rpx 16rpx;
-  font-size: 20rpx;
-  letter-spacing: 1rpx;
+.earnings-hero-main-label {
+  font-size: 21rpx;
+  line-height: 1.35;
+  color: var(--theme-hero-muted);
 }
 
-.earnings-hero .source-badge {
-  flex: 0 0 auto;
-  max-width: 220rpx;
+.earnings-hero-main-value {
+  margin-top: 6rpx;
+  font-size: 48rpx;
+  font-weight: 800;
+  line-height: 1.1;
+  color: var(--theme-hero-text);
+}
+
+.earnings-hero-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8rpx;
+  margin-top: 18rpx;
+}
+
+.earnings-hero-metric {
+  min-width: 0;
+  padding: 13rpx 12rpx 12rpx;
+  border-radius: 18rpx;
+  background: rgba(255, 255, 255, 0.12);
+  box-shadow: inset 0 0 0 1rpx rgba(255, 255, 255, 0.08);
+}
+
+.earnings-hero-metric-label {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.earnings-hero-metrics {
-  margin-top: 8rpx;
-  gap: 8rpx;
-}
-
-.earnings-metric-card {
-  padding: 13rpx 13rpx 11rpx;
-  border-radius: 20rpx;
-  background: var(--theme-badge-bg);
-}
-
-.earnings-metric-card .metric-label {
   font-size: 18rpx;
+  line-height: 1.35;
+  color: var(--theme-hero-muted);
 }
 
-.earnings-metric-card .metric-value {
+.earnings-hero-metric-value {
   margin-top: 4rpx;
-  font-size: 26rpx;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 25rpx;
+  font-weight: 700;
+  line-height: 1.25;
+  color: var(--theme-hero-text);
 }
 
 .earnings-section-header {
   margin-bottom: 12rpx;
 }
 
-.earnings-month-chip {
+.earnings-filter-row {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8rpx;
+}
+
+.earnings-filter-chip {
   min-height: 44rpx;
   padding: 0 16rpx;
   font-size: 20rpx;
   background: var(--theme-soft-badge-bg);
   color: var(--theme-soft-badge-text);
+}
+
+.earnings-filter-chip.is-active {
+  background: var(--theme-hero-primary-bg);
+  color: var(--theme-hero-primary-text);
+  box-shadow: var(--theme-hero-primary-shadow);
 }
 
 .earnings-deal-card {
@@ -73,20 +99,54 @@
   min-width: 0;
 }
 
-.earnings-inline-metrics {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  margin-top: 10rpx;
-  gap: 8rpx;
-}
-
 .earnings-inline-item {
   justify-content: flex-start;
-  padding: 12rpx 14rpx;
+  padding: 10rpx 12rpx;
   border-radius: 16rpx;
   background: var(--theme-inline-bg);
   color: var(--theme-inline-text);
   font-size: 21rpx;
+}
+
+.earnings-amount-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8rpx;
+  margin-top: 12rpx;
+}
+
+.earnings-edit-item,
+.earnings-read-item {
+  min-width: 0;
+  padding: 12rpx 14rpx;
+  border-radius: 18rpx;
+  background: var(--theme-inline-bg);
+  box-shadow: inset 0 0 0 1rpx rgba(24, 39, 51, 0.05);
+}
+
+.earnings-edit-label {
+  font-size: 19rpx;
+  line-height: 1.35;
+  color: var(--theme-text-muted);
+}
+
+.earnings-edit-input {
+  margin-top: 5rpx;
+  width: 100%;
+  height: 38rpx;
+  min-height: 38rpx;
+  font-size: 25rpx;
+  font-weight: 700;
+  line-height: 38rpx;
+  color: var(--theme-title);
+}
+
+.earnings-read-value {
+  margin-top: 5rpx;
+  font-size: 25rpx;
+  font-weight: 700;
+  line-height: 1.35;
+  color: var(--theme-title);
 }
 
 .earnings-note-card {
@@ -94,28 +154,176 @@
   padding: 14rpx 16rpx;
 }
 
+.earnings-card-actions {
+  margin-top: 12rpx;
+  justify-content: flex-end;
+}
+
+.earnings-card-actions .btn-ghost,
+.earnings-card-actions .btn-primary {
+  min-width: 142rpx;
+  height: 64rpx;
+  border-radius: 18rpx;
+  font-size: 22rpx;
+}
+
+.earnings-sheet-mask {
+  z-index: 81;
+}
+
+.earnings-sheet {
+  z-index: 82;
+  top: 18vh;
+  bottom: 0;
+  height: auto;
+  max-height: none;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding-bottom: calc(24rpx + env(safe-area-inset-bottom));
+}
+
+.earnings-sheet-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 4rpx;
+  padding-bottom: 150rpx;
+}
+
+.earnings-sheet-tip {
+  margin-bottom: 12rpx;
+  padding: 12rpx 14rpx;
+  border-radius: 18rpx;
+  background: var(--theme-soft-block-bg);
+  color: var(--theme-text-soft);
+  font-size: 21rpx;
+  line-height: 1.5;
+}
+
+.earnings-record-card {
+  padding: 16rpx 18rpx 18rpx;
+  border-radius: 22rpx;
+  background: var(--theme-soft-block-bg);
+  box-shadow: inset 0 0 0 1rpx var(--theme-divider);
+}
+
+.earnings-record-card + .earnings-record-card {
+  margin-top: 12rpx;
+}
+
+.earnings-record-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16rpx;
+  margin-bottom: 12rpx;
+}
+
+.earnings-record-title {
+  font-size: 24rpx;
+  font-weight: 700;
+  line-height: 1.35;
+  color: var(--theme-title);
+}
+
+.earnings-record-remove {
+  flex: 0 0 auto;
+  font-size: 22rpx;
+  color: var(--theme-danger-text);
+}
+
+.earnings-record-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12rpx;
+}
+
+.earnings-add-record {
+  margin-top: 12rpx;
+  min-height: 68rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 20rpx;
+  background: var(--theme-glass-bg);
+  box-shadow: inset 0 0 0 1rpx var(--theme-divider);
+  color: var(--theme-brand-text);
+  font-size: 24rpx;
+  font-weight: 700;
+}
+
+.earnings-sheet-actions {
+  position: absolute;
+  left: 24rpx;
+  right: 24rpx;
+  bottom: calc(24rpx + env(safe-area-inset-bottom));
+  z-index: 2;
+  margin-top: 0;
+  padding-top: 16rpx;
+  border-top: 2rpx solid rgba(24, 39, 51, 0.08);
+  background: rgba(249, 246, 240, 0.98);
+  box-shadow: 0 -16rpx 24rpx rgba(19, 31, 40, 0.05);
+}
+
+.earnings-sheet-actions .btn-ghost,
+.earnings-sheet-actions .btn-primary {
+  flex: 1 1 0;
+}
+
 .page-shell.earnings-page.appearance-font-large .earnings-hero {
   padding: 24rpx 30rpx 22rpx;
 }
 
-.page-shell.earnings-page.appearance-font-large .earnings-metric-card,
+.page-shell.earnings-page.appearance-font-large .earnings-hero-metric,
 .page-shell.earnings-page.appearance-font-large .earnings-deal-card {
   border-radius: 24rpx;
 }
 
-.page-shell.earnings-page.appearance-font-large .earnings-inline-metrics {
+.page-shell.earnings-page.appearance-font-large .earnings-amount-grid {
   gap: 10rpx;
+}
+
+.earnings-sheet.appearance-font-large .sheet-title,
+.earnings-sheet.appearance-font-large .earnings-record-title {
+  font-size: 30rpx;
+}
+
+.earnings-sheet.appearance-font-large .field-label {
+  font-size: 28rpx;
+}
+
+.earnings-sheet.appearance-font-large .input-sim,
+.earnings-sheet.appearance-font-large .textarea-sim,
+.earnings-sheet.appearance-font-large .picker-sim {
+  font-size: 30rpx;
 }
 
 .page-shell.earnings-page.appearance-font-readable .earnings-hero {
   padding: 28rpx 32rpx 24rpx;
 }
 
-.page-shell.earnings-page.appearance-font-readable .earnings-metric-card,
+.page-shell.earnings-page.appearance-font-readable .earnings-hero-metric,
 .page-shell.earnings-page.appearance-font-readable .earnings-deal-card {
   border-radius: 26rpx;
 }
 
-.page-shell.earnings-page.appearance-font-readable .earnings-inline-metrics {
+.page-shell.earnings-page.appearance-font-readable .earnings-amount-grid {
   gap: 12rpx;
+}
+
+.earnings-sheet.appearance-font-readable .sheet-title,
+.earnings-sheet.appearance-font-readable .earnings-record-title {
+  font-size: 38rpx;
+}
+
+.earnings-sheet.appearance-font-readable .field-label {
+  font-size: 34rpx;
+}
+
+.earnings-sheet.appearance-font-readable .input-sim,
+.earnings-sheet.appearance-font-readable .textarea-sim,
+.earnings-sheet.appearance-font-readable .picker-sim {
+  font-size: 38rpx;
 }

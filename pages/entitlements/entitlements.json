@@ -1,0 +1,6 @@
+{
+  "navigationBarTitleText": "套餐与权益",
+  "usingComponents": {
+    "loading-panel": "/components/loading-panel/index"
+  }
+}

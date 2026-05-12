@@ -8,9 +8,28 @@ function normalizeText(value) {
   return String(value || '').trim()
 }
 
+function resolveUserDisplayName(user = {}, fallbackValue = '', defaultText = '当前用户') {
+  const customDisplayName = normalizeText(user.customDisplayName)
+  if (customDisplayName) {
+    return customDisplayName
+  }
+
+  const wechatNickname = normalizeText(user.wechatNickname || user.nickName)
+  if (wechatNickname) {
+    return wechatNickname
+  }
+
+  const phoneValue = normalizeText(user.phoneMasked || user.phone)
+  if (phoneValue) {
+    return phoneValue
+  }
+
+  return normalizeText(fallbackValue) || defaultText
+}
+
 function normalizeTaskType(value) {
   const current = normalizeText(value)
-  const allowed = ['send_solution', 'send_quote', 'callback', 'meeting', 'contract', 'collect_info', 'other']
+  const allowed = ['send_solution', 'send_quote', 'demo', 'report_solution', 'business_negotiation', 'research', 'callback', 'meeting', 'contract', 'collect_info', 'other']
   return allowed.includes(current) ? current : 'other'
 }
 
@@ -54,36 +73,6 @@ function formatTaskDueText(dueDate, dueTime, dueAt) {
   const hour = `${dueAt.getHours()}`.padStart(2, '0')
   const minute = `${dueAt.getMinutes()}`.padStart(2, '0')
   return `${year}-${month}-${day} ${hour}:${minute}`
-}
-
-async function resolveProjectNextFollowUpDate(projectId, openid, options = {}) {
-  const preferredTask = options.preferredTask && typeof options.preferredTask === 'object' ? options.preferredTask : null
-  if (preferredTask && normalizeText(preferredTask.dueDateText)) {
-    return normalizeText(preferredTask.dueDateText)
-  }
-
-  const openTaskResult = await db.collection('tasks').where({
-    _openid: openid,
-    projectId,
-    status: db.command.in(['pending', 'in_progress'])
-  }).orderBy('dueAt', 'asc').limit(1).get()
-
-  const openTask = openTaskResult.data && openTaskResult.data[0]
-  if (openTask && normalizeText(openTask.dueDateText)) {
-    return normalizeText(openTask.dueDateText)
-  }
-
-  const followUpResult = await db.collection('followUps').where({
-    _openid: openid,
-    projectId
-  }).orderBy('followUpTime', 'desc').limit(10).get()
-
-  const latestFollowWithNext = (followUpResult.data || []).find((item) => normalizeText(item && item.nextFollowUpTime))
-  if (latestFollowWithNext) {
-    return normalizeText(latestFollowWithNext.nextFollowUpTime)
-  }
-
-  return ''
 }
 
 function buildNextTaskPayload(value) {
@@ -184,6 +173,64 @@ async function resolveTaskNotifications(openid, projectId, taskId, now) {
   }))
 }
 
+async function syncSharedTaskProgress(projectId, actorName, task, followUpId, now) {
+  const safeProjectId = normalizeText(projectId)
+  if (!safeProjectId) {
+    return
+  }
+
+  try {
+    const projectResult = await db.collection('projects').doc(safeProjectId).get()
+    const project = projectResult.data || {}
+    const sharedFromOpenid = normalizeText(project.sharedFromOpenid)
+    const sourceProjectId = normalizeText(project.sourceProjectId)
+    const sourceShareRecordId = normalizeText(project.sourceShareRecordId)
+
+    if (!project.isSharedProject || !sharedFromOpenid || !sourceProjectId || !sourceShareRecordId) {
+      return
+    }
+
+    await db.collection('shareRecords').doc(sourceShareRecordId).update({
+      data: {
+        updatedAt: now,
+        lastCollaboratorFollowAt: now,
+        lastCollaboratorTaskDoneAt: now
+      }
+    })
+
+    await db.collection('notifications').add({
+      data: {
+        _openid: sharedFromOpenid,
+        type: 'shared_followed',
+        level: 'normal',
+        title: '对方已继续推进',
+        summary: `${actorName} 已完成 ${normalizeText(task && task.title) || '一项推进任务'}，可在外发项目中查看最新进展。`,
+        projectId: sourceProjectId,
+        projectName: normalizeText(project.projectName) || '未命名项目',
+        shareRecordId: sourceShareRecordId,
+        sourceOpenid: project._openid || '',
+        sourceName: actorName,
+        actionUrl: `/pages/project-detail/project-detail?projectId=${sourceProjectId}&view=shared-out`,
+        actionLabel: '进入外发项目',
+        status: 'unread',
+        extra: {
+          importedProjectId: safeProjectId,
+          taskId: normalizeText(task && task._id),
+          followUpId: normalizeText(followUpId),
+          sharedFromOpenid,
+          receiverOpenid: project._openid || '',
+          receiverName: actorName,
+          shareMode: 'outbound'
+        },
+        createdAt: now,
+        updatedAt: now
+      }
+    })
+  } catch (error) {
+    // Do not block task completion when collaborative progress sync fails.
+  }
+}
+
 exports.main = async (event) => {
   const wxContext = cloud.getWXContext()
   const taskId = normalizeText(event.taskId)
@@ -232,7 +279,7 @@ exports.main = async (event) => {
     _openid: wxContext.OPENID
   }).limit(1).get()
   const actorProfile = userResult.data[0] || {}
-  const actorName = normalizeText(actorProfile.nickName) || '当前用户'
+  const actorName = resolveUserDisplayName(actorProfile)
 
   const updatePayload = {
     status: nextStatus,
@@ -323,10 +370,6 @@ exports.main = async (event) => {
       updatedAt: now
     }
 
-    projectUpdatePayload.nextFollowUpDate = await resolveProjectNextFollowUpDate(currentTask.projectId, wxContext.OPENID, {
-      preferredTask: nextTaskPayload
-    })
-
     await db.collection('projects').doc(currentTask.projectId).update({
       data: projectUpdatePayload
     })
@@ -338,6 +381,10 @@ exports.main = async (event) => {
     } catch (error) {
       // Do not block task completion when notification sync fails.
     }
+  }
+
+  if (nextStatus === 'done') {
+    await syncSharedTaskProgress(currentTask.projectId, actorName, currentTask, followUpId, now)
   }
 
   return {

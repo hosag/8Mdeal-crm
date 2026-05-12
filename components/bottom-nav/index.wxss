@@ -13,11 +13,12 @@
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 8rpx;
-  padding: 14rpx 12rpx 12rpx;
+  padding: 48rpx 12rpx 12rpx;
   border-radius: 32rpx;
   background: var(--nav-bg);
   backdrop-filter: blur(18rpx);
   box-shadow: var(--nav-shadow);
+  z-index: 30;
 }
 
 .bottom-nav__item {
@@ -71,6 +72,8 @@
   align-items: center;
   gap: 8rpx;
   transform: translateY(-34rpx);
+  position: relative;
+  z-index: 31;
 }
 
 .bottom-nav__action-icon {
@@ -146,7 +149,7 @@
 }
 
 .bottom-nav.appearance-font-large {
-  padding: 16rpx;
+  padding: 52rpx 16rpx 16rpx;
 }
 
 .bottom-nav.appearance-font-large .bottom-nav__item {
@@ -187,7 +190,7 @@
 }
 
 .bottom-nav.appearance-font-readable {
-  padding: 18rpx;
+  padding: 60rpx 18rpx 18rpx;
 }
 
 .bottom-nav.appearance-font-readable .bottom-nav__item {

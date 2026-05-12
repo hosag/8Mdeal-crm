@@ -64,6 +64,36 @@ function decryptSensitiveValue(value) {
   }
 }
 
+async function markOutboundShareRecordViewed(projectId, openid, now) {
+  const safeProjectId = String(projectId || '').trim()
+  const safeOpenid = String(openid || '').trim()
+  if (!safeProjectId || !safeOpenid) {
+    return
+  }
+
+  try {
+    const recordResult = await db.collection('shareRecords').where({
+      projectId: safeProjectId,
+      _openid: safeOpenid,
+      shareMode: 'outbound'
+    }).orderBy('updatedAt', 'desc').limit(1).get()
+    const record = recordResult.data && recordResult.data[0]
+
+    if (!record || !record._id) {
+      return
+    }
+
+    await db.collection('shareRecords').doc(record._id).update({
+      data: {
+        senderLastViewedAt: now,
+        senderLastViewedProjectDetailAt: now
+      }
+    })
+  } catch (error) {
+    // Reading the detail should not fail if the lightweight read marker cannot be written.
+  }
+}
+
 function startOfDay(value = new Date()) {
   const date = value instanceof Date ? new Date(value) : new Date(value)
   date.setHours(0, 0, 0, 0)
@@ -154,6 +184,28 @@ function parseDate(value) {
 
 function normalizeText(value) {
   return String(value || '').trim()
+}
+
+function isClosedProject(item) {
+  const stage = normalizeText(item && item.stage)
+  return stage === '成交' || stage === '流失' || !!(item && item.isClosed)
+}
+
+async function resolveAccountIdByOpenid(openid = '') {
+  const currentOpenid = normalizeText(openid)
+  if (!currentOpenid) {
+    return ''
+  }
+
+  try {
+    const result = await db.collection('accountIdentities').where({
+      provider: 'wechat_mp',
+      openid: currentOpenid
+    }).limit(1).get()
+    return normalizeText(result.data[0] && result.data[0].accountId)
+  } catch (error) {
+    return ''
+  }
 }
 
 function normalizeShareViewLog(item) {
@@ -294,9 +346,11 @@ function buildTimelineItem(followUp, extra = {}) {
   } else if (typeKey === 'stage_change') {
     title = `阶段已更新为 ${stageChange}`
   } else if (typeKey === 'collaborator_follow') {
-    title = `${method}推进`
+    title = `${method}跟进`
   } else if (typeKey === 'shared_sync') {
     title = `${method}同步`
+  } else {
+    title = `${method}跟进`
   }
 
   return {
@@ -322,9 +376,9 @@ function buildTimelineItem(followUp, extra = {}) {
     methodLabel: method,
     stageChange,
     nextFollowUpText,
-    summaryLabel: typeKey === 'task_done' ? '完成动作' : (typeKey === 'collaborator_follow' ? '推进摘要' : 'AI 摘要'),
-    highlightsLabel: typeKey === 'task_done' ? '完成情况' : '关键进展',
-    rawLabel: typeKey === 'task_done' ? '完成详情' : '原始记录',
+    summaryLabel: typeKey === 'task_done' ? '完成结果' : (typeKey === 'collaborator_follow' ? '整理摘要' : '整理摘要'),
+    highlightsLabel: typeKey === 'task_done' ? '补充说明' : '关键进展',
+    rawLabel: typeKey === 'task_done' ? '任务原文' : '原始录入',
     collaborationLabel: extra.collaborationLabel || '',
     fromCollaborator: !!extra.fromCollaborator
   }
@@ -359,9 +413,9 @@ function buildTaskTimelineItem(task) {
     methodLabel: '动作完成',
     stageChange: '',
     nextFollowUpText: '',
-    summaryLabel: '完成动作',
-    highlightsLabel: '完成情况',
-    rawLabel: '完成详情',
+    summaryLabel: '完成结果',
+    highlightsLabel: '补充说明',
+    rawLabel: '任务原文',
     collaborationLabel: '',
     fromCollaborator: false
   }
@@ -371,6 +425,10 @@ function getTaskTypeLabel(type) {
   const labelMap = {
     send_solution: '待发方案',
     send_quote: '待报价',
+    demo: '待演示',
+    report_solution: '待汇报方案',
+    business_negotiation: '待商务谈判',
+    research: '待调研',
     callback: '待回访',
     meeting: '待约会面',
     contract: '待签约',
@@ -469,6 +527,127 @@ function buildTaskItem(task) {
   }
 }
 
+function getFileExtension(value) {
+  const text = normalizeText(value).split('?')[0]
+  const matched = /\.([a-zA-Z0-9]+)$/.exec(text)
+  return matched ? matched[1].toLowerCase() : ''
+}
+
+function isImageExtension(extension) {
+  return ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'heic', 'heif'].indexOf(normalizeText(extension).toLowerCase()) >= 0
+}
+
+function inferAssetType(rawAsset, fallbackType = '') {
+  const asset = rawAsset && typeof rawAsset === 'object' && !Array.isArray(rawAsset) ? rawAsset : {}
+  const explicitType = normalizeText(asset.assetType || asset.type || fallbackType).toLowerCase()
+  if (explicitType === 'image' || explicitType === 'file') {
+    return explicitType
+  }
+
+  const fileType = normalizeText(asset.fileType || asset.mimeType).toLowerCase()
+  if (fileType.indexOf('image/') === 0) {
+    return 'image'
+  }
+
+  const source = typeof rawAsset === 'string'
+    ? rawAsset
+    : normalizeText(asset.name || asset.fileName || asset.fileId || asset.fileID || asset.url || asset.fileUrl)
+  return isImageExtension(getFileExtension(source)) ? 'image' : 'file'
+}
+
+function formatFileSize(value) {
+  const size = Number(value || 0)
+  if (!Number.isFinite(size) || size <= 0) {
+    return ''
+  }
+
+  if (size >= 1048576) {
+    const mb = size / 1048576
+    return `${Number.isInteger(mb) ? mb : mb.toFixed(1)}MB`
+  }
+
+  if (size >= 1024) {
+    const kb = size / 1024
+    return `${Number.isInteger(kb) ? kb : kb.toFixed(1)}KB`
+  }
+
+  return `${size}B`
+}
+
+function buildAssetName(rawAsset, index, extension, type) {
+  if (rawAsset && typeof rawAsset === 'object' && !Array.isArray(rawAsset)) {
+    const explicitName = normalizeText(rawAsset.name || rawAsset.fileName || rawAsset.title)
+    if (explicitName) {
+      return explicitName
+    }
+  }
+
+  const suffix = extension ? `.${extension}` : ''
+  return type === 'image' ? `项目图片${index + 1}${suffix}` : `项目附件${index + 1}${suffix}`
+}
+
+function buildProjectAsset(rawAsset, followUp, index, typeHint = '') {
+  const asset = rawAsset && typeof rawAsset === 'object' && !Array.isArray(rawAsset) ? rawAsset : {}
+  const type = inferAssetType(rawAsset, typeHint)
+  const fileId = normalizeText(typeof rawAsset === 'string' ? rawAsset : (asset.fileId || asset.fileID))
+  const url = normalizeText(asset.url || asset.fileUrl || asset.tempFileURL || asset.previewPath || asset.tempFilePath || fileId)
+  const extension = getFileExtension(asset.name || asset.fileName || url || fileId)
+  const followUpTime = parseDate(followUp && (followUp.followUpTime || followUp.createdAt))
+  const sourceSummary = normalizeText((followUp && (followUp.aiSummary || followUp.content)) || '')
+  const sourceTimeText = followUpTime ? formatDateTime(followUpTime) : formatDateTime(followUp && followUp.createdAt)
+
+  return {
+    id: normalizeText(asset.id || asset.assetId) || `${normalizeText(followUp && followUp._id) || 'follow'}-${type}-${index}`,
+    type,
+    fileId,
+    url,
+    previewUrl: normalizeText(asset.previewUrl || asset.previewPath || asset.tempFilePath || url || fileId),
+    name: buildAssetName(rawAsset, index, extension, type),
+    extension: extension || (type === 'image' ? 'image' : 'file'),
+    size: Number(asset.size || 0) || 0,
+    sizeText: formatFileSize(asset.size),
+    sourceFollowUpId: normalizeText(followUp && followUp._id),
+    sourceTitle: normalizeText(followUp && followUp.method) || '跟进记录',
+    sourceSummary: sourceSummary.slice(0, 90),
+    sourceTime: sourceTimeText,
+    sourceTimeRaw: followUpTime ? followUpTime.toISOString() : '',
+    actorName: normalizeText(followUp && followUp.actorName) || '当前用户'
+  }
+}
+
+function buildProjectAssets(followUps) {
+  const assets = []
+
+  ;(Array.isArray(followUps) ? followUps : []).forEach((followUp) => {
+    ;(Array.isArray(followUp.images) ? followUp.images : []).forEach((image, index) => {
+      assets.push(buildProjectAsset(image, followUp, index, 'image'))
+    })
+
+    ;(Array.isArray(followUp.attachments) ? followUp.attachments : []).forEach((attachment, index) => {
+      assets.push(buildProjectAsset(attachment, followUp, index, 'file'))
+    })
+  })
+
+  assets.sort((left, right) => {
+    const leftTime = left.sourceTimeRaw ? new Date(left.sourceTimeRaw).getTime() : 0
+    const rightTime = right.sourceTimeRaw ? new Date(right.sourceTimeRaw).getTime() : 0
+    return rightTime - leftTime
+  })
+
+  const imageCount = assets.filter((asset) => asset.type === 'image').length
+  const fileCount = assets.filter((asset) => asset.type === 'file').length
+
+  return {
+    assets,
+    summary: {
+      total: assets.length,
+      imageCount,
+      fileCount,
+      recentText: assets[0] ? assets[0].sourceTime : ''
+    }
+  }
+}
+
 async function syncSharedSourceFollowUps(item) {
   if (!item.isSharedProject || !item.sourceProjectId || !item.sharedFromOpenid) {
     return
@@ -524,6 +703,8 @@ async function syncSharedSourceFollowUps(item) {
 
 exports.main = async (event) => {
   const wxContext = cloud.getWXContext()
+  const viewerOpenid = normalizeText(wxContext.OPENID)
+  const viewMode = normalizeText(event.viewMode || event.view)
 
   if (!event.projectId) {
     return {
@@ -545,6 +726,29 @@ exports.main = async (event) => {
   }
 
   const item = result.data[0]
+  const now = new Date()
+  const viewerAccountId = await resolveAccountIdByOpenid(viewerOpenid)
+  const projectAccountId = normalizeText(item.accountId)
+  const ownerAccountId = normalizeText(item.ownerAccountId || item.accountId)
+  const sharedFromAccountId = normalizeText(item.sharedFromAccountId)
+  const ownershipTransferred = item.handoverStatus === 'handed_over' && !item.isSharedProject
+  const projectClosed = isClosedProject(item)
+  const canEditProject = ownershipTransferred && viewerAccountId && ownerAccountId
+    ? viewerAccountId === ownerAccountId
+    : !ownershipTransferred
+  const access = {
+    viewerAccountId,
+    projectAccountId,
+    ownerAccountId,
+    sharedFromAccountId,
+    canEditProject,
+    canAdvanceProject: canEditProject && !projectClosed,
+    canManageContacts: canEditProject,
+    canManageTasks: canEditProject && !projectClosed,
+    canShareProject: canEditProject,
+    canMarkDeal: canEditProject && !projectClosed,
+    readonlyReason: projectClosed ? 'project_closed' : (canEditProject ? '' : (ownershipTransferred ? 'ownership_transferred' : ''))
+  }
   const rawContacts = Array.isArray(item.contacts) ? item.contacts : []
   const shouldMigrateContacts = rawContacts.some((contact) => {
     const phone = String(contact && contact.phone ? contact.phone : '').trim()
@@ -713,58 +917,21 @@ exports.main = async (event) => {
     })()
   }
 
-  const importedProjectIds = shareResult.data
-    .map((record) => String(record.importedProjectId || '').trim())
-    .filter(Boolean)
-  const collaboratorFollowCountMap = {}
-
-  if (importedProjectIds.length) {
-    const collaboratorFollowResult = await db.collection('followUps').where({
-      projectId: _.in(importedProjectIds),
-      importedFromShare: _.neq(true)
-    }).get()
-
-    collaboratorFollowResult.data.forEach((followUp) => {
-      const projectId = String(followUp.projectId || '').trim()
-      if (!projectId) {
-        return
-      }
-
-      if (!collaboratorFollowCountMap[projectId]) {
-        collaboratorFollowCountMap[projectId] = {
-          count: 0,
-          latestAt: ''
-        }
-      }
-
-      collaboratorFollowCountMap[projectId].count += 1
-      collaboratorFollowCountMap[projectId].latestAt = formatDateTime(followUp.followUpTime || followUp.createdAt)
-    })
-  }
-
   const shareHistory = shareResult.data.map((record) => {
-    const collaboratorFollow = collaboratorFollowCountMap[record.importedProjectId] || { count: 0, latestAt: '' }
     const shareViewMeta = buildShareViewMeta(record)
-    const isOutbound = record.shareMode === 'outbound'
     const firstOpenedAt = shareViewMeta.firstOpenedAt || parseDate(record.firstOpenedAt)
     const lastViewedAt = shareViewMeta.lastViewedAt || parseDate(record.lastViewedAt)
     const singleViewerName = shareViewMeta.latestViewerName || normalizeText(record.receiverName)
     const singleViewerMasked = maskOpenid(shareViewMeta.latestViewerOpenid || record.receiverOpenid)
-    const receiverDisplayName = isOutbound
-      ? (singleViewerName || singleViewerMasked || '待接手方')
-      : (shareViewMeta.viewerCount > 1
-        ? `${shareViewMeta.viewerCount}人查看`
-        : (singleViewerName || singleViewerMasked || '暂未识别'))
-    const status = record.shareMode === 'outbound'
-      ? (collaboratorFollow.count > 0
-        ? '已跟进'
-        : (record.importedProjectId ? '已导入' : ((firstOpenedAt || shareViewMeta.totalViewCount > 0) ? '已打开' : '未打开')))
-      : ((firstOpenedAt || shareViewMeta.totalViewCount > 0) ? '已打开' : '未打开')
+    const receiverDisplayName = shareViewMeta.viewerCount > 1
+      ? `${shareViewMeta.viewerCount}人查看`
+      : (singleViewerName || singleViewerMasked || '暂未识别')
+    const status = (firstOpenedAt || shareViewMeta.totalViewCount > 0) ? '已打开' : '未打开'
 
     return {
       id: record._id,
       mode: '发送资料',
-      tagName: record.shareTagName || '未命名标签',
+      tagName: record.shareMode === 'outbound' ? '转交项目' : '发送资料',
       viewed: shareViewMeta.totalViewCount,
       viewCount: shareViewMeta.totalViewCount,
       viewerCount: shareViewMeta.viewerCount,
@@ -776,40 +943,60 @@ exports.main = async (event) => {
       lastViewedAt: lastViewedAt ? formatDateTime(lastViewedAt) : '',
       updatedAt: formatDateTime(record.updatedAt || record.createdAt),
       status,
-      importedProjectId: record.importedProjectId || '',
-      importedAt: record.importedAt ? formatDateTime(record.importedAt) : '',
+      importedProjectId: '',
+      importedAt: '',
       receiverOpenid: shareViewMeta.latestViewerOpenid || record.receiverOpenid || '',
-      collaboratorFollowCount: collaboratorFollow.count,
-      collaboratorLatestFollowAt: collaboratorFollow.latestAt
+      collaboratorFollowCount: 0,
+      collaboratorLatestFollowAt: ''
     }
   })
+  const projectAssets = buildProjectAssets(followResult.data || [])
+
+  if (viewMode === 'shared-out') {
+    await markOutboundShareRecordViewed(event.projectId, wxContext.OPENID, now)
+  }
 
   return {
     ok: true,
+    access,
     projectDetail: {
       id: item._id,
       name: item.projectName || '未命名项目',
       client: item.clientName || '未填写客户',
+      voiceAliases: Array.isArray(item.voiceAliases)
+        ? item.voiceAliases.map((alias) => String(alias || '').trim()).filter(Boolean)
+        : [],
+      voiceAliasesText: Array.isArray(item.voiceAliases)
+        ? item.voiceAliases.map((alias) => String(alias || '').trim()).filter(Boolean).join(' / ')
+        : '',
       stage: item.stage || '线索',
+      isClosedProject: projectClosed,
       estimatedAmount: formatAmount(item.estimatedAmount),
       estimatedAmountValue: item.estimatedAmount || 0,
       actualAmount: formatAmount(item.actualAmount),
       actualAmountValue: item.actualAmount || 0,
       expectedCommission: formatAmount(item.expectedCommission),
       expectedCommissionValue: item.expectedCommission || 0,
-      nextFollowUp: item.nextFollowUpDate || '待设置',
+      followUpSilenceDays: Number(item.followUpSilenceDays || 0),
+      nextFollowUp: '',
       description: item.description || '暂无项目摘要',
       tags: Array.isArray(item.tags) ? item.tags : [],
+      accountId: projectAccountId,
+      ownerAccountId,
+      sharedFromAccountId,
       isSharedProject: !!item.isSharedProject,
       handoverStatus: item.handoverStatus || '',
       handoverToName: item.handoverToName || '',
       handedOverAt: item.handedOverAt ? formatDateTime(item.handedOverAt) : '',
-      sharedFromName: item.sharedFromName || ''
+      sharedFromName: item.sharedFromName || '',
+      aiReview: item.aiReview && typeof item.aiReview === 'object' ? item.aiReview : null
     },
     contacts,
     tasks,
     taskSummary,
     followTimeline,
+    projectAssets: projectAssets.assets,
+    projectAssetSummary: projectAssets.summary,
     shareHistory
   }
 }

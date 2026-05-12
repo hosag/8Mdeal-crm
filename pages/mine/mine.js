@@ -1,7 +1,11 @@
 const {
   loadEarningsData,
   loadUserPreferencesData,
-  saveUserPreferencesData
+  saveUserPreferencesData,
+  resolveAccountData,
+  getEntitlementsData,
+  getDefaultAccountSummary,
+  getDefaultEntitlements
 } = require('../../services/data')
 const {
   THEME_OPTIONS,
@@ -11,6 +15,7 @@ const {
   getAppearancePageClass,
   syncPageAppearance
 } = require('../../utils/appearance')
+const { ensureActionAllowed, buildEntitlementOverview } = require('../../utils/entitlement-guard')
 
 const ADVANCE_OPTIONS = [
   { key: 'same_day', label: '当天提醒' },
@@ -49,18 +54,88 @@ function buildOverviewMetrics(earnings) {
   }))
 }
 
-function buildCloudEnvMeta(source) {
-  const currentSource = String(source || '').trim()
-  if (currentSource === 'CloudBase') {
-    return {
-      cloudEnvLabel: '已连接',
-      cloudEnvCaption: '当前已连接真实云环境'
-    }
+function formatDateLabel(value) {
+  const date = value ? new Date(value) : null
+  if (!date || Number.isNaN(date.getTime())) {
+    return ''
   }
 
+  const month = `${date.getMonth() + 1}`.padStart(2, '0')
+  const day = `${date.getDate()}`.padStart(2, '0')
+  return `${date.getFullYear()}-${month}-${day}`
+}
+
+function buildAccountDisplayTitle(account) {
+  const nextAccount = {
+    ...getDefaultAccountSummary(),
+    ...(account && typeof account === 'object' ? account : {})
+  }
+  return String(nextAccount.displayName || nextAccount.phoneMasked || '账户与偏好').trim() || '账户与偏好'
+}
+
+function buildAvatarText(value) {
+  const text = String(value || '').trim()
+  if (!text) {
+    return '我'
+  }
+
+  return text.slice(0, 1).toUpperCase()
+}
+
+function buildMineHeroSubtitle(account, entitlements) {
+  const nextAccount = {
+    ...getDefaultAccountSummary(),
+    ...(account && typeof account === 'object' ? account : {})
+  }
+  const nextEntitlements = {
+    ...getDefaultEntitlements(),
+    ...(entitlements && typeof entitlements === 'object' ? entitlements : {})
+  }
+  const overview = buildEntitlementOverview({
+    account: nextAccount,
+    entitlements: nextEntitlements
+  })
+  const effectiveEnd = formatDateLabel(nextEntitlements.effectiveTo || nextAccount.trialEndsAt)
+  const parts = [overview.writeStatusLabel]
+
+  if (effectiveEnd) {
+    parts.push(`有效至 ${effectiveEnd}`)
+  }
+
+  return parts.filter(Boolean).join(' · ')
+}
+
+function buildAccessSummaryState(account, entitlements) {
+  const nextAccount = {
+    ...getDefaultAccountSummary(),
+    ...(account && typeof account === 'object' ? account : {})
+  }
+  const nextEntitlements = {
+    ...getDefaultEntitlements(),
+    ...(entitlements && typeof entitlements === 'object' ? entitlements : {})
+  }
+  const overview = buildEntitlementOverview({
+    account: nextAccount,
+    entitlements: nextEntitlements
+  })
+
   return {
-    cloudEnvLabel: '演示数据',
-    cloudEnvCaption: '当前仍在演示数据模式'
+    accountSummary: nextAccount,
+    entitlementsSummary: nextEntitlements,
+    heroTitle: buildAccountDisplayTitle(nextAccount),
+    heroAvatarText: buildAvatarText(buildAccountDisplayTitle(nextAccount)),
+    heroSubtitle: buildMineHeroSubtitle(nextAccount, nextEntitlements),
+    displayNameInput: String(nextAccount.customDisplayName || '').trim(),
+    wechatNicknameText: String(nextAccount.wechatNickname || '').trim() || '当前未同步微信昵称',
+    accountAccessRows: [
+      { key: 'status', label: '账户状态', value: overview.accountStatusLabel },
+      { key: 'access', label: '当前权益', value: overview.accessLevelLabel },
+      { key: 'phone', label: '手机号', value: overview.phoneStatusLabel },
+      { key: 'projects', label: '项目数量', value: overview.projectQuotaText },
+      { key: 'voice', label: '语音额度', value: overview.voiceQuotaText },
+      { key: 'ai', label: 'AI 额度', value: overview.aiQuotaText }
+    ],
+    accountAccessNotice: overview.reasonSummary
   }
 }
 
@@ -90,26 +165,52 @@ Page({
     reminderSettings: getDefaultReminderSettings(),
     appearanceSettings: getDefaultAppearanceSettings(),
     isLoading: true,
-    dataSource: 'Mock Demo',
-    cloudEnvLabel: '检查中',
-    cloudEnvCaption: '正在确认当前环境',
+    isAccessLoading: true,
     currentThemeLabel: THEME_LABELS.deep_business,
     appearancePageClass: getAppearancePageClass(getDefaultAppearanceSettings()),
-    preferenceSavingKey: ''
+    preferenceSavingKey: '',
+    heroTitle: '账户与偏好',
+    heroAvatarText: '我',
+    heroSubtitle: '正在同步账户状态',
+    displayNameInput: '',
+    showDisplayNameSheet: false,
+    wechatNicknameText: '当前未同步微信昵称',
+    accountSummary: getDefaultAccountSummary(),
+    entitlementsSummary: getDefaultEntitlements(),
+    accountAccessRows: [],
+    accountAccessNotice: ''
   },
 
   async onLoad() {
     syncPageAppearance(this)
     try {
-      const [earningsResult, preferencesResult] = await Promise.all([
+      const [earningsResult, preferencesResult, accountResult, entitlementsResult] = await Promise.all([
         loadEarningsData(),
         loadUserPreferencesData().catch(() => ({
           reminderSettings: getDefaultReminderSettings(),
           appearanceSettings: getDefaultAppearanceSettings()
+        })),
+        resolveAccountData().catch(() => ({
+          data: getDefaultAccountSummary()
+        })),
+        getEntitlementsData().catch(() => ({
+          data: getDefaultEntitlements()
         }))
       ])
-      const cloudEnvMeta = buildCloudEnvMeta(earningsResult.source)
       const appearanceSettings = normalizeAppearanceSettings(preferencesResult && preferencesResult.appearanceSettings)
+      const app = getApp()
+      const accountSummary = accountResult && accountResult.data ? accountResult.data : getDefaultAccountSummary()
+      const entitlementsSummary = entitlementsResult && entitlementsResult.data
+        ? entitlementsResult.data
+        : getDefaultEntitlements()
+
+      if (app && typeof app.applyAccountState === 'function') {
+        app.applyAccountState(accountSummary)
+      }
+      if (app && typeof app.applyEntitlementsState === 'function') {
+        app.applyEntitlementsState(entitlementsSummary)
+      }
+
       this.setData({
         earnings: earningsResult.data,
         overviewMetrics: buildOverviewMetrics(earningsResult.data),
@@ -117,11 +218,10 @@ Page({
         appearanceSettings,
         themeOptions: buildThemeOptions(appearanceSettings.themeKey, ''),
         isLoading: false,
-        dataSource: earningsResult.source,
-        cloudEnvLabel: cloudEnvMeta.cloudEnvLabel,
-        cloudEnvCaption: cloudEnvMeta.cloudEnvCaption,
         currentThemeLabel: THEME_LABELS[appearanceSettings.themeKey] || THEME_LABELS.deep_business,
-        appearancePageClass: getAppearancePageClass(appearanceSettings)
+        appearancePageClass: getAppearancePageClass(appearanceSettings),
+        isAccessLoading: false,
+        ...buildAccessSummaryState(accountSummary, entitlementsSummary)
       })
     } catch (error) {
       this.setData({
@@ -133,10 +233,10 @@ Page({
         appearanceSettings: getDefaultAppearanceSettings(),
         themeOptions: buildThemeOptions(getDefaultAppearanceSettings().themeKey, ''),
         isLoading: false,
-        cloudEnvLabel: '检查失败',
-        cloudEnvCaption: '当前无法确认云环境状态',
+        isAccessLoading: false,
         currentThemeLabel: THEME_LABELS.deep_business,
-        appearancePageClass: getAppearancePageClass(getDefaultAppearanceSettings())
+        appearancePageClass: getAppearancePageClass(getDefaultAppearanceSettings()),
+        ...buildAccessSummaryState(getDefaultAccountSummary(), getDefaultEntitlements())
       })
       wx.showToast({
         title: '当前无法同步我的数据',
@@ -150,8 +250,56 @@ Page({
     wx.navigateTo({ url })
   },
 
+  openEntitlementsPage() {
+    wx.navigateTo({
+      url: '/pages/entitlements/entitlements'
+    })
+  },
+
+  openPlansPage() {
+    wx.navigateTo({
+      url: '/pages/plans/plans'
+    })
+  },
+
+  openPhoneBindPage() {
+    wx.navigateTo({
+      url: '/pages/phone-bind/phone-bind'
+    })
+  },
+
   onShow() {
     syncPageAppearance(this)
+    this.refreshAccessState()
+  },
+
+  async refreshAccessState() {
+    try {
+      const [accountResult, entitlementsResult] = await Promise.all([
+        resolveAccountData(),
+        getEntitlementsData()
+      ])
+      const accountSummary = accountResult && accountResult.data ? accountResult.data : getDefaultAccountSummary()
+      const entitlementsSummary = entitlementsResult && entitlementsResult.data
+        ? entitlementsResult.data
+        : getDefaultEntitlements()
+      const app = getApp()
+
+      if (app && typeof app.applyAccountState === 'function') {
+        app.applyAccountState(accountSummary)
+      }
+      if (app && typeof app.applyEntitlementsState === 'function') {
+        app.applyEntitlementsState(entitlementsSummary)
+      }
+
+      this.setData({
+        isAccessLoading: false,
+        preferenceSavingKey: this.data.preferenceSavingKey === 'customDisplayName' ? '' : this.data.preferenceSavingKey,
+        ...buildAccessSummaryState(accountSummary, entitlementsSummary)
+      })
+    } catch (error) {
+      // Keep the last visible snapshot when refresh fails.
+    }
   },
 
   async saveReminderSettings(nextSettings, savingKey) {
@@ -241,6 +389,91 @@ Page({
     }
   },
 
+  onDisplayNameInput(event) {
+    this.setData({
+      displayNameInput: String(event && event.detail && event.detail.value || '').slice(0, 24)
+    })
+  },
+
+  openDisplayNameSheet() {
+    this.setData({
+      showDisplayNameSheet: true,
+      displayNameInput: String(this.data.accountSummary.customDisplayName || '').trim()
+    })
+  },
+
+  closeDisplayNameSheet() {
+    if (this.data.preferenceSavingKey === 'customDisplayName') {
+      return
+    }
+
+    this.setData({
+      showDisplayNameSheet: false,
+      displayNameInput: String(this.data.accountSummary.customDisplayName || '').trim()
+    })
+  },
+
+  async persistDisplayName(nextDisplayName) {
+    if (this.data.preferenceSavingKey) {
+      return
+    }
+
+    const normalizedDisplayName = String(nextDisplayName || '').trim().slice(0, 24)
+    if (normalizedDisplayName === String(this.data.accountSummary.customDisplayName || '').trim()) {
+      this.setData({
+        showDisplayNameSheet: false
+      })
+      return
+    }
+
+    this.setData({
+      preferenceSavingKey: 'customDisplayName',
+      displayNameInput: normalizedDisplayName
+    })
+
+    try {
+      const result = await saveUserPreferencesData({
+        customDisplayName: normalizedDisplayName
+      })
+
+      if (!result || !result.ok) {
+        throw new Error(result && result.message ? result.message : '保存显示名失败')
+      }
+
+      await this.refreshAccessState()
+      this.setData({
+        showDisplayNameSheet: false
+      })
+      wx.showToast({
+        title: normalizedDisplayName ? '显示名已保存' : '已恢复默认显示',
+        icon: 'none'
+      })
+    } catch (error) {
+      this.setData({
+        preferenceSavingKey: ''
+      })
+      wx.showToast({
+        title: error && error.message ? error.message : '保存显示名失败',
+        icon: 'none'
+      })
+    }
+  },
+
+  saveDisplayName() {
+    this.persistDisplayName(this.data.displayNameInput)
+  },
+
+  resetDisplayName() {
+    if (this.data.preferenceSavingKey) {
+      return
+    }
+
+    this.setData({
+      displayNameInput: ''
+    })
+    this.persistDisplayName('')
+  },
+
   onReminderToggleChange(event) {
     const field = event.currentTarget.dataset.field
     if (!field) {
@@ -299,9 +532,14 @@ Page({
     }, 'themeKey')
   },
 
-  handleQuickEntryTap() {
-    wx.reLaunch({
-      url: '/pages/index/index?openQuickEntry=1'
+  async handleQuickEntryTap() {
+    const decision = await ensureActionAllowed('quick_entry', { guide: true })
+    if (!decision.allowed) {
+      return
+    }
+
+    wx.navigateTo({
+      url: '/pages/index/index?openQuickEntry=1&quickEntryStandalone=1'
     })
   }
 })

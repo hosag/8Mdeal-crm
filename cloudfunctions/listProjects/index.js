@@ -4,10 +4,23 @@ cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 
 const db = cloud.database()
 
+function normalizeText(value) {
+  return String(value || '').trim()
+}
+
 function startOfDay(value = new Date()) {
   const date = value instanceof Date ? new Date(value) : new Date(value)
   date.setHours(0, 0, 0, 0)
   return date
+}
+
+function computeDormantDays(value, now = new Date()) {
+  const date = parseDateTime(value)
+  if (!date) {
+    return 0
+  }
+
+  return Math.max(0, Math.round((startOfDay(now).getTime() - startOfDay(date).getTime()) / 86400000))
 }
 
 function parseDateTime(value) {
@@ -61,40 +74,98 @@ function computeProgress(stage) {
   return progressMap[stage] || 12
 }
 
-function computeNextStatus(stage, nextDate, now = new Date()) {
-  if (stage === '成交' || stage === '流失') {
+function parseBoolean(value) {
+  if (typeof value === 'boolean') {
+    return value
+  }
+
+  const text = normalizeText(value).toLowerCase()
+  return text === '1' || text === 'true' || text === 'yes'
+}
+
+function computeTaskStatus(stage, taskStats, now = new Date()) {
+  if (isClosedProjectStage(stage)) {
     return {
       code: 'closed',
       text: stage === '成交' ? '已成交' : '已流失'
     }
   }
 
-  if (!nextDate) {
+  const stats = taskStats || {}
+  const openCount = Number(stats.openCount || 0)
+  const nextTaskDueAt = parseDateTime(stats.nextTaskDueAt)
+  if (!openCount) {
     return {
       code: 'unplanned',
-      text: '待安排'
+      text: '待补动作'
     }
   }
 
-  const diff = Math.round((startOfDay(nextDate).getTime() - startOfDay(now).getTime()) / 86400000)
+  if (Number(stats.overdueCount || 0) > 0) {
+    return {
+      code: 'overdue',
+      text: '优先处理'
+    }
+  }
+
+  if (!nextTaskDueAt) {
+    return {
+      code: 'upcoming',
+      text: '待处理'
+    }
+  }
+
+  const diff = Math.round((startOfDay(nextTaskDueAt).getTime() - startOfDay(now).getTime()) / 86400000)
   if (diff < 0) {
     return {
       code: 'overdue',
-      text: '已逾期'
+      text: '优先处理'
     }
   }
 
   if (diff === 0) {
     return {
       code: 'today',
-      text: '今天跟进'
+      text: '今天处理'
     }
   }
 
   return {
     code: 'upcoming',
-    text: '待跟进'
+    text: diff === 1 ? '提前准备' : '待处理'
   }
+}
+
+function isClosedProjectStage(stage) {
+  const current = normalizeText(stage)
+  return current === '成交' || current === '流失'
+}
+
+function buildReviewSummary(aiReview, stage) {
+  const review = aiReview && typeof aiReview === 'object' && !Array.isArray(aiReview) ? aiReview : null
+  if (!review) {
+    return ''
+  }
+
+  const candidates = []
+  if (stage === '成交') {
+    candidates.push(
+      ...(Array.isArray(review.reusableLessons) ? review.reusableLessons : []),
+      ...(Array.isArray(review.effectiveActions) ? review.effectiveActions : []),
+      ...(Array.isArray(review.turningPoints) ? review.turningPoints : [])
+    )
+  } else {
+    candidates.push(
+      ...(Array.isArray(review.lossReasons) ? review.lossReasons : []),
+      ...(Array.isArray(review.slowdownPoints) ? review.slowdownPoints : [])
+    )
+    if (review.reactivationAdvice) {
+      candidates.push(review.reactivationAdvice)
+    }
+  }
+
+  candidates.push(review.reviewOverview)
+  return normalizeText(candidates.find((item) => normalizeText(item)))
 }
 
 function getStageFocus(stage, isSharedProject) {
@@ -154,9 +225,10 @@ function buildTaskStats(tasks) {
   }
 }
 
-exports.main = async () => {
+exports.main = async (event = {}) => {
   const wxContext = cloud.getWXContext()
   const now = new Date()
+  const includeReadonlySharedOut = parseBoolean(event.includeReadonlySharedOut)
 
   const result = await db.collection('projects')
     .where({
@@ -165,7 +237,9 @@ exports.main = async () => {
     .orderBy('updatedAt', 'desc')
     .get()
 
-  const visibleProjects = result.data.filter((item) => !(item.handoverStatus === 'handed_over' && !item.isSharedProject))
+  const visibleProjects = includeReadonlySharedOut
+    ? result.data
+    : result.data.filter((item) => !(item.handoverStatus === 'handed_over' && !item.isSharedProject))
   const projectIds = visibleProjects.map((item) => item._id)
   const latestFollowMap = {}
 
@@ -215,8 +289,6 @@ exports.main = async () => {
     ok: true,
     projects: visibleProjects.map((item) => {
       const updatedAt = parseDateTime(item.updatedAt || item.createdAt)
-      const nextFollowUpAt = parseDateTime(item.nextFollowUpDate)
-      const nextStatus = computeNextStatus(item.stage, nextFollowUpAt, now)
       const contactNames = Array.isArray(item.contacts)
         ? item.contacts
           .map((contact) => String(contact.name || '').trim())
@@ -224,15 +296,46 @@ exports.main = async () => {
         : []
       const latestFollow = latestFollowMap[item._id] || null
       const latestSummary = String((latestFollow && (latestFollow.aiSummary || latestFollow.content)) || '').trim()
-      const taskStats = buildTaskStats(taskStatsMap[item._id])
+      const rawTaskStats = buildTaskStats(taskStatsMap[item._id])
+      const nextStatus = computeTaskStatus(item.stage, rawTaskStats, now)
+      const latestFollowAt = parseDateTime(latestFollow && (latestFollow.followUpTime || latestFollow.createdAt))
+      const lastActiveAt = latestFollowAt || updatedAt
+      const dormantDays = computeDormantDays(lastActiveAt, now)
+      const isClosed = isClosedProjectStage(item.stage) || item.isClosed === true
+      const isReadOnlySharedOut = item.handoverStatus === 'handed_over' && !item.isSharedProject
+      const ownerType = item.isSharedProject
+        ? 'shared_in'
+        : (isReadOnlySharedOut ? 'shared_out_readonly' : 'owned')
+      const handoverToName = normalizeText(item.handoverToName)
+      const canEditProject = !isReadOnlySharedOut
+      const aiReview = item.aiReview && typeof item.aiReview === 'object' ? item.aiReview : null
+      const closedStageText = item.stage === '成交' ? '已成交' : (item.stage === '流失' ? '已流失' : '已关闭')
+      const reviewSummary = buildReviewSummary(aiReview, item.stage)
+      const closedSummaryText = reviewSummary || `${closedStageText}，待复盘`
+      const taskStats = isClosed
+        ? {
+            openCount: 0,
+            overdueCount: 0,
+            openTaskTypes: [],
+            nextTaskId: '',
+            nextTaskTitle: '',
+            nextTaskDueText: '',
+            nextTaskDueAt: ''
+          }
+        : rawTaskStats
 
       return {
         id: item._id,
         name: item.projectName || '未命名项目',
         client: item.clientName || '未填写客户',
+        voiceAliases: Array.isArray(item.voiceAliases)
+          ? item.voiceAliases.map((alias) => String(alias || '').trim()).filter(Boolean)
+          : [],
         stage: item.stage || '线索',
-        next: item.nextFollowUpDate ? `下次跟进 ${item.nextFollowUpDate}` : '暂无下次跟进',
-        nextFollowUpAt: nextFollowUpAt ? nextFollowUpAt.toISOString() : '',
+        next: taskStats.nextTaskTitle
+          ? `推进任务 ${taskStats.nextTaskTitle}${taskStats.nextTaskDueText ? ` · 截止 ${taskStats.nextTaskDueText}` : ''}`
+          : (isClosed ? closedStageText : '暂无推进任务'),
+        nextFollowUpAt: '',
         nextStatus: nextStatus.code,
         nextStatusText: nextStatus.text,
         amount: formatAmount(item.estimatedAmount),
@@ -241,26 +344,48 @@ exports.main = async () => {
         commissionValue: Number(item.expectedCommission || 0),
         latest: formatDateTime(updatedAt || item.updatedAt || item.createdAt),
         updatedAtRaw: updatedAt ? updatedAt.toISOString() : '',
+        lastActiveAt: lastActiveAt ? lastActiveAt.toISOString() : '',
+        lastActiveText: formatDateTime(lastActiveAt || updatedAt || item.updatedAt || item.createdAt),
+        dormantDays,
+        showAiWakeAction: canEditProject && !isClosed && dormantDays >= 7,
         progress: computeProgress(item.stage),
-        tag: item.isSharedProject ? '外发给我' : '我创建',
-        ownerType: item.isSharedProject ? 'shared_in' : 'owned',
+        tag: item.isSharedProject
+          ? '外发给我'
+          : (isReadOnlySharedOut ? '已转交' : '我创建'),
+        ownerType,
         ownerLabel: item.isSharedProject
           ? `${item.sharedFromName || '分享方'} 外发给我`
-          : '我负责推进',
+          : (isReadOnlySharedOut ? `已转交给 ${handoverToName || '接手方'}` : '我负责推进'),
         contactCount: contactNames.length,
         contactNames,
         tags: Array.isArray(item.tags) ? item.tags : [],
         sharedFromName: item.sharedFromName || '',
+        handoverToName,
         description: String(item.description || '').trim(),
-        focusText: getStageFocus(item.stage || '线索', !!item.isSharedProject),
-        latestSummary: latestSummary || '当前还没有跟进摘要',
+        focusText: isReadOnlySharedOut
+          ? `项目已转交给 ${handoverToName || '接手方'}，当前仅保留只读追踪。`
+          : (isClosed ? `${closedStageText}，${aiReview ? '已复盘' : '待复盘'}` : getStageFocus(item.stage || '线索', !!item.isSharedProject)),
+        latestSummary: isClosed ? closedSummaryText : (latestSummary || '当前还没有跟进摘要'),
+        isClosedProject: isClosed,
+        closedStageText,
+        reviewStatusText: aiReview ? '已复盘' : '待复盘',
+        closedSummaryText,
         openTaskCount: taskStats.openCount,
         overdueTaskCount: taskStats.overdueCount,
         openTaskTypes: taskStats.openTaskTypes,
         nextTaskId: taskStats.nextTaskId,
         nextTaskTitle: taskStats.nextTaskTitle,
         nextTaskDueText: taskStats.nextTaskDueText,
-        nextTaskDueAt: taskStats.nextTaskDueAt
+        nextTaskDueAt: taskStats.nextTaskDueAt,
+        canEditProject,
+        canAdvanceProject: canEditProject && !isClosed,
+        canShareProject: canEditProject,
+        canManageTasks: canEditProject && !isClosed,
+        canMarkDeal: canEditProject && !isClosed,
+        canReviewProject: canEditProject && isClosed,
+        isReadOnlySharedOut,
+        aiReview,
+        reviewActionText: aiReview ? '查看复盘' : 'AI复盘'
       }
     })
   }

@@ -218,6 +218,14 @@ function pushProject(aggregate, project, projectLatestTouchAt, projectLatestSumm
     return
   }
 
+  const isReadOnlySharedOut = project.handoverStatus === 'handed_over' && !project.isSharedProject
+  const ownerLabel = project.isSharedProject
+    ? `${normalizeText(project.sharedFromName) || '分享方'} 外发给我`
+    : (isReadOnlySharedOut ? `已转交给 ${normalizeText(project.handoverToName) || '接手方'}` : '我负责推进')
+  const ownerType = project.isSharedProject
+    ? 'shared_in'
+    : (isReadOnlySharedOut ? 'shared_out_readonly' : 'owned')
+
   const projectEntry = {
     id: project._id,
     name: normalizeText(project.projectName) || '未命名项目',
@@ -229,10 +237,8 @@ function pushProject(aggregate, project, projectLatestTouchAt, projectLatestSumm
       const source = parseDateTime(projectLatestTouchAt || project.updatedAt || project.createdAt)
       return source ? source.toISOString() : ''
     })(),
-    ownerLabel: project.isSharedProject
-      ? `${normalizeText(project.sharedFromName) || '分享方'} 外发给我`
-      : '我负责推进',
-    ownerType: project.isSharedProject ? 'shared_in' : 'owned'
+    ownerLabel,
+    ownerType
   }
 
   aggregate.projectMap[project._id] = true
@@ -245,7 +251,7 @@ exports.main = async () => {
   const projects = await fetchAll('projects', {
     _openid: wxContext.OPENID
   }, 'updatedAt', 'desc')
-  const visibleProjects = projects.filter((item) => !(item.handoverStatus === 'handed_over' && !item.isSharedProject))
+  const visibleProjects = projects
 
   if (!visibleProjects.length) {
     return {
@@ -318,6 +324,7 @@ exports.main = async () => {
       const currentLatestTime = aggregate.latestTouchAt ? aggregate.latestTouchAt.getTime() : 0
       const candidateLatestTime = projectLatestTouchAt ? projectLatestTouchAt.getTime() : 0
       if (candidateLatestTime >= currentLatestTime) {
+        const isReadOnlySharedOut = project.handoverStatus === 'handed_over' && !project.isSharedProject
         aggregate.latestTouchAt = projectLatestTouchAt
         aggregate.latestSummary = projectLatestSummary || aggregate.latestSummary
         aggregate.latestProjectId = project._id
@@ -325,8 +332,10 @@ exports.main = async () => {
         aggregate.latestProjectClient = normalizeText(project.clientName) || ''
         aggregate.latestOwnerLabel = project.isSharedProject
           ? `${normalizeText(project.sharedFromName) || '分享方'} 外发给我`
-          : '我负责推进'
-        aggregate.latestOwnerType = project.isSharedProject ? 'shared_in' : 'owned'
+          : (isReadOnlySharedOut ? `已转交给 ${normalizeText(project.handoverToName) || '接手方'}` : '我负责推进')
+        aggregate.latestOwnerType = project.isSharedProject
+          ? 'shared_in'
+          : (isReadOnlySharedOut ? 'shared_out_readonly' : 'owned')
       }
 
       aggregate.stageTags.push(normalizeText(project.stage) || '线索')

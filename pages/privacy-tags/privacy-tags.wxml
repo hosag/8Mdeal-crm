@@ -7,17 +7,13 @@
   <view class="hero rise-in">
     <view class="eyebrow-row">
       <view class="eyebrow">隐私标签</view>
-      <view class="source-badge">{{dataSource}}</view>
     </view>
-    <view class="hero-title">把权限规则做成可理解的标签</view>
-    <view class="hero-subtitle">默认标签既能满足大多数分享场景，也给了用户增删改的空间，避免复杂权限表单。</view>
-    <view class="hero-actions">
-      <view class="btn-secondary" data-tag-id="" bindtap="openPage">新建标签</view>
-    </view>
+    <view class="hero-title">分享可见范围</view>
+    <view class="hero-subtitle">分别管理发送资料和转交项目时，对方可以看到哪些信息。</view>
   </view>
 
   <view class="section rise-in stagger-1">
-    <view class="tag-card" wx:for="{{privacyTags}}" wx:key="id" data-tag-id="{{item.id}}" bindtap="openPage">
+    <view class="tag-card" wx:for="{{privacyScopes}}" wx:key="mode" data-tag-id="{{item.id}}" data-mode="{{item.mode}}" bindtap="openPage">
       <view class="line-between">
         <view>
           <view class="tag-title">{{item.name}}</view>
@@ -30,17 +26,12 @@
       </view>
     </view>
     <empty-state
-      wx:if="{{!privacyTags.length}}"
+      wx:if="{{!privacyScopes.length}}"
       appearance-page-class="{{appearancePageClass}}"
-      title="暂无可用标签"
-      desc="新建标签后，可作为资料分享范围模板复用。"
+      title="暂无可用范围"
+      desc="当前无法加载分享范围设置。"
       image="/assets/illustrations/empty-tags.svg"
-      actionText="新建标签"
-      bind:action="openPage"
-      data-tag-id=""
     />
   </view>
-
-  <view class="center-note section">标签页重点强调“可见字段”而不是技术权限术语，降低理解门槛。</view>
   </block>
 </view>

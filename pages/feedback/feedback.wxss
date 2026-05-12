@@ -1,0 +1,86 @@
+.feedback-page {
+  padding-bottom: 180rpx;
+}
+
+.feedback-tip-card {
+  padding: 18rpx 20rpx;
+}
+
+.feedback-pill-row {
+  margin-top: 10rpx;
+  gap: 10rpx;
+}
+
+.feedback-chip {
+  min-height: 54rpx;
+  padding: 0 18rpx;
+  font-size: 21rpx;
+}
+
+.feedback-textarea {
+  min-height: 260rpx;
+}
+
+.feedback-contact-hint {
+  margin-top: 8rpx;
+}
+
+.feedback-contact-row {
+  margin-top: 24rpx;
+  padding: 18rpx 20rpx;
+  border-radius: 22rpx;
+  background: var(--theme-soft-block-bg);
+  box-shadow: inset 0 0 0 1rpx rgba(24, 39, 51, 0.05);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18rpx;
+}
+
+.feedback-contact-copy {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.feedback-success-card {
+  text-align: center;
+  padding: 34rpx 28rpx;
+}
+
+.feedback-success-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 50rpx;
+  padding: 0 18rpx;
+  border-radius: 999rpx;
+  background: var(--theme-success-bg);
+  color: var(--theme-success-text);
+  font-size: 22rpx;
+  font-weight: 700;
+}
+
+.feedback-success-card .form-card-title {
+  margin-top: 18rpx;
+}
+
+.feedback-success-actions {
+  margin-top: 24rpx;
+  justify-content: center;
+}
+
+.feedback-action {
+  min-width: 190rpx;
+}
+
+.footer-bar.appearance-font-large .btn-primary,
+.footer-bar.appearance-font-large .btn-ghost {
+  height: 106rpx;
+  font-size: 31rpx;
+}
+
+.footer-bar.appearance-font-readable .btn-primary,
+.footer-bar.appearance-font-readable .btn-ghost {
+  height: 128rpx;
+  font-size: 38rpx;
+}

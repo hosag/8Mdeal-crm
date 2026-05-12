@@ -1,7 +1,17 @@
-const { loadProjectDetailData, updateTaskStatusData, markNotificationReadData, resolveNotificationData, saveProjectData } = require('../../services/data')
-const { buildProjectDetailEntryContext } = require('../../utils/navigation-context')
+const {
+  loadProjectDetailData,
+  updateTaskStatusData,
+  markNotificationReadData,
+  resolveNotificationData,
+  requestProjectJudgementData,
+  requestProjectReviewData,
+  requestSpeechToTextData,
+  reportSystemFailureData,
+  flowProjectData
+} = require('../../services/data')
 const { touchNotificationSync } = require('../../utils/notification-sync')
 const { syncPageAppearance } = require('../../utils/appearance')
+const { ensureActionAllowed } = require('../../utils/entitlement-guard')
 const {
   buildTaskCompletionFeedback,
   buildTaskStatusFeedback,
@@ -12,6 +22,10 @@ const {
 const NEXT_TASK_TEMPLATES = [
   { type: 'send_solution', label: '待发方案' },
   { type: 'send_quote', label: '待报价' },
+  { type: 'demo', label: '待演示' },
+  { type: 'report_solution', label: '待汇报方案' },
+  { type: 'business_negotiation', label: '待商务谈判' },
+  { type: 'research', label: '待调研' },
   { type: 'callback', label: '待回访' },
   { type: 'meeting', label: '待约会面' },
   { type: 'contract', label: '待签约' },
@@ -34,6 +48,129 @@ const SHARE_ACTION_OPTIONS = [
     note: '后续在外发项目查看'
   }
 ]
+
+const PROJECT_AI_MODEL_SOURCE_DEFAULTS = {
+  sourceType: 'model',
+  sourceLabel: '云端模型',
+  providerLabel: 'CloudBase AI',
+  modelName: 'hunyuan-exp / hunyuan-turbos-latest',
+  canRegenerate: true
+}
+
+const PROJECT_AI_FALLBACK_SOURCE_DEFAULTS = {
+  sourceType: 'fallback',
+  sourceLabel: '系统基础建议',
+  providerLabel: '',
+  modelName: '',
+  canRegenerate: true
+}
+
+function normalizeText(value) {
+  return String(value || '').trim()
+}
+
+function normalizeStringArray(value) {
+  if (!Array.isArray(value)) {
+    return []
+  }
+
+  return value.map((item) => String(item || '').trim()).filter(Boolean)
+}
+
+function formatAiGeneratedTime(value) {
+  const date = value instanceof Date ? value : new Date(value)
+  if (Number.isNaN(date.getTime())) {
+    return ''
+  }
+
+  return `${padNumber(date.getMonth() + 1)}-${padNumber(date.getDate())} ${padNumber(date.getHours())}:${padNumber(date.getMinutes())}`
+}
+
+function normalizeProjectAiSourceMeta(value) {
+  const payload = value && typeof value === 'object' ? value : {}
+  const sourceType = String(payload.sourceType || (payload.fallback ? 'fallback' : 'model')).trim() === 'fallback'
+    ? 'fallback'
+    : 'model'
+  const defaults = sourceType === 'fallback'
+    ? PROJECT_AI_FALLBACK_SOURCE_DEFAULTS
+    : PROJECT_AI_MODEL_SOURCE_DEFAULTS
+  const modelName = String(payload.modelName || defaults.modelName).trim()
+  const sourceLabel = String(payload.sourceLabel || defaults.sourceLabel).trim()
+  const generatedAt = String(payload.generatedAt || '').trim()
+  const generatedAtText = formatAiGeneratedTime(payload.generatedAt)
+  const sourceMetaParts = [sourceLabel]
+  if (sourceType !== 'fallback' && modelName) {
+    sourceMetaParts.push(modelName)
+  }
+  if (generatedAtText) {
+    sourceMetaParts.push(`生成于 ${generatedAtText}`)
+  }
+
+  return {
+    sourceType,
+    sourceLabel,
+    providerLabel: String(payload.providerLabel || defaults.providerLabel).trim(),
+    modelName,
+    canRegenerate: payload.canRegenerate !== false,
+    generatedAt,
+    generatedAtText,
+    sourceMetaText: sourceMetaParts.join(' · '),
+    sourceDisplayText: sourceType === 'fallback'
+      ? '来自：系统基础建议'
+      : `来自：云端模型${modelName ? ` · ${modelName}` : ''}`,
+    regenerateLabel: sourceType === 'fallback' ? '获取云端复盘' : 'AI重新复盘'
+  }
+}
+
+function normalizeProjectAiResult(value) {
+  const payload = value && typeof value === 'object' ? value : {}
+  return {
+    ...payload,
+    ...normalizeProjectAiSourceMeta(payload),
+    summary: String(payload.summary || '').trim(),
+    statusJudgement: String(payload.statusJudgement || '').trim(),
+    keyBlockers: normalizeStringArray(payload.keyBlockers),
+    positiveSignals: normalizeStringArray(payload.positiveSignals),
+    priorityAction: String(payload.priorityAction || '').trim()
+  }
+}
+
+function normalizeProjectReviewResult(value) {
+  const payload = value && typeof value === 'object' ? value : {}
+  return {
+    ...payload,
+    ...normalizeProjectAiSourceMeta(payload),
+    stage: String(payload.stage || '').trim(),
+    reviewOverview: String(payload.reviewOverview || '').trim(),
+    turningPoints: normalizeStringArray(payload.turningPoints),
+    effectiveActions: normalizeStringArray(payload.effectiveActions),
+    reusableLessons: normalizeStringArray(payload.reusableLessons),
+    slowdownPoints: normalizeStringArray(payload.slowdownPoints),
+    lossReasons: normalizeStringArray(payload.lossReasons),
+    reactivationAdvice: String(payload.reactivationAdvice || '').trim()
+  }
+}
+
+function cloneSnapshot(value) {
+  if (!value || typeof value !== 'object') {
+    return null
+  }
+
+  return JSON.parse(JSON.stringify(value))
+}
+
+function shouldShowProjectAiAction(stage, isReadOnlySharedOut, projectAccess = {}) {
+  const currentStage = String(stage || '').trim()
+  if (isReadOnlySharedOut || projectAccess.canAdvanceProject === false) {
+    return false
+  }
+
+  return Boolean(currentStage && currentStage !== '成交' && currentStage !== '流失')
+}
+
+function shouldShowProjectReviewAction(stage, isReadOnlySharedOut, projectAccess = {}) {
+  return false
+}
 
 function padNumber(value) {
   return `${value}`.padStart(2, '0')
@@ -71,6 +208,29 @@ function buildDefaultNextTaskDraft() {
   }
 }
 
+const MAX_RECORD_DURATION = 60000
+
+function getSpeechRecorderManager() {
+  if (!wx || typeof wx.getRecorderManager !== 'function') {
+    return null
+  }
+
+  return wx.getRecorderManager()
+}
+
+function normalizeRecognizedText(value) {
+  return String(value || '').replace(/\s+/g, ' ').trim()
+}
+
+function getVoiceFileExtension(filePath = '') {
+  const matched = /\.([^.\\/]+)$/.exec(String(filePath || '').trim().toLowerCase())
+  const extension = matched ? matched[1] : 'mp3'
+  if (['mp3', 'm4a', 'wav', 'aac', 'amr'].includes(extension)) {
+    return extension
+  }
+
+  return 'mp3'
+}
 
 function getStageFocus(stage) {
   const focusMap = {
@@ -134,11 +294,6 @@ function buildProjectBadges(projectDetail, isReadOnlySharedOut) {
       text: detail.handoverToName ? `已外发给 ${detail.handoverToName}` : '外发追踪中',
       className: 'chip'
     })
-  } else if (detail.nextFollowUp && detail.nextFollowUp !== '待设置') {
-    badges.push({
-      text: `下次跟进 ${detail.nextFollowUp}`,
-      className: 'chip'
-    })
   }
 
   return badges
@@ -194,7 +349,6 @@ function buildProjectOverview(projectDetail, contacts, followTimeline, shareHist
     latestSummary: latestTimelineItem
       ? String(latestTimelineItem.summary || latestTimelineItem.desc || '').trim()
       : '暂无跟进摘要',
-    nextFollowUpText: detail.nextFollowUp || '未设置',
     primaryContactText: contactList.length
       ? `${contactList[0].name || '联系人'}${contactList[0].role ? ` / ${contactList[0].role}` : ''}`
       : '暂无联系人',
@@ -206,6 +360,65 @@ function buildProjectOverview(projectDetail, contacts, followTimeline, shareHist
       ? '外发追踪中'
       : (latestShare ? `最近发送 ${latestShare.status}` : '暂无资料发送')
   }
+}
+
+function buildShareSheetMeta(projectDetail = {}) {
+  const detail = projectDetail && typeof projectDetail === 'object' ? projectDetail : {}
+  return {
+    client: detail.client || '',
+    stage: detail.stage || '',
+    amount: detail.estimatedAmount || '',
+    nextDisplay: ''
+  }
+}
+
+function buildProjectAccess(projectDetail = {}, accessMeta = {}) {
+  const detail = projectDetail && typeof projectDetail === 'object' ? projectDetail : {}
+  const source = accessMeta && typeof accessMeta === 'object' ? accessMeta : {}
+  const fallbackReadonly = detail.handoverStatus === 'handed_over' && !detail.isSharedProject
+  const canEditProject = typeof source.canEditProject === 'boolean' ? source.canEditProject : !fallbackReadonly
+  const isClosedProject = detail.isClosedProject === true || detail.stage === '成交' || detail.stage === '流失'
+  const canAdvanceProject = typeof source.canAdvanceProject === 'boolean' ? source.canAdvanceProject : (canEditProject && !isClosedProject)
+  const canManageContacts = typeof source.canManageContacts === 'boolean' ? source.canManageContacts : canEditProject
+  const canManageTasks = typeof source.canManageTasks === 'boolean' ? source.canManageTasks : (canEditProject && !isClosedProject)
+  const canShareProject = typeof source.canShareProject === 'boolean' ? source.canShareProject : canEditProject
+  const canMarkDeal = typeof source.canMarkDeal === 'boolean' ? source.canMarkDeal : (canEditProject && !isClosedProject)
+  const isReadOnlySharedOut = fallbackReadonly && !canEditProject
+  let readOnlyReasonText = ''
+
+  if (isReadOnlySharedOut) {
+    readOnlyReasonText = `该项目已转交给 ${detail.handoverToName || '接收方'}，当前页仅保留只读追踪。后续进展请在“外发项目”查看。`
+  } else if (isClosedProject) {
+    readOnlyReasonText = detail.stage === '流失'
+      ? '项目已流失，当前不再新增跟进和推进任务。'
+      : '项目已成交，当前不再新增跟进和推进任务。'
+  }
+
+  return {
+    viewerAccountId: normalizeText(source.viewerAccountId),
+    projectAccountId: normalizeText(source.projectAccountId || detail.accountId),
+    ownerAccountId: normalizeText(source.ownerAccountId || detail.ownerAccountId),
+    sharedFromAccountId: normalizeText(source.sharedFromAccountId || detail.sharedFromAccountId),
+    canEditProject,
+    canAdvanceProject,
+    canManageContacts,
+    canManageTasks,
+    canShareProject,
+    canMarkDeal,
+    isReadOnlySharedOut,
+    readOnlyReason: normalizeText(source.readonlyReason),
+    readOnlyReasonText
+  }
+}
+
+function getProjectReadonlyToast(projectAccess = {}, projectDetail = {}) {
+  if (projectAccess && projectAccess.isReadOnlySharedOut) {
+    return projectDetail && projectDetail.handoverToName
+      ? `该项目已转交给 ${projectDetail.handoverToName}，当前仅保留查看`
+      : '该项目已转交给接手方，当前仅保留查看'
+  }
+
+  return '当前项目为只读状态'
 }
 
 function buildContactMeta(contacts) {
@@ -230,7 +443,7 @@ function buildEmptyContactDraft(projectDetail = {}) {
     role: '',
     phone: '',
     wechat: '',
-    company: String(projectDetail.client || '').trim()
+    company: normalizeText(projectDetail.client)
   }
 }
 
@@ -283,32 +496,13 @@ function normalizeShareModeLabel(mode) {
 
 function normalizeShareHistory(records) {
   return (Array.isArray(records) ? records : []).map((item) => {
-    const isOutbound = item.mode === '项目外发'
     const viewerCount = Number(item.viewerCount || 0)
     let statusSummary = '已发出，等待对方查看'
-    let collaborationSummary = isOutbound
-      ? '当前还在等待对方打开交接卡。'
-      : '本次分享仍由你继续维护。'
+    let collaborationSummary = '本次分享仍由你继续维护。'
 
     if (item.status === '已打开') {
-      statusSummary = isOutbound
-        ? '对方已查看，等待接手'
-        : (viewerCount > 1 ? `已有 ${viewerCount} 人查看资料` : '对方已查看资料')
-      collaborationSummary = isOutbound
-        ? `${item.receiverName || item.receiverOpenidMasked || '对方'} 已查看交接卡，暂未接手项目。`
-        : `${item.receiverName || item.receiverOpenidMasked || '对方'} 已查看资料卡，本次分享仍由你继续维护。`
-    }
-
-    if (item.status === '已导入') {
-      statusSummary = '对方已接手项目'
-      collaborationSummary = '项目已进入对方“我的项目”，等待首条推进记录。'
-    }
-
-    if (item.status === '已跟进') {
-      statusSummary = `对方已继续跟进 ${Number(item.collaboratorFollowCount || 0)} 条`
-      collaborationSummary = item.collaboratorLatestFollowAt
-        ? `${item.receiverName || item.receiverOpenidMasked || '对方'} 最近更新 ${item.collaboratorLatestFollowAt}`
-        : '可在“外发项目”查看完整时间线'
+      statusSummary = viewerCount > 1 ? `已有 ${viewerCount} 人查看资料` : '对方已查看资料'
+      collaborationSummary = `${item.receiverName || item.receiverOpenidMasked || '对方'} 已查看资料卡，本次分享仍由你继续维护。`
     }
 
     return {
@@ -318,26 +512,58 @@ function normalizeShareHistory(records) {
       receiverLabel: item.receiverName || item.receiverOpenidMasked || '暂未识别',
       statusSummary,
       collaborationSummary,
-      receiverSummary: isOutbound
-        ? (item.status === '已跟进' || item.status === '已导入'
-          ? `${item.receiverName || item.receiverOpenidMasked || '对方'} 已接手项目`
-          : (item.status === '已打开'
-            ? `${item.receiverName || item.receiverOpenidMasked || '对方'} 已查看交接卡`
-            : '等待接手方打开交接卡'))
-        : `${item.receiverName || item.receiverOpenidMasked || '对方'}${item.status === '已打开' ? ' 已查看资料卡' : ' 尚未查看资料卡'}`,
-      progressText: isOutbound
-        ? (item.status === '已跟进'
-          ? `已推进 ${Number(item.collaboratorFollowCount || 0)} 条`
-          : (item.status === '已导入' ? '已接手' : (item.status === '已打开' ? '已查看，待接手' : '等待查看')))
-        : (item.status === '已打开'
-          ? (viewerCount > 1 ? `${viewerCount}人已查看` : '资料已查看')
-          : '等待查看'),
-      collaborationCountText: isOutbound ? `${Number(item.collaboratorFollowCount || 0)} 条` : '查看型分享',
-      statusBadgeClass: item.status === '已跟进'
-        ? 'is-success'
-        : (item.status === '已打开' || item.status === '已导入' ? 'is-brand' : (item.status === '未打开' ? 'is-danger' : ''))
+      receiverSummary: `${item.receiverName || item.receiverOpenidMasked || '对方'}${item.status === '已打开' ? ' 已查看资料卡' : ' 尚未查看资料卡'}`,
+      progressText: item.status === '已打开'
+        ? (viewerCount > 1 ? `${viewerCount}人已查看` : '资料已查看')
+        : '等待查看',
+      collaborationCountText: '查看型分享',
+      statusBadgeClass: item.status === '已打开' ? 'is-brand' : (item.status === '未打开' ? 'is-danger' : '')
     }
   })
+}
+
+function normalizeProjectAssets(value) {
+  return (Array.isArray(value) ? value : []).map((item, index) => {
+    const asset = item && typeof item === 'object' && !Array.isArray(item) ? item : {}
+    const type = String(asset.type || '').trim() === 'file' ? 'file' : 'image'
+    const extension = String(asset.extension || (type === 'image' ? 'image' : 'file')).trim()
+
+    return {
+      id: String(asset.id || `asset-${index}`).trim(),
+      type,
+      fileId: String(asset.fileId || '').trim(),
+      url: String(asset.url || asset.fileId || '').trim(),
+      previewUrl: String(asset.previewUrl || asset.url || asset.fileId || '').trim(),
+      name: String(asset.name || (type === 'image' ? `项目图片${index + 1}` : `项目附件${index + 1}`)).trim(),
+      extension,
+      extensionText: type === 'image' ? '图片' : extension.toUpperCase(),
+      sizeText: String(asset.sizeText || '').trim(),
+      sourceFollowUpId: String(asset.sourceFollowUpId || '').trim(),
+      sourceTitle: String(asset.sourceTitle || '跟进记录').trim(),
+      sourceSummary: String(asset.sourceSummary || '').trim(),
+      sourceTime: String(asset.sourceTime || '').trim(),
+      actorName: String(asset.actorName || '').trim()
+    }
+  })
+}
+
+function buildProjectAssetSummary(assets, sourceSummary = {}) {
+  const list = Array.isArray(assets) ? assets : []
+  const imageCount = Number(sourceSummary.imageCount || list.filter((asset) => asset.type === 'image').length || 0)
+  const fileCount = Number(sourceSummary.fileCount || list.filter((asset) => asset.type === 'file').length || 0)
+  const total = Number(sourceSummary.total || list.length || 0)
+  const recentText = String(sourceSummary.recentText || (list[0] && list[0].sourceTime) || '').trim()
+
+  return {
+    total,
+    imageCount,
+    fileCount,
+    totalText: total ? `共 ${total} 个资料` : '暂无项目资料',
+    imageText: `图片 ${imageCount}`,
+    fileText: `附件 ${fileCount}`,
+    recentText: recentText ? `最近 ${recentText}` : '',
+    previewAssets: list.slice(0, 6)
+  }
 }
 
 Page({
@@ -355,12 +581,28 @@ Page({
     taskSummary: {},
     followTimeline: [],
     shareHistory: [],
+    projectAssets: [],
+    projectAssetSummary: {
+      total: 0,
+      imageCount: 0,
+      fileCount: 0,
+      totalText: '暂无项目资料',
+      imageText: '图片 0',
+      fileText: '附件 0',
+      recentText: '',
+      previewAssets: []
+    },
     showContacts: false,
     showAddContactSheet: false,
     isSavingContact: false,
     contactDraft: buildEmptyContactDraft(),
     showShareSheet: false,
     shareActionOptions: SHARE_ACTION_OPTIONS,
+    showTransferSheet: false,
+    transferMode: 'transfer_original',
+    transferProjectName: '',
+    isTransferOpening: false,
+    isCopyingProject: false,
     showTaskCompleteSheet: false,
     taskCompletionTaskId: '',
     taskCompletionTaskTitle: '',
@@ -377,10 +619,25 @@ Page({
     taskCompleteBodyStyle: '',
     taskCompleteActionsStyle: '',
     isTaskCompletionEditing: false,
+    isTaskCompletionVoiceSupported: true,
+    isTaskCompletionVoiceRecording: false,
+    isTaskCompletionVoiceRecognizing: false,
     taskFeedback: {
       title: '',
       detail: ''
     },
+    showProjectAiAction: false,
+    showProjectAiSheet: false,
+    isProjectAiLoading: false,
+    projectAiError: '',
+    projectAiResult: null,
+    projectAiResultBackup: null,
+    showProjectReviewAction: false,
+    showProjectReviewSheet: false,
+    isProjectReviewLoading: false,
+    projectReviewError: '',
+    projectReviewResult: null,
+    projectReviewResultBackup: null,
     nextTaskTemplates: NEXT_TASK_TEMPLATES,
     projectBadges: [],
     heroMetrics: [],
@@ -399,11 +656,26 @@ Page({
       openedText: '',
       unopenedText: ''
     },
-    entryContextText: '',
     isShareLoading: false,
     isSharing: false,
     taskActionId: '',
     canMarkDeal: true,
+    showActionFooter: false,
+    projectAccess: {
+      viewerAccountId: '',
+      projectAccountId: '',
+      ownerAccountId: '',
+      sharedFromAccountId: '',
+      canEditProject: true,
+      canAdvanceProject: true,
+      canManageContacts: true,
+      canManageTasks: true,
+      canShareProject: true,
+      canMarkDeal: true,
+      isReadOnlySharedOut: false,
+      readOnlyReason: '',
+      readOnlyReasonText: ''
+    },
     isReadOnlySharedOut: false,
     isLoading: true,
     dataSource: 'Mock Demo'
@@ -433,11 +705,13 @@ Page({
   },
 
   onHide() {
+    this.stopTaskCompletionVoiceInput({ silent: true })
     this.clearTaskFeedbackTimer()
     this.destroyTaskCompletionKeyboard()
   },
 
   onUnload() {
+    this.stopTaskCompletionVoiceInput({ silent: true })
     this.clearTaskFeedbackTimer()
     this.destroyTaskCompletionKeyboard()
   },
@@ -488,17 +762,52 @@ Page({
   async fetchProjectDetail() {
     this.setData({ isLoading: true })
     try {
-      const { data, source } = await loadProjectDetailData(this.data.projectId)
+      const { data, source } = await loadProjectDetailData(this.data.projectId, {
+        viewMode: this.data.viewMode
+      })
       const normalizedShareHistory = normalizeShareHistory(data.shareHistory || [])
-      const isReadOnlySharedOut = data.projectDetail.handoverStatus === 'handed_over' && !data.projectDetail.isSharedProject
+      const normalizedProjectAssets = normalizeProjectAssets(data.projectAssets || [])
+      const projectAccess = buildProjectAccess(data.projectDetail, data.access)
+      const isReadOnlySharedOut = !!projectAccess.isReadOnlySharedOut
+
+      if (isReadOnlySharedOut && this.data.viewMode !== 'shared-out') {
+        this.setData({
+          isLoading: false
+        })
+        wx.redirectTo({
+          url: `/pages/project-detail/project-detail?projectId=${this.data.projectId}&view=shared-out`
+        })
+        return
+      }
+
+      const canMarkDeal = projectAccess.canMarkDeal
+        && !(data.projectDetail.stage === '成交' || Number(data.projectDetail.actualAmountValue || 0) > 0)
+      const showActionFooter = projectAccess.canAdvanceProject || projectAccess.canShareProject || projectAccess.canMarkDeal
 
       this.setData({
-        projectDetail: data.projectDetail,
+        projectDetail: {
+          ...data.projectDetail,
+          shareSheetMeta: buildShareSheetMeta(data.projectDetail)
+        },
         contacts: data.contacts,
         tasks: Array.isArray(data.tasks) ? data.tasks : [],
         taskSummary: data.taskSummary || {},
         followTimeline: data.followTimeline,
         shareHistory: normalizedShareHistory,
+        projectAssets: normalizedProjectAssets,
+        projectAssetSummary: buildProjectAssetSummary(normalizedProjectAssets, data.projectAssetSummary || {}),
+        showProjectAiAction: shouldShowProjectAiAction(data.projectDetail.stage, isReadOnlySharedOut, projectAccess),
+        showProjectReviewAction: shouldShowProjectReviewAction(data.projectDetail.stage, isReadOnlySharedOut, projectAccess),
+        showProjectAiSheet: false,
+        projectAiError: '',
+        projectAiResult: null,
+        projectAiResultBackup: null,
+        showProjectReviewSheet: false,
+        projectReviewError: '',
+        projectReviewResult: data.projectDetail.aiReview
+          ? normalizeProjectReviewResult(data.projectDetail.aiReview)
+          : null,
+        projectReviewResultBackup: null,
         projectBadges: buildProjectBadges(data.projectDetail, isReadOnlySharedOut),
         heroMetrics: buildHeroMetrics(data.projectDetail, data.contacts, normalizedShareHistory, isReadOnlySharedOut),
         projectOverview: buildProjectOverview(
@@ -511,12 +820,9 @@ Page({
         contactMeta: buildContactMeta(data.contacts),
         timelineMeta: buildTimelineMeta(data.followTimeline),
         shareHistoryMeta: buildShareHistoryMeta(normalizedShareHistory),
-        entryContextText: buildProjectDetailEntryContext(
-          this.data.viewMode,
-          this.data.entrySource,
-          this.data.notificationType
-        ),
-        canMarkDeal: !(data.projectDetail.stage === '成交' || Number(data.projectDetail.actualAmountValue || 0) > 0),
+        projectAccess,
+        canMarkDeal,
+        showActionFooter,
         isReadOnlySharedOut,
         isLoading: false,
         dataSource: source
@@ -617,7 +923,13 @@ Page({
   },
 
   openAddContactSheet() {
-    if (!this.data.projectId || this.data.isReadOnlySharedOut || this.data.isSavingContact) {
+    if (!this.data.projectId || !this.data.projectAccess.canManageContacts || this.data.isSavingContact) {
+      if (this.data.projectId && !this.data.projectAccess.canManageContacts) {
+        wx.showToast({
+          title: getProjectReadonlyToast(this.data.projectAccess, this.data.projectDetail),
+          icon: 'none'
+        })
+      }
       return
     }
 
@@ -649,8 +961,19 @@ Page({
     })
   },
 
+  buildProjectContactsPayload() {
+    return (Array.isArray(this.data.contacts) ? this.data.contacts : []).map((item) => ({
+      contactId: item.id || '',
+      name: normalizeText(item.name),
+      role: normalizeText(item.role),
+      phone: normalizeText(item.phone),
+      wechat: normalizeText(item.wechat),
+      company: normalizeText(item.company)
+    }))
+  },
+
   async saveContactDraft() {
-    if (!this.data.projectId || this.data.isSavingContact || this.data.isReadOnlySharedOut) {
+    if (!this.data.projectId || this.data.isSavingContact || !this.data.projectAccess.canManageContacts) {
       return
     }
 
@@ -671,16 +994,7 @@ Page({
       return
     }
 
-    const currentContacts = Array.isArray(this.data.contacts) ? this.data.contacts : []
-    const contactsPayload = currentContacts
-      .map((item) => ({
-        contactId: item.id || '',
-        name: String(item.name || '').trim(),
-        role: String(item.role || '').trim(),
-        phone: String(item.phone || '').trim(),
-        wechat: String(item.wechat || '').trim(),
-        company: String(item.company || '').trim()
-      }))
+    const contactsPayload = this.buildProjectContactsPayload()
       .concat(nextContact)
 
     const detail = this.data.projectDetail || {}
@@ -696,9 +1010,11 @@ Page({
         clientName: String(detail.client || '').trim(),
         stage: String(detail.stage || '线索').trim(),
         estimatedAmount: detail.estimatedAmountValue || 0,
+        actualAmount: detail.actualAmountValue || 0,
         expectedCommission: detail.expectedCommissionValue || 0,
         tagsText: Array.isArray(detail.tags) ? detail.tags.join(' / ') : '',
         description: String(detail.description || '').trim(),
+        voiceAliasesText: Array.isArray(detail.voiceAliases) ? detail.voiceAliases.join(' / ') : '',
         contacts: contactsPayload
       })
 
@@ -730,7 +1046,13 @@ Page({
   },
 
   goEditProject() {
-    if (!this.data.projectId || this.data.isReadOnlySharedOut) {
+    if (!this.data.projectId || !this.data.projectAccess.canEditProject) {
+      if (this.data.projectId && !this.data.projectAccess.canEditProject) {
+        wx.showToast({
+          title: getProjectReadonlyToast(this.data.projectAccess, this.data.projectDetail),
+          icon: 'none'
+        })
+      }
       return
     }
 
@@ -740,9 +1062,9 @@ Page({
   },
 
   openFollowUp() {
-    if (this.data.isReadOnlySharedOut) {
+    if (!this.data.projectAccess.canAdvanceProject) {
       wx.showToast({
-        title: '该项目已外发，由接手方继续跟进',
+        title: getProjectReadonlyToast(this.data.projectAccess, this.data.projectDetail),
         icon: 'none'
       })
       return
@@ -755,9 +1077,264 @@ Page({
     wx.navigateTo({ url })
   },
 
+  closeProjectAiSheet() {
+    this.setData({
+      showProjectAiSheet: false
+    })
+  },
+
+  closeProjectReviewSheet() {
+    this.setData({
+      showProjectReviewSheet: false
+    })
+  },
+
+  async handleProjectAiJudge() {
+    if (!this.data.projectId || !this.data.showProjectAiAction || !this.data.projectAccess.canAdvanceProject) {
+      return
+    }
+
+    const decision = await ensureActionAllowed('ai', { guide: true })
+    if (!decision.allowed) {
+      return
+    }
+
+    this.setData({
+      showProjectAiSheet: true
+    })
+
+    if (this.data.projectAiResult || this.data.isProjectAiLoading) {
+      return
+    }
+
+    await this.fetchProjectAiJudge()
+  },
+
+  async regenerateProjectAiJudge() {
+    if (!this.data.projectId || !this.data.showProjectAiAction || !this.data.projectAccess.canAdvanceProject) {
+      return
+    }
+
+    const decision = await ensureActionAllowed('ai', { guide: true })
+    if (!decision.allowed) {
+      return
+    }
+
+    this.setData({
+      showProjectAiSheet: true
+    })
+
+    await this.fetchProjectAiJudge(true)
+  },
+
+  async fetchProjectAiJudge(forceRefresh = false) {
+    if (this.data.isProjectAiLoading || !this.data.projectId) {
+      return
+    }
+
+    this.setData({
+      isProjectAiLoading: true,
+      projectAiError: '',
+      ...(forceRefresh && this.data.projectAiResult
+        ? { projectAiResultBackup: cloneSnapshot(this.data.projectAiResult) }
+        : {})
+    })
+
+    try {
+      const result = await requestProjectJudgementData({
+        projectId: this.data.projectId
+      })
+
+      if (!result || !result.ok) {
+        throw new Error(result && result.message ? result.message : '当前无法生成项目研判')
+      }
+
+      await resolveNotificationData({
+        projectId: this.data.projectId,
+        types: ['ai_failed'],
+        scenes: ['project_ai_judgement']
+      })
+
+      const nextResult = normalizeProjectAiResult({
+        ...result,
+        generatedAt: result.generatedAt || new Date().toISOString()
+      })
+      const hadPreviousVersion = !!this.data.projectAiResult
+
+      this.setData({
+        projectAiResult: nextResult,
+        projectAiError: ''
+      })
+
+      if (hadPreviousVersion) {
+        wx.showToast({
+          title: '新研判已生成，可恢复上一版',
+          icon: 'none'
+        })
+      }
+    } catch (error) {
+      await reportSystemFailureData({
+        type: 'ai_failed',
+        scene: 'project_ai_judgement',
+        title: '当前无法生成项目研判',
+        message: error.message || '当前无法生成项目研判，请稍后重试',
+        projectId: this.data.projectId,
+        projectName: this.data.projectDetail && this.data.projectDetail.name ? this.data.projectDetail.name : '',
+        actionUrl: `/pages/project-detail/project-detail?projectId=${this.data.projectId}`,
+        actionLabel: '重新生成'
+      })
+
+      this.setData({
+        projectAiError: error.message || '当前无法生成项目研判，请稍后重试'
+      })
+    } finally {
+      this.setData({
+        isProjectAiLoading: false
+      })
+    }
+  },
+
+  restoreProjectAiJudgeVersion() {
+    if (!this.data.projectAiResultBackup) {
+      return
+    }
+
+    this.setData({
+      projectAiResult: cloneSnapshot(this.data.projectAiResultBackup),
+      projectAiResultBackup: cloneSnapshot(this.data.projectAiResult),
+      projectAiError: ''
+    })
+
+    wx.showToast({
+      title: '已恢复上一版研判',
+      icon: 'success'
+    })
+  },
+
+  async handleProjectAiReview() {
+    if (!this.data.projectId || !this.data.showProjectReviewAction || !this.data.projectAccess.canAdvanceProject) {
+      return
+    }
+
+    this.setData({
+      showProjectReviewSheet: true
+    })
+
+    if (this.data.projectReviewResult || this.data.isProjectReviewLoading) {
+      return
+    }
+
+    const decision = await ensureActionAllowed('ai', { guide: true })
+    if (!decision.allowed) {
+      return
+    }
+
+    await this.fetchProjectAiReview()
+  },
+
+  async regenerateProjectAiReview() {
+    if (!this.data.projectId || !this.data.showProjectReviewAction || !this.data.projectAccess.canAdvanceProject) {
+      return
+    }
+
+    this.setData({
+      showProjectReviewSheet: true
+    })
+
+    await this.fetchProjectAiReview(true)
+  },
+
+  async fetchProjectAiReview(forceRefresh = false) {
+    if (this.data.isProjectReviewLoading || !this.data.projectId) {
+      return
+    }
+
+    this.setData({
+      isProjectReviewLoading: true,
+      projectReviewError: '',
+      ...(forceRefresh && this.data.projectReviewResult
+        ? { projectReviewResultBackup: cloneSnapshot(this.data.projectReviewResult) }
+        : {})
+    })
+
+    try {
+      const result = await requestProjectReviewData({
+        projectId: this.data.projectId
+      })
+
+      if (!result || !result.ok) {
+        throw new Error(result && result.message ? result.message : '当前无法生成项目复盘')
+      }
+
+      await resolveNotificationData({
+        projectId: this.data.projectId,
+        types: ['ai_failed'],
+        scenes: ['project_ai_review']
+      })
+
+      const nextResult = normalizeProjectReviewResult({
+        ...result,
+        generatedAt: result.generatedAt || new Date().toISOString()
+      })
+      const hadPreviousVersion = !!this.data.projectReviewResult
+
+      this.setData({
+        projectDetail: {
+          ...this.data.projectDetail,
+          aiReview: nextResult
+        },
+        projectReviewResult: nextResult,
+        projectReviewError: ''
+      })
+
+      if (hadPreviousVersion) {
+        wx.showToast({
+          title: '新复盘已生成，可恢复上一版',
+          icon: 'none'
+        })
+      }
+    } catch (error) {
+      await reportSystemFailureData({
+        type: 'ai_failed',
+        scene: 'project_ai_review',
+        title: '当前无法生成项目复盘',
+        message: error.message || '当前无法生成项目复盘，请稍后重试',
+        projectId: this.data.projectId,
+        projectName: this.data.projectDetail && this.data.projectDetail.name ? this.data.projectDetail.name : '',
+        actionUrl: `/pages/project-detail/project-detail?projectId=${this.data.projectId}`,
+        actionLabel: '重新生成'
+      })
+
+      this.setData({
+        projectReviewError: error.message || '当前无法生成项目复盘，请稍后重试'
+      })
+    } finally {
+      this.setData({
+        isProjectReviewLoading: false
+      })
+    }
+  },
+
+  restoreProjectAiReviewVersion() {
+    if (!this.data.projectReviewResultBackup) {
+      return
+    }
+
+    this.setData({
+      projectReviewResult: cloneSnapshot(this.data.projectReviewResultBackup),
+      projectReviewResultBackup: cloneSnapshot(this.data.projectReviewResult),
+      projectReviewError: ''
+    })
+
+    wx.showToast({
+      title: '已恢复上一版复盘',
+      icon: 'success'
+    })
+  },
+
   async updateTaskStatus(event) {
     const { taskId, status } = event.currentTarget.dataset
-    if (!taskId || !status || this.data.taskActionId) {
+    if (!taskId || !status || this.data.taskActionId || !this.data.projectAccess.canManageTasks) {
       return
     }
 
@@ -798,7 +1375,7 @@ Page({
 
   openTaskCompleteSheet(event) {
     const { taskId } = event.currentTarget.dataset
-    if (!taskId || this.data.taskActionId) {
+    if (!taskId || this.data.taskActionId || !this.data.projectAccess.canManageTasks) {
       return
     }
 
@@ -819,9 +1396,11 @@ Page({
       taskCompletionNextTaskType: 'callback',
       taskCompletionNextTaskDate: defaultNextTaskDraft.dueDate,
       taskCompletionNextTaskTime: defaultNextTaskDraft.dueTime,
-      taskCompletionNextTaskDescription: ''
+      taskCompletionNextTaskDescription: '',
+      isTaskCompletionVoiceRecognizing: false
     })
     this.syncTaskCompletionLayout(0, false)
+    this.initTaskCompletionVoiceRecognition()
   },
 
   closeTaskCompleteSheet(force = false) {
@@ -830,6 +1409,7 @@ Page({
       return
     }
 
+    this.stopTaskCompletionVoiceInput({ silent: true })
     this.setData({
       showTaskCompleteSheet: false,
       taskCompletionTaskId: '',
@@ -840,7 +1420,9 @@ Page({
       taskCompletionNextTaskType: 'callback',
       taskCompletionNextTaskDate: '',
       taskCompletionNextTaskTime: '',
-      taskCompletionNextTaskDescription: ''
+      taskCompletionNextTaskDescription: '',
+      isTaskCompletionVoiceRecording: false,
+      isTaskCompletionVoiceRecognizing: false
     })
     this.syncTaskCompletionLayout(0, false)
   },
@@ -913,6 +1495,305 @@ Page({
     })
   },
 
+  openTaskCompletionVoiceGuide() {
+    wx.showModal({
+      title: '语音服务未就绪',
+      content: '当前设备暂不支持原生录音，或云端语音识别服务尚未完成配置。请先确认真机环境与云函数配置。',
+      showCancel: false,
+      confirmText: '知道了'
+    })
+  },
+
+  openTaskCompletionRecordSettingGuide() {
+    wx.showModal({
+      title: '需要麦克风权限',
+      content: '语音录入需要使用麦克风。请允许录音权限后再试。',
+      confirmText: '去设置',
+      cancelText: '取消',
+      success: (result) => {
+        if (result.confirm) {
+          wx.openSetting({})
+        }
+      }
+    })
+  },
+
+  getSetting() {
+    return new Promise((resolve, reject) => {
+      wx.getSetting({
+        success: resolve,
+        fail: reject
+      })
+    })
+  },
+
+  authorizeRecordScope() {
+    return new Promise((resolve, reject) => {
+      wx.authorize({
+        scope: 'scope.record',
+        success: resolve,
+        fail: reject
+      })
+    })
+  },
+
+  async ensureTaskCompletionRecordScope() {
+    try {
+      const setting = await this.getSetting()
+      if (setting && setting.authSetting && setting.authSetting['scope.record']) {
+        return true
+      }
+
+      await this.authorizeRecordScope()
+      return true
+    } catch (error) {
+      this.openTaskCompletionRecordSettingGuide()
+      return false
+    }
+  },
+
+  initTaskCompletionVoiceRecognition() {
+    if (this.taskCompletionVoiceManager) {
+      return true
+    }
+
+    const manager = getSpeechRecorderManager()
+    if (!manager || typeof manager.onStart !== 'function') {
+      this.setData({
+        isTaskCompletionVoiceSupported: false,
+        isTaskCompletionVoiceRecording: false,
+        isTaskCompletionVoiceRecognizing: false
+      })
+      return false
+    }
+
+    manager.onStart(() => {
+      this.skipTaskCompletionVoiceCommit = false
+      this.setData({
+        isTaskCompletionVoiceSupported: true,
+        isTaskCompletionVoiceRecording: true,
+        isTaskCompletionVoiceRecognizing: false
+      })
+    })
+
+    manager.onStop(async (result) => {
+      if (this.skipTaskCompletionVoiceCommit) {
+        this.skipTaskCompletionVoiceCommit = false
+        this.setData({
+          isTaskCompletionVoiceRecording: false,
+          isTaskCompletionVoiceRecognizing: false
+        })
+        return
+      }
+
+      if (!this.data.showTaskCompleteSheet) {
+        return
+      }
+
+      this.setData({
+        isTaskCompletionVoiceRecording: false,
+        isTaskCompletionVoiceRecognizing: true
+      })
+
+      await this.transcribeTaskCompletionVoiceFile(result)
+    })
+
+    manager.onError((error) => {
+      const errMsg = error && (error.retmsg || error.msg || error.errMsg) ? (error.retmsg || error.msg || error.errMsg) : ''
+      this.setData({
+        isTaskCompletionVoiceRecording: false,
+        isTaskCompletionVoiceRecognizing: false
+      })
+
+      if (errMsg && (errMsg.includes('auth deny') || errMsg.includes('auth denied') || errMsg.includes('permission'))) {
+        this.openTaskCompletionRecordSettingGuide()
+        return
+      }
+
+      wx.showToast({
+        title: '语音录入失败',
+        icon: 'none'
+      })
+    })
+
+    this.taskCompletionVoiceManager = manager
+    this.setData({
+      isTaskCompletionVoiceSupported: true
+    })
+    return true
+  },
+
+  async handleTaskCompletionVoiceInput() {
+    if (this.data.isTaskCompletionVoiceRecognizing || this.data.taskActionId) {
+      return
+    }
+
+    if (this.data.isTaskCompletionVoiceRecording) {
+      this.stopTaskCompletionVoiceInput()
+      return
+    }
+
+    if (!this.initTaskCompletionVoiceRecognition()) {
+      this.openTaskCompletionVoiceGuide()
+      return
+    }
+
+    const decision = await ensureActionAllowed('speech', { guide: true })
+    if (!decision.allowed) {
+      return
+    }
+
+    const hasPermission = await this.ensureTaskCompletionRecordScope()
+    if (!hasPermission) {
+      return
+    }
+
+    try {
+      this.setData({
+        isTaskCompletionVoiceRecognizing: false
+      })
+
+      this.taskCompletionVoiceManager.start({
+        duration: MAX_RECORD_DURATION,
+        format: 'mp3',
+        sampleRate: 16000,
+        numberOfChannels: 1,
+        encodeBitRate: 32000
+      })
+    } catch (error) {
+      this.setData({
+        isTaskCompletionVoiceRecording: false,
+        isTaskCompletionVoiceRecognizing: false
+      })
+      wx.showToast({
+        title: '录音启动失败',
+        icon: 'none'
+      })
+    }
+  },
+
+  stopTaskCompletionVoiceInput(options = {}) {
+    if (!this.taskCompletionVoiceManager || !this.data.isTaskCompletionVoiceRecording) {
+      return
+    }
+
+    this.skipTaskCompletionVoiceCommit = Boolean(options.silent)
+
+    this.setData({
+      isTaskCompletionVoiceRecording: false,
+      isTaskCompletionVoiceRecognizing: !options.silent
+    })
+
+    try {
+      this.taskCompletionVoiceManager.stop()
+    } catch (error) {
+      this.setData({
+        isTaskCompletionVoiceRecognizing: false
+      })
+    }
+  },
+
+  async uploadTaskCompletionVoiceFile(filePath) {
+    if (!wx.cloud || typeof wx.cloud.uploadFile !== 'function') {
+      throw new Error('当前环境未连接云存储')
+    }
+
+    const extension = getVoiceFileExtension(filePath)
+    const taskId = String(this.data.taskCompletionTaskId || 'task').trim() || 'task'
+    const cloudPath = `voiceInputs/task-completion/${taskId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${extension}`
+    const result = await wx.cloud.uploadFile({
+      cloudPath,
+      filePath
+    })
+
+    if (!result || !result.fileID) {
+      throw new Error('录音上传失败，请重新试一次')
+    }
+
+    return {
+      fileID: result.fileID,
+      extension
+    }
+  },
+
+  async transcribeTaskCompletionVoiceFile(result = {}) {
+    const filePath = String(result.tempFilePath || '').trim()
+    if (!filePath) {
+      this.setData({
+        isTaskCompletionVoiceRecording: false,
+        isTaskCompletionVoiceRecognizing: false
+      })
+      wx.showToast({
+        title: '未生成有效音频',
+        icon: 'none'
+      })
+      return
+    }
+
+    try {
+      const uploadResult = await this.uploadTaskCompletionVoiceFile(filePath)
+      if (!this.data.showTaskCompleteSheet) {
+        this.setData({
+          isTaskCompletionVoiceRecording: false,
+          isTaskCompletionVoiceRecognizing: false
+        })
+        return
+      }
+
+      const asrResult = await requestSpeechToTextData({
+        fileID: uploadResult.fileID,
+        voiceFormat: uploadResult.extension,
+        projectId: this.data.projectId || '',
+        taskId: this.data.taskCompletionTaskId || '',
+        scene: 'task_completion_result',
+        duration: Number(result.duration || 0) || 0
+      })
+
+      const recognizedText = normalizeRecognizedText(asrResult && asrResult.text)
+      if (!recognizedText) {
+        this.setData({
+          isTaskCompletionVoiceRecording: false,
+          isTaskCompletionVoiceRecognizing: false
+        })
+        wx.showToast({
+          title: '未识别出有效内容',
+          icon: 'none'
+        })
+        return
+      }
+
+      const currentContent = String(this.data.taskCompletionText || '').trim()
+      const nextContent = currentContent ? `${currentContent}\n${recognizedText}` : recognizedText
+
+      this.setData({
+        taskCompletionText: nextContent,
+        isTaskCompletionVoiceRecording: false,
+        isTaskCompletionVoiceRecognizing: false
+      })
+
+      wx.showToast({
+        title: '语音已转文字',
+        icon: 'success'
+      })
+    } catch (error) {
+      const errMsg = error && error.message ? error.message : ''
+      this.setData({
+        isTaskCompletionVoiceRecording: false,
+        isTaskCompletionVoiceRecognizing: false
+      })
+
+      if (/密钥|SECRET|语音识别服务/.test(errMsg)) {
+        this.openTaskCompletionVoiceGuide()
+        return
+      }
+
+      wx.showToast({
+        title: '语音识别失败',
+        icon: 'none'
+      })
+    }
+  },
+
   toggleTaskCompletionCreateNextTask() {
     this.setData({
       taskCompletionCreateNextTask: !this.data.taskCompletionCreateNextTask
@@ -961,7 +1842,7 @@ Page({
     const nextTaskTime = String(this.data.taskCompletionNextTaskTime || '').trim()
     const nextTaskDescription = String(this.data.taskCompletionNextTaskDescription || '').trim()
 
-    if (!taskId || this.data.taskActionId) {
+    if (!taskId || this.data.taskActionId || !this.data.projectAccess.canManageTasks) {
       return
     }
 
@@ -1044,9 +1925,9 @@ Page({
   },
 
   openShareSheet() {
-    if (this.data.isReadOnlySharedOut) {
+    if (!this.data.projectAccess.canShareProject) {
       wx.showToast({
-        title: '该项目已外发，无需再次分享',
+        title: getProjectReadonlyToast(this.data.projectAccess, this.data.projectDetail),
         icon: 'none'
       })
       return
@@ -1059,13 +1940,36 @@ Page({
 
   closeShareSheet() {
     this.setData({
-      showShareSheet: false
+      showShareSheet: false,
+      showTransferSheet: false,
+      transferMode: 'transfer_original',
+      transferProjectName: '',
+      isTransferOpening: false
     })
   },
 
-  openShareFlow(event) {
-    const mode = String(event.currentTarget.dataset.mode || 'info').trim() || 'info'
-    if (!this.data.projectId) {
+  async openShareFlow(event) {
+    const mode = String(
+      event && event.detail && event.detail.mode
+        ? event.detail.mode
+        : event.currentTarget && event.currentTarget.dataset
+          ? event.currentTarget.dataset.mode
+          : 'info'
+    ).trim() || 'info'
+    if (!this.data.projectId || !this.data.projectAccess.canShareProject) {
+      return
+    }
+
+    if (mode === 'outbound') {
+      const clientName = this.data.projectDetail && this.data.projectDetail.client && this.data.projectDetail.client !== '未填写客户'
+        ? this.data.projectDetail.client
+        : ''
+      this.setData({
+        showShareSheet: false,
+        showTransferSheet: true,
+        transferMode: 'transfer_original',
+        transferProjectName: clientName ? `${clientName} · 新需求` : '新需求项目'
+      })
       return
     }
 
@@ -1073,13 +1977,144 @@ Page({
       showShareSheet: false
     })
 
+    const decision = await ensureActionAllowed(mode === 'outbound' ? 'share_out' : 'share_record', {
+      refresh: true,
+      guide: true
+    })
+    if (!decision.allowed) {
+      return
+    }
+
     wx.navigateTo({
       url: `/pages/share-card/share-card?projectId=${this.data.projectId}&mode=${mode}&entry=sender`
     })
   },
 
+  setTransferMode(event) {
+    const mode = String(event.currentTarget.dataset.mode || 'transfer_original').trim()
+    this.setData({
+      transferMode: mode === 'clone_seed' ? 'clone_seed' : 'transfer_original'
+    })
+  },
+
+  onTransferProjectNameInput(event) {
+    this.setData({
+      transferProjectName: String(event.detail.value || '')
+    })
+  },
+
+  closeTransferSheet() {
+    this.setData({
+      showTransferSheet: false,
+      transferMode: 'transfer_original',
+      transferProjectName: '',
+      isTransferOpening: false
+    })
+  },
+
+  async confirmTransferFlow() {
+    const projectId = String(this.data.projectId || '').trim()
+    const transferMode = this.data.transferMode === 'clone_seed' ? 'clone_seed' : 'transfer_original'
+    const seedProjectName = String(this.data.transferProjectName || '').trim()
+    if (!projectId || this.data.isTransferOpening) {
+      return
+    }
+
+    if (transferMode === 'clone_seed' && !seedProjectName) {
+      wx.showToast({
+        title: '请先填写新项目名称',
+        icon: 'none'
+      })
+      return
+    }
+
+    this.setData({
+      isTransferOpening: true
+    })
+
+    try {
+      const decision = await ensureActionAllowed('share_out', {
+        refresh: true,
+        guide: true
+      })
+      if (!decision.allowed) {
+        return
+      }
+
+      const params = [
+        `projectId=${projectId}`,
+        'mode=outbound',
+        'entry=sender',
+        `flowMode=${transferMode}`
+      ]
+      if (transferMode === 'clone_seed') {
+        params.push(`seedProjectName=${encodeURIComponent(seedProjectName)}`)
+        params.push('historyScope=none')
+      }
+
+      this.setData({
+        showTransferSheet: false,
+        transferMode: 'transfer_original',
+        transferProjectName: ''
+      })
+
+      wx.navigateTo({
+        url: `/pages/share-card/share-card?${params.join('&')}`
+      })
+    } finally {
+      this.setData({
+        isTransferOpening: false
+      })
+    }
+  },
+
+  async copyProject() {
+    if (!this.data.projectId || this.data.isCopyingProject) {
+      return
+    }
+
+    const decision = await ensureActionAllowed('create_project', {
+      refresh: true,
+      guide: true
+    })
+    if (!decision.allowed) {
+      return
+    }
+
+    this.setData({
+      isCopyingProject: true
+    })
+
+    try {
+      const result = await flowProjectData({
+        projectId: this.data.projectId,
+        flowMode: 'clone_static'
+      })
+      if (!result || !result.ok || !result.projectId) {
+        throw new Error(result && result.message ? result.message : '复制项目失败')
+      }
+
+      wx.showToast({
+        title: '已复制为新项目',
+        icon: 'success'
+      })
+      wx.navigateTo({
+        url: `/pages/project-form/project-form?projectId=${result.projectId}&mode=edit&source=clone`
+      })
+    } catch (error) {
+      wx.showToast({
+        title: error.message || '复制项目失败',
+        icon: 'none'
+      })
+    } finally {
+      this.setData({
+        isCopyingProject: false
+      })
+    }
+  },
+
   openDealPage() {
-    if (!this.data.projectId || this.data.isReadOnlySharedOut) {
+    if (!this.data.projectId || !this.data.projectAccess.canMarkDeal) {
       return
     }
 
@@ -1096,22 +2131,68 @@ Page({
     })
   },
 
+  openProjectAssetsPage() {
+    if (!this.data.projectId) {
+      return
+    }
+
+    const viewQuery = this.data.viewMode ? `&view=${encodeURIComponent(this.data.viewMode)}` : ''
+    wx.navigateTo({
+      url: `/pages/project-assets/project-assets?projectId=${this.data.projectId}${viewQuery}`
+    })
+  },
+
+  previewProjectAsset(event) {
+    const { id } = event.currentTarget.dataset
+    const currentAsset = (this.data.projectAssets || []).find((item) => item.id === id)
+    if (!currentAsset) {
+      return
+    }
+
+    if (currentAsset.type === 'image') {
+      const urls = (this.data.projectAssets || [])
+        .filter((item) => item.type === 'image')
+        .map((item) => item.previewUrl || item.url || item.fileId)
+        .filter(Boolean)
+      const current = currentAsset.previewUrl || currentAsset.url || currentAsset.fileId
+
+      if (current && urls.length) {
+        wx.previewImage({
+          current,
+          urls
+        })
+      }
+      return
+    }
+
+    wx.showToast({
+      title: '请到项目资料页查看附件',
+      icon: 'none'
+    })
+  },
+
   openPage(event) {
     const { url } = event.currentTarget.dataset
 
     if (url === '/pages/share-config/share-config' && this.data.projectId) {
-      wx.navigateTo({
-        url: `${url}?projectId=${this.data.projectId}`
+      if (!this.data.projectAccess.canShareProject) {
+        wx.showToast({
+          title: getProjectReadonlyToast(this.data.projectAccess, this.data.projectDetail),
+          icon: 'none'
+        })
+        return
+      }
+
+      this.openShareFlow({
+        currentTarget: {
+          dataset: {
+            mode: 'info'
+          }
+        }
       })
       return
     }
 
     wx.navigateTo({ url })
-  },
-
-  openSharedOutPage() {
-    wx.navigateTo({
-      url: '/pages/shared-out/shared-out'
-    })
   }
 })

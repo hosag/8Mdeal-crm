@@ -18,6 +18,10 @@ function normalizeStringArray(value) {
     .filter(Boolean)
 }
 
+function getNotificationStatus(item) {
+  return normalizeText(item && item.status) || 'unread'
+}
+
 exports.main = async (event) => {
   const wxContext = cloud.getWXContext()
   const notificationId = normalizeText(event.notificationId)
@@ -33,20 +37,54 @@ exports.main = async (event) => {
     }
   }
 
+  if (notificationId) {
+    let target = null
+    try {
+      const docResult = await db.collection('notifications').doc(notificationId).get()
+      target = docResult && docResult.data ? docResult.data : null
+    } catch (error) {
+      target = null
+    }
+
+    if (!target || normalizeText(target._openid) !== wxContext.OPENID) {
+      return {
+        ok: true,
+        updated: 0
+      }
+    }
+
+    if (getNotificationStatus(target) !== 'unread') {
+      return {
+        ok: true,
+        updated: 0,
+        status: getNotificationStatus(target)
+      }
+    }
+
+    await db.collection('notifications').doc(notificationId).update({
+      data: {
+        status: 'read',
+        readAt: target.readAt || now,
+        updatedAt: now
+      }
+    })
+
+    return {
+      ok: true,
+      updated: 1
+    }
+  }
+
   const listResult = await db.collection('notifications').where({
     _openid: wxContext.OPENID
   }).get()
 
   const targets = (listResult.data || []).filter((item) => {
     if (markAll) {
-      return normalizeText(item.status) === 'unread'
+      return getNotificationStatus(item) === 'unread'
     }
 
-    if (notificationId) {
-      return item._id === notificationId && normalizeText(item.status) === 'unread'
-    }
-
-    if (normalizeText(item.status) !== 'unread') {
+    if (getNotificationStatus(item) !== 'unread') {
       return false
     }
 

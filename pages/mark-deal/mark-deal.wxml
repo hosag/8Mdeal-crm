@@ -7,42 +7,30 @@
   <view class="hero">
     <view class="eyebrow-row">
       <view class="eyebrow">成交记录</view>
-      <view class="source-badge">{{dataSource}}</view>
     </view>
     <view class="hero-title">成交记录聚焦金额、提成与回款</view>
     <view class="hero-subtitle">页面围绕“快速登记、便于复盘”设计，不要求复杂财务字段，优先满足个人收益追踪。</view>
     <view class="pill-row">
       <view class="soft-badge">{{form.projectName}}</view>
-      <view class="chip">{{form.paymentStatus}}</view>
     </view>
   </view>
 
   <view class="form-card section">
     <view class="field-group">
       <view class="field-label">实际成交金额</view>
-      <input class="input-sim input-native" type="digit" value="{{form.actualAmount}}" data-field="actualAmount" bindinput="onFieldInput" placeholder="例如 980000" placeholder-class="input-placeholder" />
+      <input class="input-sim input-native" type="digit" value="{{form.actualAmount}}" data-field="actualAmount" bindinput="onFieldInput" placeholder="可选，例如 980000" placeholder-class="input-placeholder" />
     </view>
-    <view class="split-row">
-      <view class="field-group">
-        <view class="field-label">合同签订日期</view>
-        <picker class="picker-block" mode="date" value="{{form.contractDate}}" bindchange="onContractDateChange">
-          <view class="picker-sim">
-            <view class="picker-value">{{form.contractDate}}</view>
-          </view>
-        </picker>
-      </view>
-      <view class="field-group">
-        <view class="field-label">回款状态</view>
-        <picker class="picker-block" mode="selector" range="{{paymentStatuses}}" value="{{paymentStatusIndex}}" bindchange="onPaymentStatusChange">
-          <view class="picker-sim">
-            <view class="picker-value">{{form.paymentStatus}}</view>
-          </view>
-        </picker>
-      </view>
+    <view class="field-group">
+      <view class="field-label">合同签订日期</view>
+      <picker class="picker-block" mode="date" value="{{form.contractDate}}" bindchange="onContractDateChange">
+        <view class="picker-sim">
+          <view class="picker-value">{{form.contractDate}}</view>
+        </view>
+      </picker>
     </view>
     <view class="field-group">
       <view class="field-label">预期提成</view>
-      <input class="input-sim input-native" type="digit" value="{{form.expectedCommission}}" data-field="expectedCommission" bindinput="onFieldInput" placeholder="例如 84000" placeholder-class="input-placeholder" />
+      <input class="input-sim input-native" type="digit" value="{{form.expectedCommission}}" data-field="expectedCommission" bindinput="onFieldInput" placeholder="可选，例如 84000" placeholder-class="input-placeholder" />
     </view>
     <view class="field-group">
       <view class="field-label">补充说明</view>

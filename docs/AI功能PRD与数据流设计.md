@@ -1,6 +1,6 @@
 # AI 功能 PRD 与数据流设计
 
-更新时间：2026-04-24
+更新时间：2026-04-27
 
 本文档用于定义成交 CRM 小程序后续 AI 能力的正式边界、页面入口、数据流和落地顺序。
 
@@ -112,6 +112,20 @@ AI 能力边界按项目阶段明确切开：
 
 - 已实现基础版
 - 后续重点是继续提高事实识别准确度、阶段建议准确度和风险提炼质量
+
+#### 首页闪录补充边界
+
+- 入口位置：[首页快速录入](/Users/shaominhe/成交CRM-CodeX版/pages/index/index.wxml)
+- 触发方式：优先语音录入，识别成文字后自动进入 AI 理解链路
+- 当前链路：候选召回 -> `resolveQuickEntryProject` 项目复判 -> `summarizeFollowUp` 跟进整理 -> `suggestNextFollowUp` 下一步建议
+- 项目归属规则：
+  - 高置信度时可自动带出项目
+  - 中置信度时只给候选，不替用户直接拍板
+  - 低置信度时要求手动确认项目
+- 保存边界：
+  - 不自动保存
+  - 不自动改项目阶段
+  - 用户确认项目后再提交
 
 ---
 
@@ -411,11 +425,32 @@ AI 能力边界按项目阶段明确切开：
    - 云函数：[index.js](/Users/shaominhe/成交CRM-CodeX版/cloudfunctions/suggestNextFollowUp/index.js)
    - 服务层：[data.js](/Users/shaominhe/成交CRM-CodeX版/services/data.js)
    - 页面接入：[follow-up.js](/Users/shaominhe/成交CRM-CodeX版/pages/follow-up/follow-up.js)
+   - 首页闪录接入：[index.js](/Users/shaominhe/成交CRM-CodeX版/pages/index/index.js)
 
-3. `generateShareBrief`
+3. `resolveQuickEntryProject`
+   - 云函数：[index.js](/Users/shaominhe/成交CRM-CodeX版/cloudfunctions/resolveQuickEntryProject/index.js)
+   - 服务层：[data.js](/Users/shaominhe/成交CRM-CodeX版/services/data.js)
+   - 页面接入：[index.js](/Users/shaominhe/成交CRM-CodeX版/pages/index/index.js)
+
+4. `generateShareBrief`
    - 云函数：[index.js](/Users/shaominhe/成交CRM-CodeX版/cloudfunctions/generateShareBrief/index.js)
    - 服务层：[data.js](/Users/shaominhe/成交CRM-CodeX版/services/data.js)
    - 页面接入：[share-card.js](/Users/shaominhe/成交CRM-CodeX版/pages/share-card/share-card.js)
+
+5. `judgeProject`
+   - 云函数：[index.js](/Users/shaominhe/成交CRM-CodeX版/cloudfunctions/judgeProject/index.js)
+   - 服务层：[data.js](/Users/shaominhe/成交CRM-CodeX版/services/data.js)
+   - 页面接入：[project-detail.js](/Users/shaominhe/成交CRM-CodeX版/pages/project-detail/project-detail.js)
+
+6. `reviewClosedProject`
+   - 云函数：[index.js](/Users/shaominhe/成交CRM-CodeX版/cloudfunctions/reviewClosedProject/index.js)
+   - 服务层：[data.js](/Users/shaominhe/成交CRM-CodeX版/services/data.js)
+   - 页面接入：[project-detail.js](/Users/shaominhe/成交CRM-CodeX版/pages/project-detail/project-detail.js)
+
+7. `wakeDormantProject`
+   - 云函数：[index.js](/Users/shaominhe/成交CRM-CodeX版/cloudfunctions/wakeDormantProject/index.js)
+   - 服务层：[data.js](/Users/shaominhe/成交CRM-CodeX版/services/data.js)
+   - 页面接入：[projects.js](/Users/shaominhe/成交CRM-CodeX版/pages/projects/projects.js)
 
 ### 7.2 已完成的共性基础项
 
@@ -426,9 +461,7 @@ AI 能力边界按项目阶段明确切开：
 
 ### 7.3 尚未落地的能力
 
-- 项目 AI 研判
-- 成交 / 流失 AI 复盘
-- 沉默项目 AI 唤醒
+- 无
 
 ---
 

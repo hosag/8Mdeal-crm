@@ -7,21 +7,17 @@ const db = cloud.database()
 const defaultShareTags = [
   {
     id: 't1',
-    name: '基础浏览',
-    desc: '隐藏电话、微信，仅展示项目基础信息与联系人姓名。',
+    mode: 'info',
+    name: '发送资料',
+    desc: '对方仅查看资料，项目仍由我维护。',
     fields: ['项目名称', '客户名称', '当前阶段', '预计金额', '联系人姓名', '项目描述']
   },
   {
     id: 't2',
-    name: '完整外发',
-    desc: '展示完整联系方式与下一步动作，适合项目接手。',
+    mode: 'outbound',
+    name: '转交项目',
+    desc: '对方接手后继续推进，我在外发项目查看进展。',
     fields: ['项目名称', '客户名称', '当前阶段', '预计金额', '项目描述', '联系人姓名', '联系人电话', '联系人微信', '下一步动作', '分享来源']
-  },
-  {
-    id: 't3',
-    name: '全量查看',
-    desc: '展示全部可分享字段，并附带来源说明。',
-    fields: ['全部字段']
   }
 ]
 
@@ -51,10 +47,63 @@ function normalizeTag(item, index) {
 
   return {
     id: String(item && item.id ? item.id : `tag-${Date.now()}-${index}`).trim(),
+    mode: item && item.mode === 'outbound' ? 'outbound' : (item && item.mode === 'info' ? 'info' : ''),
     name: String(item && item.name ? item.name : `标签${index + 1}`).trim(),
     desc: String(item && item.desc ? item.desc : '').trim(),
     fields
   }
+}
+
+function hasContactField(tag) {
+  const fields = Array.isArray(tag && tag.fields) ? tag.fields : []
+  return fields.indexOf('全部字段') > -1
+    || fields.indexOf('联系人电话') > -1
+    || fields.indexOf('联系人微信') > -1
+    || fields.indexOf('下一步动作') > -1
+}
+
+function isOutboundScopeTag(tag) {
+  const name = String(tag && tag.name || '')
+  return tag && (
+    tag.mode === 'outbound'
+    || tag.id === 't2'
+    || name.indexOf('转交') > -1
+    || name.indexOf('外发') > -1
+    || name.indexOf('全量') > -1
+    || hasContactField(tag)
+  )
+}
+
+function isInfoScopeTag(tag) {
+  return tag && (
+    tag.mode === 'info'
+    || tag.id === 't1'
+    || !hasContactField(tag)
+  )
+}
+
+function buildScopeTag(scope, source) {
+  const fields = Array.isArray(source && source.fields) && source.fields.length
+    ? source.fields
+    : scope.fields
+
+  return {
+    ...scope,
+    fields: fields.slice()
+  }
+}
+
+function resolveShareTags(tags) {
+  const normalizedTags = Array.isArray(tags) ? tags.map(normalizeTag) : []
+  const infoSource = normalizedTags.find(isInfoScopeTag)
+  const outboundSource = normalizedTags.find(isOutboundScopeTag)
+
+  return clone(defaultShareTags).map((scope) => {
+    if (scope.mode === 'outbound') {
+      return buildScopeTag(scope, outboundSource)
+    }
+    return buildScopeTag(scope, infoSource)
+  })
 }
 
 exports.main = async () => {
@@ -64,9 +113,7 @@ exports.main = async () => {
   }).limit(1).get()
 
   const user = result.data[0]
-  const shareTags = Array.isArray(user && user.shareTags) && user.shareTags.length
-    ? user.shareTags.map(normalizeTag)
-    : clone(defaultShareTags)
+  const shareTags = resolveShareTags(user && user.shareTags)
 
   return {
     ok: true,

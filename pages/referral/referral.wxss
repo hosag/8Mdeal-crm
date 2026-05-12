@@ -1,0 +1,250 @@
+.referral-page {
+  padding-bottom: 160rpx;
+}
+
+.referral-hero {
+  padding-bottom: 26rpx;
+}
+
+.referral-bind-card {
+  padding: 18rpx 20rpx;
+}
+
+.referral-bind-card.is-success {
+  box-shadow: inset 0 0 0 2rpx rgba(35, 119, 91, 0.16);
+}
+
+.referral-bind-card.is-warning {
+  box-shadow: inset 0 0 0 2rpx rgba(169, 117, 43, 0.18);
+}
+
+.referral-main-card,
+.referral-stats-card,
+.referral-list-card,
+.referral-invitee-card {
+  padding: 20rpx;
+}
+
+.referral-invitee-card {
+  box-shadow: inset 0 0 0 2rpx rgba(35, 119, 91, 0.12);
+}
+
+.referral-invitee-card.is-warning {
+  box-shadow: inset 0 0 0 2rpx rgba(169, 117, 43, 0.16);
+}
+
+.referral-invitee-status {
+  padding: 2rpx 0 4rpx;
+}
+
+.referral-main-head {
+  align-items: flex-start;
+  gap: 18rpx;
+}
+
+.referral-reward-pill {
+  flex: 0 0 auto;
+  min-width: 92rpx;
+  height: 52rpx;
+  padding: 0 16rpx;
+  border-radius: 999rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--theme-brand-bg);
+  color: var(--theme-brand-text);
+  font-size: 24rpx;
+  font-weight: 800;
+}
+
+.referral-rule-grid,
+.referral-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10rpx;
+  margin-top: 16rpx;
+}
+
+.referral-stats-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.referral-rule-item,
+.referral-stat-item,
+.referral-code-card {
+  min-width: 0;
+  padding: 14rpx 16rpx 12rpx;
+  border-radius: 20rpx;
+  background: var(--theme-soft-block-bg);
+  box-shadow: inset 0 0 0 1rpx rgba(24, 39, 51, 0.05);
+}
+
+.referral-rule-label {
+  font-size: 20rpx;
+  color: var(--theme-text-muted);
+}
+
+.referral-rule-value {
+  margin-top: 6rpx;
+  font-size: 25rpx;
+  font-weight: 700;
+  color: var(--theme-title);
+  line-height: 1.35;
+}
+
+.referral-code-card {
+  margin-top: 10rpx;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18rpx;
+}
+
+.referral-code {
+  margin-top: 6rpx;
+  font-size: 30rpx;
+  font-weight: 800;
+  color: var(--theme-title);
+  letter-spacing: 1rpx;
+}
+
+.referral-share-btn {
+  margin-top: 16rpx;
+  width: 100%;
+  border: 0;
+  line-height: 1;
+}
+
+.referral-share-btn::after {
+  border: 0;
+}
+
+.referral-main-actions {
+  margin-top: 18rpx;
+  display: flex;
+  justify-content: center;
+}
+
+.referral-main-actions .referral-main-share-btn {
+  width: 360rpx;
+  max-width: 100%;
+  margin-top: 0;
+  box-sizing: border-box;
+}
+
+.referral-invitee-actions {
+  margin-top: 18rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.referral-invitee-actions .referral-invitee-btn {
+  width: 360rpx;
+  max-width: 100%;
+  margin-top: 0;
+  margin-left: auto;
+  margin-right: auto;
+  box-sizing: border-box;
+}
+
+.referral-secondary-action {
+  margin-top: 16rpx;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48rpx;
+  padding: 0 16rpx;
+  text-align: center;
+}
+
+.referral-stat-item {
+  padding-left: 10rpx;
+  padding-right: 10rpx;
+  text-align: center;
+}
+
+.referral-stat-item .metric-label {
+  font-size: 19rpx;
+  color: var(--theme-text-muted);
+  white-space: nowrap;
+}
+
+.referral-stat-item .metric-value {
+  margin-top: 6rpx;
+  font-size: 28rpx;
+  font-weight: 800;
+  color: var(--theme-title);
+  line-height: 1.25;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.referral-list {
+  margin-top: 12rpx;
+}
+
+.referral-row {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  padding: 16rpx 0;
+  border-bottom: 1rpx solid rgba(24, 39, 51, 0.08);
+}
+
+.referral-row:last-child {
+  border-bottom: 0;
+}
+
+.referral-row-main {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.referral-row-title {
+  font-size: 26rpx;
+  font-weight: 700;
+  color: var(--theme-title);
+}
+
+.referral-row-desc {
+  margin-top: 5rpx;
+  font-size: 21rpx;
+  line-height: 1.4;
+  color: var(--theme-text-muted);
+}
+
+.referral-row-status {
+  flex: 0 0 auto;
+  min-width: 88rpx;
+  min-height: 42rpx;
+  padding: 0 14rpx;
+  border-radius: 999rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--theme-soft-block-bg);
+  color: var(--theme-text-muted);
+  font-size: 20rpx;
+  font-weight: 700;
+}
+
+.referral-row-status.is-rewarded {
+  background: var(--theme-success-bg);
+  color: var(--theme-success-text);
+}
+
+.empty-copy {
+  margin-top: 14rpx;
+  padding: 24rpx 0 10rpx;
+  text-align: center;
+  font-size: 23rpx;
+  color: var(--theme-text-muted);
+}
+
+@media (max-width: 520px) {
+  .referral-stats-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}

@@ -5,20 +5,37 @@
 
   <block wx:else>
     <view class="hero rise-in mine-hero">
-      <view class="eyebrow-row">
-        <view class="eyebrow">我的</view>
-        <view class="source-badge">{{dataSource}}</view>
+      <view class="mine-hero-profile" bindtap="openDisplayNameSheet">
+        <view class="mine-hero-avatar">{{heroAvatarText}}</view>
+        <view class="mine-hero-profile-main">
+          <view class="hero-title">{{heroTitle}}</view>
+          <view class="hero-subtitle">{{heroSubtitle}}</view>
+        </view>
       </view>
-      <view class="hero-title">账户与偏好</view>
-      <view class="hero-subtitle">收益、关键联系人、标签和偏好集中管理。</view>
     </view>
 
-    <view class="surface-card section mine-overview-card rise-in stagger-1">
+    <view class="surface-card section mine-access-card rise-in stagger-1">
+      <view class="section-title mine-section-title">账户与权益</view>
+      <view wx:if="{{isAccessLoading}}" class="menu-caption mine-access-loading">正在同步账户状态...</view>
+      <view wx:else class="mine-access-grid">
+        <view class="mine-access-item" wx:for="{{accountAccessRows}}" wx:key="key">
+          <view class="mine-access-label">{{item.label}}</view>
+          <view class="mine-access-value">{{item.value}}</view>
+        </view>
+      </view>
+      <view class="mine-access-notice">{{accountAccessNotice}}</view>
+      <view class="hero-actions mine-access-actions">
+        <view class="btn-secondary mine-access-action" bindtap="openPlansPage">套餐与加购</view>
+        <view wx:if="{{!accountSummary.phoneVerified}}" class="btn-ghost mine-access-action" bindtap="openPhoneBindPage">绑定手机号</view>
+        <view wx:else class="btn-ghost mine-access-action" bindtap="openEntitlementsPage">权益详情</view>
+      </view>
+    </view>
+
+    <view class="surface-card section mine-overview-card rise-in stagger-3">
       <view class="line-between mine-section-head">
         <view>
           <view class="section-title mine-section-title">本月概览</view>
         </view>
-        <view class="section-link" data-url="/pages/earnings/earnings" bindtap="openPage">明细</view>
       </view>
       <view class="mine-overview-grid">
         <view class="mine-overview-metric" wx:for="{{overviewMetrics}}" wx:key="label">
@@ -28,7 +45,27 @@
       </view>
     </view>
 
-    <view class="section mine-entry-grid rise-in stagger-2">
+    <view class="section mine-entry-grid rise-in stagger-4">
+      <view class="nav-card mine-entry-card" data-url="/pages/referral/referral" bindtap="openPage">
+        <view class="line-between mine-entry-head">
+          <view class="mine-entry-main">
+            <view class="card-title">推荐朋友</view>
+            <view class="card-subtitle">朋友创建第一个项目后，双方各得 10 万 AI 额度</view>
+          </view>
+          <view class="section-link">进入</view>
+        </view>
+      </view>
+
+      <view class="nav-card mine-entry-card" data-url="/pages/feedback/feedback" bindtap="openPage">
+        <view class="line-between mine-entry-head">
+          <view class="mine-entry-main">
+            <view class="card-title">反馈与建议</view>
+            <view class="card-subtitle">提交问题、需求或使用想法，获得平台百万AI额度奖励</view>
+          </view>
+          <view class="section-link">进入</view>
+        </view>
+      </view>
+
       <view class="nav-card mine-entry-card" data-url="/pages/earnings/earnings" bindtap="openPage">
         <view class="line-between mine-entry-head">
           <view class="mine-entry-main">
@@ -60,19 +97,8 @@
       </view>
     </view>
 
-    <view class="surface-card section mine-settings-card rise-in stagger-3">
+    <view class="surface-card section mine-settings-card rise-in stagger-5">
       <view class="section-title mine-section-title">账户与偏好</view>
-
-      <view class="mine-setting-group">
-        <view class="mine-group-title">云环境</view>
-        <view class="menu-row mine-plain-row">
-          <view class="menu-main">
-            <view>云开发环境</view>
-            <view class="menu-caption">{{cloudEnvCaption}}</view>
-          </view>
-          <view class="section-link">{{cloudEnvLabel}}</view>
-        </view>
-      </view>
 
       <view class="mine-setting-group">
         <view class="mine-group-title">站内提醒</view>
@@ -81,10 +107,10 @@
           <view class="menu-row reminder-menu-row mine-reminder-row">
             <view class="menu-main">
               <view class="menu-title-row">
-                <view>跟进提醒</view>
-                <view wx:if="{{preferenceSavingKey === 'followUpEnabled' || preferenceSavingKey === 'followUpAdvance'}}" class="menu-saving-text">保存中</view>
+                <view>项目回看提醒</view>
+                <view wx:if="{{preferenceSavingKey === 'followUpEnabled'}}" class="menu-saving-text">保存中</view>
               </view>
-              <view class="menu-caption">控制项目下次跟进提醒。</view>
+              <view class="menu-caption">控制较久未推进项目的弱提醒。</view>
             </view>
             <switch
               color="#355d76"
@@ -92,19 +118,6 @@
               data-field="followUpEnabled"
               bindchange="onReminderToggleChange"
             />
-          </view>
-          <view class="reminder-option-row mine-reminder-option-row">
-            <view class="menu-caption">提醒时间</view>
-            <view class="pill-row reminder-pill-row mine-reminder-pill-row">
-              <view
-                wx:for="{{reminderAdvanceOptions}}"
-                wx:key="key"
-                class="chip mine-reminder-chip {{reminderSettings.followUpAdvance === item.key ? 'is-active' : ''}} {{!reminderSettings.followUpEnabled ? 'is-disabled' : ''}}"
-                data-field="followUpAdvance"
-                data-value="{{item.key}}"
-                bindtap="onReminderAdvanceTap"
-              >{{item.label}}</view>
-            </view>
           </view>
         </view>
 
@@ -199,5 +212,40 @@
     </view>
   </block>
 </view>
+
+<block wx:if="{{showDisplayNameSheet}}">
+  <view class="sheet-mask" bindtap="closeDisplayNameSheet"></view>
+  <view class="sheet-panel mine-name-sheet {{appearancePageClass}}">
+    <view class="sheet-handle"></view>
+    <view class="sheet-header">
+      <view class="sheet-title">显示名称</view>
+      <view class="sheet-close" bindtap="closeDisplayNameSheet">关闭</view>
+    </view>
+    <view class="mine-name-sheet-body">
+      <view class="mine-name-sheet-meta">
+        <view class="mine-access-label">当前显示</view>
+        <view class="mine-access-value">{{accountSummary.displayName || accountSummary.phoneMasked || '未设置'}}</view>
+      </view>
+      <view class="mine-name-sheet-meta">
+        <view class="mine-access-label">微信昵称</view>
+        <view class="mine-access-value">{{wechatNicknameText}}</view>
+      </view>
+      <view class="mine-name-form">
+        <input
+          class="mine-name-input"
+          maxlength="24"
+          placeholder="输入显示名称，留空则恢复默认"
+          value="{{displayNameInput}}"
+          bindinput="onDisplayNameInput"
+        />
+        <view class="menu-caption mine-name-tip">留空则使用微信昵称或账号信息。</view>
+      </view>
+      <view class="hero-actions mine-access-actions mine-name-sheet-actions">
+        <view class="btn-secondary mine-access-action" bindtap="saveDisplayName">{{preferenceSavingKey === 'customDisplayName' ? '保存中...' : '保存'}}</view>
+        <view class="btn-ghost mine-access-action" bindtap="resetDisplayName">恢复默认</view>
+      </view>
+    </view>
+  </view>
+</block>
 
 <bottom-nav current="mine" appearance-page-class="{{appearancePageClass}}" bind:quickentry="handleQuickEntryTap" />

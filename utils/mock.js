@@ -49,7 +49,7 @@ const dashboard = {
     {
       date: '昨天',
       items: [
-        { time: '16:20', title: '完成分享配置', desc: '本次使用“基础浏览”标签，自动隐藏客户电话与微信。', projectId: 'p1' },
+        { time: '16:20', title: '完成分享配置', desc: '本次按发送资料范围展示，自动隐藏客户电话与微信。', projectId: 'p1' },
         { time: '18:05', title: '录入成交记录', desc: '晨曜咨询签约 48 万，预计提成 3.6 万，回款状态为部分回款。', projectId: 'p1' }
       ]
     }
@@ -174,9 +174,8 @@ const shareModes = [
 ]
 
 const shareTags = [
-  { id: 't1', name: '基础浏览', desc: '隐藏电话、微信，仅展示项目基础信息与联系人姓名。', fields: ['项目概况', '阶段', '预计金额', '联系人姓名'] },
-  { id: 't2', name: '完整外发', desc: '展示全部信息，适合项目接手。', fields: ['项目概况', '全部联系方式', '跟进摘要', '下次动作'] },
-  { id: 't3', name: '全量查看', desc: '完整可见，并附带来源说明。', fields: ['全部项目字段', '联系人方式', '分享来源'] }
+  { id: 't1', mode: 'info', name: '发送资料', desc: '对方仅查看资料，项目仍由我维护。', fields: ['项目名称', '客户名称', '当前阶段', '预计金额', '联系人姓名', '项目描述'] },
+  { id: 't2', mode: 'outbound', name: '转交项目', desc: '对方接手后继续推进，我在外发项目查看进展。', fields: ['项目名称', '客户名称', '当前阶段', '预计金额', '项目描述', '联系人姓名', '联系人电话', '联系人微信', '下一步动作', '分享来源'] }
 ]
 
 const outboundProjects = [
@@ -201,6 +200,7 @@ const outboundProjects = [
     statusText: '已跟进',
     collaboratorFollowCount: 2,
     collaboratorLatestFollowAt: '04-18 09:12',
+    unreadProgressCount: 2,
     status: '进行中',
     stage: '方案'
   }
@@ -213,16 +213,15 @@ const earnings = {
     { label: '已回款', value: '168万' }
   ],
   deals: [
-    { id: 'd1', name: '晨曜咨询流程优化项目', amount: '48万', commission: '3.6万', status: '部分回款', date: '2026-04-12' },
-    { id: 'd2', name: '柏川软件出海咨询', amount: '92万', commission: '6.8万', status: '全部回款', date: '2026-04-08' },
-    { id: 'd3', name: '森野科技数据中台升级', amount: '146万', commission: '9.2万', status: '未回款', date: '2026-04-03' }
+    { id: 'd1', projectId: 'p1', name: '晨曜咨询流程优化项目', client: '晨曜咨询', amount: '480,000', amountValue: 480000, amountInput: '480,000', commission: '36,000', commissionValue: 36000, commissionInput: '36,000', paidAmount: '240,000', paidAmountValue: 240000, settledCommission: '12,000', settledCommissionValue: 12000, status: '部分回款', paymentStatus: '部分回款', paymentStatusClass: '', commissionStatus: '部分兑现', date: '2026-04-12', revenueRecords: [{ id: 'r1', paymentAmount: 240000, commissionAmount: 12000, date: '2026-04-18', note: '首期款和首笔提成' }] },
+    { id: 'd2', projectId: 'p2', name: '柏川软件出海咨询', client: '柏川软件', amount: '920,000', amountValue: 920000, amountInput: '920,000', commission: '68,000', commissionValue: 68000, commissionInput: '68,000', paidAmount: '920,000', paidAmountValue: 920000, settledCommission: '68,000', settledCommissionValue: 68000, status: '全部回款', paymentStatus: '全部回款', paymentStatusClass: 'is-success', commissionStatus: '已兑现', date: '2026-04-08', revenueRecords: [{ id: 'r2', paymentAmount: 920000, commissionAmount: 68000, date: '2026-04-20', note: '尾款和提成已结清' }] },
+    { id: 'd3', projectId: 'p3', name: '森野科技数据中台升级', client: '森野科技', amount: '1,460,000', amountValue: 1460000, amountInput: '1,460,000', commission: '92,000', commissionValue: 92000, commissionInput: '92,000', paidAmount: '0', paidAmountValue: 0, settledCommission: '0', settledCommissionValue: 0, status: '未回款', paymentStatus: '未回款', paymentStatusClass: 'is-danger', commissionStatus: '待兑现', date: '2026-04-03', revenueRecords: [] }
   ]
 }
 
 const privacyTags = [
-  { id: 't1', name: '基础浏览', desc: '适合先了解项目情况，不暴露联系方式。', fields: ['项目名称', '客户名称', '阶段', '预计金额', '联系人姓名'] },
-  { id: 't2', name: '完整外发', desc: '用于正式接手场景，展示完整联系方式。', fields: ['项目名称', '联系人姓名', '电话', '微信', '项目描述'] },
-  { id: 't3', name: '全量查看', desc: '允许查看完整字段和跟进摘要。', fields: ['全部字段', '分享来源', '下一步动作'] }
+  { id: 't1', mode: 'info', name: '发送资料', desc: '对方仅查看资料，项目仍由我维护。', fields: ['项目名称', '客户名称', '当前阶段', '预计金额', '联系人姓名', '项目描述'] },
+  { id: 't2', mode: 'outbound', name: '转交项目', desc: '对方接手后继续推进，我在外发项目查看进展。', fields: ['项目名称', '客户名称', '当前阶段', '预计金额', '项目描述', '联系人姓名', '联系人电话', '联系人微信', '下一步动作', '分享来源'] }
 ]
 
 const visibleFields = [

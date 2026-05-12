@@ -1,5 +1,5 @@
 {
-  "navigationBarTitleText": "分享设置",
+  "navigationBarTitleText": "分享项目",
   "usingComponents": {
     "loading-panel": "/components/loading-panel/index"
   }

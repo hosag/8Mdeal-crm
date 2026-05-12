@@ -10,11 +10,14 @@ Page({
       actualAmount: '',
       contractDate: '',
       paymentStatus: '未回款',
+      paidAmount: '',
+      latestPaymentDate: '',
       expectedCommission: '',
+      commissionStatus: '待兑现',
+      settledCommission: '',
+      commissionSettledDate: '',
       note: ''
     },
-    paymentStatuses: ['未回款', '部分回款', '全部回款'],
-    paymentStatusIndex: 0,
     existingDeal: false,
     isLoading: true,
     isSaving: false,
@@ -48,13 +51,11 @@ Page({
     try {
       const result = await loadDealFormData(projectId)
       const form = result && result.form ? result.form : this.data.form
-      const paymentStatusIndex = this.data.paymentStatuses.indexOf(form.paymentStatus)
       const existingDeal = !!(result && result.existingDeal)
 
       this.safeSetData({
         form,
         existingDeal,
-        paymentStatusIndex: paymentStatusIndex > -1 ? paymentStatusIndex : 0,
         isLoading: false,
         dataSource: 'CloudBase'
       })
@@ -117,14 +118,6 @@ Page({
     })
   },
 
-  onPaymentStatusChange(event) {
-    const paymentStatusIndex = Number(event.detail.value)
-    this.setData({
-      paymentStatusIndex,
-      'form.paymentStatus': this.data.paymentStatuses[paymentStatusIndex]
-    })
-  },
-
   async handleSave() {
     if (this.data.isSaving) {
       return
@@ -138,9 +131,9 @@ Page({
       return
     }
 
-    if (!this.data.form.projectId || !this.data.form.actualAmount || !this.data.form.contractDate) {
+    if (!this.data.form.projectId || !this.data.form.contractDate) {
       wx.showToast({
-        title: '请先填写成交金额和合同日期',
+        title: '请先选择合同日期',
         icon: 'none'
       })
       return

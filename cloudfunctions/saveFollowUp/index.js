@@ -3,9 +3,145 @@ const cloud = require('wx-server-sdk')
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 
 const db = cloud.database()
+const _ = db.command
 
 function normalizeText(value) {
   return String(value || '').trim()
+}
+
+function isClosedProjectStage(stage) {
+  const current = normalizeText(stage)
+  return current === '成交' || current === '流失'
+}
+
+async function closeOpenProjectTasks(openid, projectId, stage, now) {
+  if (!isClosedProjectStage(stage)) {
+    return
+  }
+
+  const currentStage = normalizeText(stage)
+  const reason = currentStage === '成交'
+    ? '项目已成交，系统自动取消未完成推进任务'
+    : '项目已流失，系统自动取消未完成推进任务'
+
+  try {
+    const taskResult = await db.collection('tasks').where({
+      _openid: openid,
+      projectId,
+      status: _.in(['pending', 'in_progress'])
+    }).get()
+    const tasks = taskResult.data || []
+
+    if (tasks.length) {
+      await Promise.all(tasks.map((task) => db.collection('tasks').doc(task._id).update({
+        data: {
+          status: 'canceled',
+          canceledAt: now,
+          canceledByOpenid: openid,
+          canceledByName: '系统',
+          cancelReason: reason,
+          canceledReason: reason,
+          updatedAt: now
+        }
+      })))
+    }
+  } catch (error) {
+    // Closing a project should not fail only because the tasks collection is not ready.
+  }
+
+  try {
+    const notificationResult = await db.collection('notifications').where({
+      _openid: openid,
+      projectId
+    }).get()
+    const closableTypes = ['task_due', 'task_overdue', 'task_upcoming', 'todo_due', 'todo_overdue', 'todo_upcoming']
+    const closableItems = (notificationResult.data || []).filter((item) => {
+      return closableTypes.includes(normalizeText(item.type)) && normalizeText(item.status) !== 'resolved'
+    })
+
+    if (closableItems.length) {
+      await Promise.all(closableItems.map((item) => db.collection('notifications').doc(item._id).update({
+        data: {
+          status: 'resolved',
+          readAt: item.readAt || now,
+          resolvedAt: now,
+          updatedAt: now
+        }
+      })))
+    }
+  } catch (error) {
+    // Notification cleanup is best-effort and should not block follow-up saving.
+  }
+}
+
+function resolveUserDisplayName(user = {}, fallbackValue = '', defaultText = '当前用户') {
+  const customDisplayName = normalizeText(user.customDisplayName)
+  if (customDisplayName) {
+    return customDisplayName
+  }
+
+  const wechatNickname = normalizeText(user.wechatNickname || user.nickName)
+  if (wechatNickname) {
+    return wechatNickname
+  }
+
+  const phoneValue = normalizeText(user.phoneMasked || user.phone)
+  if (phoneValue) {
+    return phoneValue
+  }
+
+  return normalizeText(fallbackValue) || defaultText
+}
+
+async function resolveAccountAccessContext(openid) {
+  const identityResult = await db.collection('accountIdentities').where({
+    provider: 'wechat_mp',
+    openid
+  }).limit(1).get()
+  const identity = identityResult.data[0] || null
+  const accountId = normalizeText(identity && identity.accountId)
+
+  if (!accountId) {
+    throw new Error('ACCOUNT_NOT_INITIALIZED: 当前账号尚未初始化，请重新进入小程序后再试')
+  }
+
+  const accountResult = await db.collection('accounts').where({
+    accountId
+  }).limit(1).get()
+  const entitlementsResult = await db.collection('entitlements').where({
+    accountId
+  }).limit(1).get()
+
+  return {
+    accountId,
+    account: accountResult.data[0] || null,
+    entitlements: entitlementsResult.data[0] || null
+  }
+}
+
+function ensureFollowUpWritable(context) {
+  const account = context && context.account ? context.account : {}
+  const entitlements = context && context.entitlements ? context.entitlements : {}
+  const status = normalizeText(entitlements.status || account.status || 'trialing')
+
+  if (status === 'disabled') {
+    throw new Error('ACCOUNT_DISABLED: 当前账号已被禁用')
+  }
+
+  if (entitlements && entitlements.bindRequiredForWrite) {
+    throw new Error('ACCOUNT_PHONE_REQUIRED: 保存正式数据前需要先绑定手机号')
+  }
+
+  if (!entitlements || !Object.keys(entitlements).length) {
+    if (status === 'free_limited' || status === 'expired_readonly') {
+      throw new Error('ENTITLEMENT_WRITE_DISABLED: 当前账号为只读状态')
+    }
+    return
+  }
+
+  if (!entitlements.canSaveFollowUp) {
+    throw new Error('ENTITLEMENT_WRITE_DISABLED: 当前账号为只读状态')
+  }
 }
 
 function normalizeStringArray(value) {
@@ -20,7 +156,7 @@ function normalizeStringArray(value) {
 
 function normalizeTaskType(value) {
   const current = normalizeText(value)
-  const allowed = ['send_solution', 'send_quote', 'callback', 'meeting', 'contract', 'collect_info', 'other']
+  const allowed = ['send_solution', 'send_quote', 'demo', 'report_solution', 'business_negotiation', 'research', 'callback', 'meeting', 'contract', 'collect_info', 'other']
   return allowed.includes(current) ? current : 'other'
 }
 
@@ -143,6 +279,7 @@ async function ensureNotification(recipientOpenid, payload) {
   const result = await db.collection('notifications').add({
     data: {
       _openid: recipientOpenid,
+      accountId: normalizeText(payload.accountId),
       recipientOpenid,
       type: normalizeText(payload.type),
       level: normalizeText(payload.level) || 'normal',
@@ -175,6 +312,8 @@ async function ensureNotification(recipientOpenid, payload) {
 
 exports.main = async (event) => {
   const wxContext = cloud.getWXContext()
+  const accessContext = await resolveAccountAccessContext(wxContext.OPENID)
+  ensureFollowUpWritable(accessContext)
 
   if (!event.projectId || !normalizeText(event.content)) {
     return {
@@ -202,16 +341,29 @@ exports.main = async (event) => {
     }
   }
 
+  const project = projectResult.data[0]
+  const currentProjectClosed = isClosedProjectStage(project.stage) || project.isClosed === true
+  if (currentProjectClosed) {
+    return {
+      ok: false,
+      message: project.stage === '流失'
+        ? '项目已流失，当前不再新增跟进'
+        : '项目已成交，当前不再新增跟进'
+    }
+  }
+
+  const projectOwnerAccountId = normalizeText(project.ownerAccountId || project.accountId || accessContext.accountId)
   const now = new Date()
   const followUpTime = parseDateTime(event.followUpTime, now)
   const selectedStage = normalizeText(event.stageChange)
   const shouldUpdateStage = selectedStage && selectedStage !== '不变更'
+  const shouldCloseProject = shouldUpdateStage && isClosedProjectStage(selectedStage)
   const userResult = await db.collection('users').where({
     _openid: wxContext.OPENID
   }).limit(1).get()
   const actorProfile = userResult.data[0] || {}
-  const actorName = normalizeText(actorProfile.nickName) || '当前用户'
-  const taskPayloads = normalizeTaskPayloads(event.tasks)
+  const actorName = resolveUserDisplayName(actorProfile, accessContext.accountId)
+  const taskPayloads = shouldCloseProject ? [] : normalizeTaskPayloads(event.tasks)
 
   const invalidTask = taskPayloads.find((task) => !task.title || !task.dueAt)
   if (invalidTask) {
@@ -224,6 +376,8 @@ exports.main = async (event) => {
   const addResult = await db.collection('followUps').add({
     data: {
       _openid: wxContext.OPENID,
+      accountId: accessContext.accountId,
+      projectAccountId: projectOwnerAccountId,
       projectId: event.projectId,
       actorOpenid: wxContext.OPENID,
       actorName,
@@ -247,6 +401,8 @@ exports.main = async (event) => {
     await Promise.all(taskPayloads.map((task) => db.collection('tasks').add({
       data: {
         _openid: wxContext.OPENID,
+        accountId: accessContext.accountId,
+        projectAccountId: projectOwnerAccountId,
         projectId: event.projectId,
         sourceFollowUpId: addResult._id,
         ownerOpenid: wxContext.OPENID,
@@ -278,17 +434,15 @@ exports.main = async (event) => {
     updatedAt: now
   }
 
-  if (normalizeText(event.nextFollowUpTime)) {
-    updatePayload.nextFollowUpDate = normalizeText(event.nextFollowUpTime)
-  }
-
   if (shouldUpdateStage) {
     updatePayload.stage = selectedStage
+    updatePayload.isClosed = shouldCloseProject
   }
 
   await db.collection('projects').doc(event.projectId).update({
     data: updatePayload
   })
+  await closeOpenProjectTasks(wxContext.OPENID, event.projectId, selectedStage, now)
 
   try {
     const notificationResult = await db.collection('notifications').where({
@@ -298,7 +452,7 @@ exports.main = async (event) => {
 
     const closableNotifications = (notificationResult.data || []).filter((item) => {
       const type = normalizeText(item.type)
-      return (type === 'todo_due' || type === 'todo_overdue' || type === 'todo_upcoming') && normalizeText(item.status) !== 'resolved'
+      return (type === 'todo_due' || type === 'todo_overdue' || type === 'todo_upcoming' || type === 'project_silent') && normalizeText(item.status) !== 'resolved'
     })
 
     if (closableNotifications.length) {
@@ -337,7 +491,6 @@ exports.main = async (event) => {
   }
 
   try {
-    const project = projectResult.data[0]
     const sharedFromOpenid = normalizeText(project.sharedFromOpenid)
     const sourceProjectId = normalizeText(project.sourceProjectId)
     const sourceShareRecordId = normalizeText(project.sourceShareRecordId)
@@ -361,6 +514,7 @@ exports.main = async (event) => {
       })
 
       await ensureNotification(sharedFromOpenid, {
+        accountId: normalizeText(project.sharedFromAccountId || projectOwnerAccountId),
         type: 'shared_followed',
         level: 'normal',
         title: '对方已继续推进',
@@ -395,7 +549,6 @@ exports.main = async (event) => {
     followUpId: addResult._id,
     projectId: event.projectId,
     taskCount: taskPayloads.length,
-    updatedStage: shouldUpdateStage ? selectedStage : projectResult.data[0].stage,
-    nextFollowUpDate: normalizeText(event.nextFollowUpTime) || formatDateOnly(projectResult.data[0].nextFollowUpDate)
+    updatedStage: shouldUpdateStage ? selectedStage : projectResult.data[0].stage
   }
 }

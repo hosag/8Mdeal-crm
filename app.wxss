@@ -702,6 +702,194 @@ page {
   color: var(--theme-link);
 }
 
+.ai-entry {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12rpx;
+  vertical-align: middle;
+}
+
+.ai-entry-icon {
+  flex: 0 0 auto;
+  width: 45rpx;
+  height: 45rpx;
+  display: block;
+  align-self: center;
+}
+
+.ai-agent-loader {
+  --ai-loader-size: 45rpx;
+  --ai-loader-stroke: 3.6rpx;
+  --ai-loader-color: var(--theme-brand-text);
+  width: var(--ai-loader-size);
+  height: var(--ai-loader-size);
+  position: relative;
+  flex: 0 0 auto;
+  align-self: center;
+}
+
+.ai-agent-loader.is-light {
+  --ai-loader-color: var(--theme-button-primary-text);
+}
+
+.ai-agent-loader.is-large {
+  --ai-loader-size: 84rpx;
+  --ai-loader-stroke: 4.4rpx;
+}
+
+.ai-agent-loader-antenna {
+  position: absolute;
+  top: 9%;
+  width: 8%;
+  height: 24%;
+  border-radius: 999rpx;
+  background: var(--ai-loader-color);
+  opacity: 0.54;
+  transform-origin: 50% 150%;
+}
+
+.ai-agent-loader-antenna.is-left {
+  left: 28%;
+  transform: rotate(-42deg);
+  animation: aiNodePulse 1080ms ease-in-out infinite alternate;
+}
+
+.ai-agent-loader-antenna.is-right {
+  right: 28%;
+  transform: rotate(42deg);
+  animation: aiNodePulse 1080ms ease-in-out 180ms infinite alternate;
+}
+
+.ai-agent-loader-dot {
+  position: absolute;
+  top: -28%;
+  left: 50%;
+  width: 100%;
+  height: 34%;
+  border-radius: 999rpx;
+  background: var(--ai-loader-color);
+  opacity: 0.68;
+  transform: translateX(-50%);
+}
+
+.ai-agent-loader-cap {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 15%;
+  height: 15%;
+  border-radius: 999rpx;
+  background: var(--ai-loader-color);
+  opacity: 0.72;
+  transform: translate(-50%, -50%);
+  animation: aiNodePulse 980ms ease-in-out infinite alternate;
+}
+
+.ai-agent-loader-ear {
+  display: none;
+}
+
+.ai-agent-loader-head {
+  position: absolute;
+  left: 16%;
+  right: 16%;
+  top: 16%;
+  bottom: 16%;
+  border: var(--ai-loader-stroke) solid var(--ai-loader-color);
+  border-top-color: transparent;
+  border-radius: 50%;
+  box-sizing: border-box;
+  opacity: 0.62;
+  animation: aiRingSpin 900ms linear infinite;
+}
+
+.ai-agent-loader-eye {
+  position: absolute;
+  top: 47%;
+  width: 10%;
+  height: 10%;
+  border-radius: 999rpx;
+  background: var(--ai-loader-color);
+  opacity: 0.54;
+  transform: translateY(-50%);
+}
+
+.ai-agent-loader-eye.is-left {
+  left: 21%;
+}
+
+.ai-agent-loader-eye.is-right {
+  right: 21%;
+}
+
+.ai-agent-loader-mouth {
+  display: none;
+}
+
+.ai-entry-text {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 1.2em;
+  line-height: 1.2;
+  text-align: center;
+  vertical-align: middle;
+}
+
+.ai-entry-link,
+.ai-entry-chip {
+  min-height: 44rpx;
+  padding: 0 16rpx;
+  border-radius: 999rpx;
+  background: var(--theme-brand-bg);
+  color: var(--theme-brand-text);
+  box-shadow: inset 0 0 0 1rpx rgba(24, 39, 51, 0.06);
+}
+
+.ai-entry-chip {
+  min-height: 42rpx;
+  padding: 0 14rpx;
+}
+
+.ai-entry-button {
+  gap: 10rpx;
+}
+
+.ai-entry-button .ai-entry-text,
+.ai-entry-link .ai-entry-text,
+.ai-entry-chip .ai-entry-text {
+  min-height: 1.3em;
+}
+
+.ai-entry-button.btn-secondary,
+.ai-entry-button.btn-ghost {
+  background: var(--theme-brand-bg);
+  color: var(--theme-brand-text);
+  box-shadow: inset 0 0 0 1rpx rgba(24, 39, 51, 0.06);
+}
+
+@keyframes aiRingSpin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes aiNodePulse {
+  from {
+    opacity: 0.34;
+  }
+
+  to {
+    opacity: 0.78;
+  }
+}
+
 .surface-card,
 .glass-card,
 .list-card,
@@ -1334,6 +1522,7 @@ page {
   position: fixed;
   inset: 0;
   background: var(--theme-sheet-mask);
+  z-index: 80;
 }
 
 .sheet-panel {
@@ -1341,6 +1530,7 @@ page {
   left: 0;
   right: 0;
   bottom: 0;
+  z-index: 81;
   padding: 24rpx 24rpx calc(28rpx + env(safe-area-inset-bottom));
   border-radius: 34rpx 34rpx 0 0;
   background: var(--theme-sheet-bg);
@@ -1785,6 +1975,12 @@ page {
   color: var(--theme-button-ghost-text);
 }
 
+.btn-primary.is-disabled,
+.btn-secondary.is-disabled,
+.btn-ghost.is-disabled {
+  opacity: 0.58;
+}
+
 .fab {
   position: fixed;
   right: 28rpx;
@@ -1821,6 +2017,22 @@ page {
 .page-shell.appearance-font-large .source-badge,
 .page-shell.appearance-font-large .section-link {
   font-size: 26rpx;
+}
+
+.page-shell.appearance-font-large .ai-entry-icon {
+  width: 50rpx;
+  height: 50rpx;
+}
+
+.page-shell.appearance-font-large .ai-agent-loader:not(.is-large) {
+  --ai-loader-size: 50rpx;
+  --ai-loader-stroke: 4rpx;
+}
+
+.page-shell.appearance-font-large .ai-entry-link,
+.page-shell.appearance-font-large .ai-entry-chip {
+  min-height: 50rpx;
+  padding: 0 18rpx;
 }
 
 .page-shell.appearance-font-large .hero-subtitle,
@@ -1914,6 +2126,22 @@ page {
 .page-shell.appearance-font-readable .source-badge,
 .page-shell.appearance-font-readable .section-link {
   font-size: 32rpx;
+}
+
+.page-shell.appearance-font-readable .ai-entry-icon {
+  width: 58rpx;
+  height: 58rpx;
+}
+
+.page-shell.appearance-font-readable .ai-agent-loader:not(.is-large) {
+  --ai-loader-size: 58rpx;
+  --ai-loader-stroke: 4.4rpx;
+}
+
+.page-shell.appearance-font-readable .ai-entry-link,
+.page-shell.appearance-font-readable .ai-entry-chip {
+  min-height: 58rpx;
+  padding: 0 22rpx;
 }
 
 .page-shell.appearance-font-readable .hero-subtitle,
@@ -2045,8 +2273,8 @@ page {
 .page-shell.mine-page.appearance-font-large .menu-saving-text,
 .page-shell.mine-page.appearance-font-large .mine-font-chip,
 .page-shell.mine-page.appearance-font-large .mine-reminder-chip,
-.page-shell.earnings-page.appearance-font-large .earnings-metric-card .metric-label,
-.page-shell.earnings-page.appearance-font-large .earnings-month-chip,
+.page-shell.earnings-page.appearance-font-large .earnings-hero-metric-label,
+.page-shell.earnings-page.appearance-font-large .earnings-filter-chip,
 .page-shell.earnings-page.appearance-font-large .earnings-inline-item,
 .page-shell.share-config-page.appearance-font-large .preview-block-title,
 .page-shell.share-config-page.appearance-font-large .preview-meta,
@@ -2118,7 +2346,7 @@ page {
 .page-shell.projects-page.appearance-font-large .summary-card-value,
 .page-shell.shared-page.appearance-font-large .summary-card-value,
 .page-shell.mine-page.appearance-font-large .mine-overview-metric .metric-value,
-.page-shell.earnings-page.appearance-font-large .earnings-metric-card .metric-value,
+.page-shell.earnings-page.appearance-font-large .earnings-hero-metric-value,
 .page-shell.share-card-page.appearance-font-large .shared-detail-value-strong {
   font-size: 36rpx;
 }
@@ -2234,8 +2462,8 @@ page {
 .page-shell.mine-page.appearance-font-readable .menu-saving-text,
 .page-shell.mine-page.appearance-font-readable .mine-font-chip,
 .page-shell.mine-page.appearance-font-readable .mine-reminder-chip,
-.page-shell.earnings-page.appearance-font-readable .earnings-metric-card .metric-label,
-.page-shell.earnings-page.appearance-font-readable .earnings-month-chip,
+.page-shell.earnings-page.appearance-font-readable .earnings-hero-metric-label,
+.page-shell.earnings-page.appearance-font-readable .earnings-filter-chip,
 .page-shell.earnings-page.appearance-font-readable .earnings-inline-item,
 .page-shell.share-config-page.appearance-font-readable .preview-block-title,
 .page-shell.share-config-page.appearance-font-readable .preview-meta,
@@ -2307,7 +2535,7 @@ page {
 .page-shell.projects-page.appearance-font-readable .summary-card-value,
 .page-shell.shared-page.appearance-font-readable .summary-card-value,
 .page-shell.mine-page.appearance-font-readable .mine-overview-metric .metric-value,
-.page-shell.earnings-page.appearance-font-readable .earnings-metric-card .metric-value,
+.page-shell.earnings-page.appearance-font-readable .earnings-hero-metric-value,
 .page-shell.share-card-page.appearance-font-readable .shared-detail-value-strong {
   font-size: 44rpx;
 }

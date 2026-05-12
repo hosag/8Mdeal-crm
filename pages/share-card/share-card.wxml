@@ -14,10 +14,9 @@
       </view>
       <view class="eyebrow-row">
         <view class="eyebrow">{{heroEyebrow}}</view>
-        <view class="source-badge">{{dataSource}}</view>
       </view>
       <view class="hero-title">{{heroTitle}}</view>
-      <view class="hero-subtitle">{{heroSubtitle}}</view>
+      <view wx:if="{{heroSubtitle}}" class="hero-subtitle">{{heroSubtitle}}</view>
     </view>
 
     <view wx:if="{{!isSenderEntry}}" class="source-banner section">{{preview.shareSourceText}}</view>
@@ -27,8 +26,8 @@
         <view class="section-title">{{stateTitle}}</view>
         <view class="status-badge is-brand">{{stateTag}}</view>
       </view>
-      <view class="share-state-summary">{{stateDesc}}</view>
-      <view class="compact-inline-metrics share-state-meta">
+      <view wx:if="{{stateDesc}}" class="share-state-summary">{{stateDesc}}</view>
+      <view wx:if="{{ownershipLabel || contactPolicy}}" class="compact-inline-metrics share-state-meta">
         <view class="compact-inline-item">联系人 {{contactPolicy}}</view>
         <view class="compact-inline-item">归属 {{ownershipLabel}}</view>
       </view>
@@ -42,33 +41,28 @@
     </view>
 
     <view wx:if="{{isSenderEntry}}" class="form-card section rise-in stagger-2 share-config-shell">
-      <view class="section-header share-config-head">
-        <view class="section-title">卡片设置</view>
-        <view class="status-badge is-brand share-preview-mode">{{activeMode === 'outbound' ? '转交项目' : '发送资料'}}</view>
-      </view>
       <view class="share-config-overview">
-        <view class="share-config-project-name">{{preview.project.name}}</view>
+        <view class="line-between share-config-topline">
+          <view class="share-config-project-name">{{preview.project.name}}</view>
+          <view class="status-badge is-brand share-preview-mode">{{activeMode === 'outbound' ? (activeFlowMode === 'clone_seed' ? '新建转交' : '转交项目') : '发送资料'}}</view>
+        </view>
         <view class="compact-inline-metrics share-config-meta-pills">
           <view wx:if="{{preview.showClient}}" class="compact-inline-item">客户 {{preview.project.client}}</view>
           <view wx:if="{{preview.showStage}}" class="compact-inline-item">阶段 {{preview.project.stage}}</view>
           <view wx:if="{{preview.showEstimatedAmount}}" class="compact-inline-item">预计 {{preview.project.estimatedAmount}}</view>
-          <view class="compact-inline-item">字段 {{visibleFields.length}} 项</view>
-          <view class="compact-inline-item">历史 {{historyScopeLabel}}</view>
         </view>
       </view>
       <view class="share-config-fields">
         <view class="share-config-fields-head">
-          <view class="share-config-fields-title">字段清单</view>
+          <view class="share-config-fields-title">字段范围</view>
           <view class="share-config-fields-count">{{visibleFields.length}} 项</view>
         </view>
-        <view class="pill-row visible-fields-wall share-config-fields-wall">
-          <view class="field-pill" wx:for="{{visibleFields}}" wx:key="*this">{{item}}</view>
-        </view>
+        <view class="share-config-fields-text">{{visibleFieldsSummary}}</view>
       </view>
     </view>
 
     <view wx:else class="surface-card section rise-in stagger-2 share-preview-card">
-      <view class="line-between share-preview-head">
+      <view class="share-preview-head">
         <view class="share-preview-head-main">
           <view class="project-name">{{preview.project.name}}</view>
           <view class="compact-inline-metrics preview-meta-pills">
@@ -77,10 +71,6 @@
             <view wx:if="{{preview.showEstimatedAmount}}" class="compact-inline-item">预计 {{preview.project.estimatedAmount}}</view>
           </view>
         </view>
-        <view class="status-badge is-brand share-preview-mode">{{activeMode === 'outbound' ? '转交项目' : '发送资料'}}</view>
-      </view>
-      <view class="pill-row share-preview-pills">
-        <view class="status-badge">{{preview.tag.name}}</view>
       </view>
 
       <view class="share-preview-section share-preview-summary">
@@ -91,19 +81,33 @@
 
     <view wx:if="{{showShareBriefCard}}" class="form-card section rise-in stagger-3 share-brief-card">
       <view class="section-header share-brief-head">
-        <view class="section-title">摘要设置</view>
-        <view wx:if="{{isSenderEntry}}" class="share-brief-btn" bindtap="handleGenerateShareBrief">
-          <view wx:if="{{isBriefLoading}}" class="share-brief-btn-spinner"></view>
-          <view class="share-brief-btn-text">{{isBriefLoading ? '生成中' : (shareBrief && shareBrief.title ? shareBrief.regenerateLabel : 'AI整理') }}</view>
-          <view wx:if="{{isBriefLoading}}" class="share-brief-btn-spinner share-brief-btn-spinner-ghost"></view>
+        <view class="section-title">摘要</view>
+        <view wx:if="{{isSenderEntry}}" class="share-brief-btn ai-entry ai-entry-button" bindtap="handleGenerateShareBrief">
+          <image wx:if="{{!isBriefLoading}}" class="ai-entry-icon" src="/assets/icons/ai-agent-light.svg" mode="aspectFit" />
+          <view wx:else class="ai-agent-loader is-light">
+            <view class="ai-agent-loader-antenna is-left"><view class="ai-agent-loader-dot"></view></view>
+            <view class="ai-agent-loader-antenna is-right"><view class="ai-agent-loader-dot"></view></view>
+            <view class="ai-agent-loader-cap"></view>
+            <view class="ai-agent-loader-ear is-left"></view>
+            <view class="ai-agent-loader-ear is-right"></view>
+            <view class="ai-agent-loader-head">
+              <view class="ai-agent-loader-eye is-left"></view>
+              <view class="ai-agent-loader-eye is-right"></view>
+              <view class="ai-agent-loader-mouth"></view>
+            </view>
+          </view>
+          <view class="share-brief-btn-text ai-entry-text">{{isBriefLoading ? '生成中...' : (shareBrief && shareBrief.title ? shareBrief.regenerateLabel : 'AI整理') }}</view>
         </view>
       </view>
 
       <view wx:if="{{isSenderEntry}}" class="share-summary-config">
         <view wx:if="{{hasShareBrief}}" class="share-brief-meta">
-          <view class="share-brief-source">{{shareBrief.sourceOriginText}}</view>
-          <view class="share-preview-section share-brief-result">
+          <view class="share-brief-source">{{shareBrief.sourceMetaText}}</view>
+          <view class="share-brief-result-panel">
             <view class="share-brief-text">{{shareBrief.summaryText}}</view>
+          </view>
+          <view wx:if="{{shareBriefBackup}}" class="inline-actions">
+            <view class="btn-ghost" bindtap="restoreShareBriefVersion">恢复上一版</view>
           </view>
         </view>
 
@@ -120,13 +124,13 @@
           </view>
         </view>
         <view class="share-summary-draft-block">
-          <view class="card-title share-final-summary-title">卡片摘要</view>
+          <view class="card-title share-final-summary-title">摘要内容</view>
           <textarea
             class="textarea-sim textarea-native share-summary-textarea"
             value="{{summaryDraftText}}"
             bindinput="onSummaryDraftInput"
             bindblur="persistSummaryDraft"
-            placeholder="发送卡片摘要"
+            placeholder="可直接编辑发送卡片摘要"
             placeholder-class="input-placeholder"
             maxlength="-1"
           ></textarea>
@@ -134,9 +138,9 @@
       </view>
     </view>
 
-    <view wx:if="{{isSenderEntry}}" class="form-card section rise-in stagger-3 history-scope-card">
+    <view wx:if="{{isSenderEntry && activeFlowMode !== 'clone_seed'}}" class="form-card section rise-in stagger-3 history-scope-card">
       <view class="section-header history-scope-head">
-        <view class="section-title">项目历史</view>
+        <view class="section-title">时间线范围</view>
         <view class="status-badge history-scope-badge">{{historyScopeLabel}}</view>
       </view>
       <view class="history-scope-selector">
@@ -156,15 +160,9 @@
     </view>
 
     <view wx:if="{{showTimelineEntry && !isSenderEntry}}" class="form-card section rise-in stagger-3 share-timeline-entry" bindtap="openTimelinePage">
-      <view class="line-between share-timeline-head">
-        <view>
-          <view class="form-card-title">项目历史</view>
-          <view class="form-card-desc">{{timelineSummaryText}}</view>
-        </view>
-        <view class="status-badge">{{historyScopeLabel}}</view>
-      </view>
-      <view class="pill-row share-timeline-pills">
-        <view class="field-pill" wx:for="{{timelinePills}}" wx:key="*this">{{item}}</view>
+      <view class="share-timeline-head">
+        <view class="form-card-title">项目历史</view>
+        <view class="form-card-desc">{{timelineSummaryText}}</view>
       </view>
       <view class="section-link share-timeline-link">查看</view>
     </view>
@@ -174,14 +172,12 @@
       <view class="form-card-desc">本次未附带项目历史。</view>
     </view>
 
-    <view wx:if="{{showVisibleFields && !isSenderEntry}}" class="form-card section rise-in stagger-3 visible-fields-card">
-      <view class="section-header visible-fields-head">
-        <view class="section-title">显示字段</view>
-        <view class="helper-text">{{visibleFields.length}} 项</view>
+    <view wx:if="{{showReceiverConversion}}" class="form-card section rise-in stagger-3 share-conversion-card">
+      <view class="share-conversion-copy">
+        <view class="form-card-title">用八面成交管理我的项目</view>
+        <view class="form-card-desc">客户进展、跟进记录和下一步动作，都可以集中管理。</view>
       </view>
-      <view class="pill-row visible-fields-wall">
-        <view class="field-pill" wx:for="{{visibleFields}}" wx:key="*this">{{item}}</view>
-      </view>
+      <view class="btn-primary share-conversion-action" bindtap="openHomePage">管理我的项目</view>
     </view>
 
     <view class="bottom-space {{showShareFooter ? 'share-bottom-space' : ''}}"></view>
@@ -201,9 +197,8 @@
       <view class="share-preview-sheet-head">
         <view class="share-preview-sheet-head-main">
           <view class="sheet-title">发送预览</view>
-          <view class="share-preview-sheet-caption">卡片将按当前设置展示</view>
         </view>
-        <view class="share-preview-sheet-mode">{{activeMode === 'outbound' ? '转交项目' : '发送资料'}}</view>
+        <view class="share-preview-sheet-mode">{{activeMode === 'outbound' ? (activeFlowMode === 'clone_seed' ? '新建转交' : '转交项目') : '发送资料'}}</view>
       </view>
       <view class="sheet-close" bindtap="closePreviewSheet">关闭</view>
     </view>
@@ -211,7 +206,7 @@
       <view wx:if="{{preview.shareSourceText}}" class="source-banner section share-preview-sheet-banner">{{preview.shareSourceText}}</view>
 
       <view class="surface-card section share-preview-card share-preview-sheet-card">
-        <view class="line-between share-preview-head">
+        <view class="share-preview-head">
           <view class="share-preview-head-main">
             <view class="share-preview-overview">
               <view class="project-name">{{preview.project.name}}</view>
@@ -222,10 +217,6 @@
               </view>
             </view>
           </view>
-          <view class="status-badge is-brand share-preview-mode">{{activeMode === 'outbound' ? '转交项目' : '发送资料'}}</view>
-        </view>
-        <view class="pill-row share-preview-pills share-preview-tag-row">
-          <view class="status-badge share-preview-tag">{{preview.tag.name}}</view>
         </view>
         <view class="share-preview-section share-preview-summary">
           <view class="card-title">卡片摘要</view>
@@ -234,15 +225,9 @@
       </view>
 
       <view wx:if="{{showTimelineEntry}}" class="form-card section share-timeline-entry" bindtap="openTimelinePage">
-        <view class="line-between share-timeline-head">
-          <view>
-            <view class="form-card-title">项目历史</view>
-            <view class="form-card-desc">{{timelineSummaryText}}</view>
-          </view>
-          <view class="status-badge">{{historyScopeLabel}}</view>
-        </view>
-        <view class="pill-row share-timeline-pills">
-          <view class="field-pill" wx:for="{{timelinePills}}" wx:key="*this">{{item}}</view>
+        <view class="share-timeline-head">
+          <view class="form-card-title">项目历史</view>
+          <view class="form-card-desc">{{timelineSummaryText}}</view>
         </view>
         <view class="section-link share-timeline-link">查看</view>
       </view>
@@ -252,15 +237,6 @@
         <view class="form-card-desc">本次未附带项目历史。</view>
       </view>
 
-      <view class="form-card section visible-fields-card">
-        <view class="section-header visible-fields-head">
-          <view class="section-title">显示字段</view>
-          <view class="helper-text">{{visibleFields.length}} 项</view>
-        </view>
-        <view class="pill-row visible-fields-wall">
-          <view class="field-pill" wx:for="{{visibleFields}}" wx:key="*this">{{item}}</view>
-        </view>
-      </view>
       <view class="bottom-space preview-bottom-space"></view>
     </scroll-view>
   </view>

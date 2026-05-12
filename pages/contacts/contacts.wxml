@@ -7,10 +7,9 @@
     <view class="hero rise-in">
       <view class="eyebrow-row">
         <view class="eyebrow">联系人</view>
-        <view class="source-badge">{{dataSource}}</view>
       </view>
       <view class="hero-title">把关键人收成一页私有线索图</view>
-      <view class="hero-subtitle">先看关键人，再回到对应项目，判断会更直接。</view>
+      <view class="hero-subtitle">联系人会保留你全部项目里的完整信息，包括已经外发转交出去的项目。</view>
     </view>
 
     <view wx:if="{{isLoadFailed}}" class="form-card section state-card rise-in stagger-1">

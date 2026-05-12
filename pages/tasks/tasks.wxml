@@ -1,0 +1,211 @@
+<view class="page-shell tasks-page {{appearancePageClass}}">
+  <view wx:if="{{isLoading}}" class="rise-in">
+    <loading-panel rows="3" appearance-page-class="{{appearancePageClass}}" />
+  </view>
+
+  <block wx:else>
+    <view class="tasks-head rise-in">
+      <view class="eyebrow-row">
+        <view class="eyebrow">任务中心</view>
+      </view>
+      <view class="tasks-title">全部推进动作</view>
+      <view class="tasks-summary-strip">
+        <view class="tasks-summary-item">
+          <view class="tasks-summary-value">{{summary.openCount || 0}}</view>
+          <view class="tasks-summary-label">未完成</view>
+        </view>
+        <view class="tasks-summary-item">
+          <view class="tasks-summary-value is-danger">{{summary.overdueCount || 0}}</view>
+          <view class="tasks-summary-label">逾期</view>
+        </view>
+        <view class="tasks-summary-item">
+          <view class="tasks-summary-value is-brand">{{summary.todayCount || 0}}</view>
+          <view class="tasks-summary-label">今日</view>
+        </view>
+      </view>
+    </view>
+
+    <view wx:if="{{isLoadFailed}}" class="form-card section state-card rise-in stagger-1">
+      <view class="form-card-title">当前无法同步任务数据</view>
+      <view class="form-card-desc">{{loadError}}</view>
+      <view class="inline-actions state-actions">
+        <view class="btn-primary state-btn" bindtap="retryFetch">重新加载</view>
+      </view>
+    </view>
+
+    <view class="form-card section tasks-control-card rise-in stagger-1">
+      <view class="tasks-search-row">
+        <input class="input-sim input-native tasks-search-input" value="{{keyword}}" bindinput="onSearchInput" placeholder="搜索任务 / 项目 / 客户" placeholder-class="input-placeholder" confirm-type="search" />
+        <view wx:if="{{keyword}}" class="tasks-search-clear" bindtap="clearSearch">清空</view>
+      </view>
+      <scroll-view scroll-x class="tasks-filter-scroll" enable-flex show-scrollbar="{{false}}">
+        <view class="tasks-filter-row">
+          <view
+            wx:for="{{filterOptions}}"
+            wx:key="key"
+            class="chip tasks-filter-chip {{filter === item.key ? 'is-active' : ''}}"
+            data-filter="{{item.key}}"
+            bindtap="setFilter"
+          >
+            <text>{{item.label}}</text>
+            <text class="tasks-filter-count">{{item.count || 0}}</text>
+          </view>
+        </view>
+      </scroll-view>
+      <view class="tasks-sort-row">
+        <view
+          wx:for="{{sortOptions}}"
+          wx:key="key"
+          class="chip tasks-sort-chip {{sort === item.key ? 'is-active' : ''}}"
+          data-sort="{{item.key}}"
+          bindtap="setSort"
+        >{{item.label}}</view>
+      </view>
+      <view class="form-card-desc tasks-result-text">{{resultSummaryText}}</view>
+    </view>
+
+    <view wx:if="{{taskFeedback.title}}" class="task-feedback-banner section rise-in stagger-2">
+      <view class="task-feedback-main">
+        <view class="task-feedback-title">{{taskFeedback.title}}</view>
+        <view class="task-feedback-detail">{{taskFeedback.detail}}</view>
+      </view>
+      <view class="task-feedback-dismiss" bindtap="dismissTaskFeedback">收起</view>
+    </view>
+
+    <view class="section rise-in stagger-2">
+      <view
+        class="tasks-card {{item.canComplete ? '' : 'is-closed'}}"
+        wx:for="{{tasks}}"
+        wx:key="id"
+      >
+        <view class="tasks-card-main">
+          <view class="tasks-card-copy" data-project-id="{{item.projectId}}" bindtap="openProjectDetail">
+            <view class="tasks-card-head">
+              <view class="status-badge {{item.urgencyBadgeClass}} tasks-urgency-badge">{{item.urgencyText}}</view>
+              <view class="tasks-card-project">{{item.projectName}}</view>
+            </view>
+            <view class="project-name tasks-card-title">{{item.title}}</view>
+            <view class="project-client tasks-card-meta">{{item.clientName}} · {{item.stage}} · {{item.typeText}}</view>
+            <view wx:if="{{item.description}}" class="tasks-card-desc">{{item.description}}</view>
+            <view class="tasks-card-inline">
+              <view class="compact-inline-item">截止 {{item.dueText}}</view>
+              <view class="compact-inline-item">{{item.priorityText}}</view>
+              <view class="compact-inline-item">{{item.statusText}}</view>
+            </view>
+          </view>
+          <view class="tasks-card-actions">
+            <view class="btn-ghost tasks-card-btn" data-project-id="{{item.projectId}}" bindtap="openProjectDetail">查看项目</view>
+            <view wx:if="{{item.canComplete}}" class="btn-primary tasks-card-btn" data-task-id="{{item.id}}" bindtap="openTaskCompleteSheet">去完成</view>
+          </view>
+        </view>
+      </view>
+
+      <empty-state
+        wx:if="{{!tasks.length}}"
+        appearance-page-class="{{appearancePageClass}}"
+        title="{{emptyTitle}}"
+        desc="{{emptyDesc}}"
+        image="/assets/illustrations/empty-projects.svg"
+        actionText="{{emptyActionText}}"
+        bind:action="handleEmptyAction"
+      />
+    </view>
+  </block>
+</view>
+
+<view wx:if="{{showTaskCompleteSheet}}">
+  <view class="sheet-mask task-complete-mask" bindtap="closeTaskCompleteSheet"></view>
+  <view class="sheet-panel task-complete-sheet {{appearancePageClass}} {{isTaskCompletionEditing ? 'is-editing' : ''}}" style="{{taskCompleteSheetStyle}}">
+    <view class="sheet-handle"></view>
+    <view class="sheet-header">
+      <view class="sheet-title">完成：{{taskCompletionTaskTitle}}</view>
+      <view class="sheet-close" bindtap="closeTaskCompleteSheet">关闭</view>
+    </view>
+    <view class="task-complete-body" style="{{taskCompleteBodyStyle}}">
+      <view class="field-group task-complete-field">
+        <view class="field-label">完成情况 · 提交后自动写入时间线</view>
+        <textarea
+          class="textarea-sim textarea-native task-complete-textarea"
+          value="{{taskCompletionText}}"
+          bindinput="onTaskCompletionInput"
+          bindfocus="onTaskCompletionFieldFocus"
+          cursor-spacing="{{taskCompletionCursorSpacing}}"
+          placeholder="例如：报价已发送，客户确认本周三内部评审，若通过则进入合同沟通。"
+          placeholder-class="input-placeholder"
+          maxlength="-1"
+        ></textarea>
+        <view wx:if="{{isTaskCompletionVoiceSupported}}" class="task-complete-voice-row">
+          <view class="btn-ghost task-complete-voice-btn {{isTaskCompletionVoiceRecording ? 'is-recording' : ''}} {{isTaskCompletionVoiceRecognizing ? 'is-busy' : ''}}" bindtap="handleTaskCompletionVoiceInput">
+            {{isTaskCompletionVoiceRecording ? '结束录音' : (isTaskCompletionVoiceRecognizing ? '识别中...' : '语音录入')}}
+          </view>
+        </view>
+      </view>
+      <view class="task-complete-inline-entry">
+        <view wx:if="{{!taskCompletionCreateNextTask}}" class="btn-ghost task-complete-inline-btn" bindtap="toggleTaskCompletionCreateNextTask">补下一步动作</view>
+      </view>
+      <view wx:if="{{taskCompletionCreateNextTask}}" class="task-complete-next-card">
+        <view class="line-between task-complete-next-head">
+          <view class="task-complete-toggle-title">下一步任务</view>
+          <view class="section-link" bindtap="toggleTaskCompletionCreateNextTask">收起</view>
+        </view>
+        <view class="field-group task-complete-field is-inline-first">
+          <input
+            class="input-sim input-native primary-title-input task-complete-title-input"
+            value="{{taskCompletionNextTaskTitle}}"
+            data-field="taskCompletionNextTaskTitle"
+            bindinput="onTaskCompletionNextTaskInput"
+            bindfocus="onTaskCompletionFieldFocus"
+            cursor-spacing="{{taskCompletionCursorSpacing}}"
+            placeholder="填写下一步任务，例如：3天后回访报价反馈"
+            placeholder-class="input-placeholder"
+          />
+        </view>
+        <view class="field-group task-complete-field">
+          <view class="field-label">任务类型</view>
+          <view class="chips task-complete-type-wall">
+            <view
+              class="chip {{taskCompletionNextTaskType === item.type ? 'is-active' : ''}}"
+              wx:for="{{nextTaskTemplates}}"
+              wx:key="type"
+              data-type="{{item.type}}"
+              bindtap="setTaskCompletionNextTaskType"
+            >{{item.label}}</view>
+          </view>
+        </view>
+        <view class="field-group task-complete-field">
+          <view class="field-label">下一步时间</view>
+          <view class="split-row task-complete-time-row">
+            <picker class="picker-block" mode="date" value="{{taskCompletionNextTaskDate}}" data-field="taskCompletionNextTaskDate" bindchange="onTaskCompletionNextTaskPicker">
+              <view class="picker-sim">
+                <view class="picker-value {{!taskCompletionNextTaskDate ? 'is-placeholder' : ''}}">{{taskCompletionNextTaskDate || '选择日期'}}</view>
+              </view>
+            </picker>
+            <picker class="picker-block" mode="time" value="{{taskCompletionNextTaskTime}}" data-field="taskCompletionNextTaskTime" bindchange="onTaskCompletionNextTaskPicker">
+              <view class="picker-sim">
+                <view class="picker-value {{!taskCompletionNextTaskTime ? 'is-placeholder' : ''}}">{{taskCompletionNextTaskTime || '选择时间'}}</view>
+              </view>
+            </picker>
+          </view>
+        </view>
+        <view class="field-group task-complete-field">
+          <view class="field-label">任务说明</view>
+          <textarea
+            class="textarea-sim textarea-native task-complete-next-textarea"
+            value="{{taskCompletionNextTaskDescription}}"
+            data-field="taskCompletionNextTaskDescription"
+            bindinput="onTaskCompletionNextTaskInput"
+            bindfocus="onTaskCompletionFieldFocus"
+            cursor-spacing="{{taskCompletionCursorSpacing}}"
+            placeholder="可选：补一句下一步要重点确认什么。"
+            placeholder-class="input-placeholder"
+            maxlength="-1"
+          ></textarea>
+        </view>
+      </view>
+    </view>
+    <view class="inline-actions task-complete-actions is-fixed {{isTaskCompletionEditing ? 'is-editing' : ''}}" style="{{taskCompleteActionsStyle}}">
+      <view class="btn-ghost" bindtap="closeTaskCompleteSheet">取消</view>
+      <view class="btn-primary" bindtap="submitTaskCompletion">{{taskActionId === taskCompletionTaskId ? '提交中...' : '确认完成'}}</view>
+    </view>
+  </view>
+</view>

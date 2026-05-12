@@ -1,0 +1,8 @@
+{
+  "name": "speechToText",
+  "version": "1.0.0",
+  "dependencies": {
+    "tencentcloud-sdk-nodejs": "latest",
+    "wx-server-sdk": "latest"
+  }
+}

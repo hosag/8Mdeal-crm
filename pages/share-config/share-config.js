@@ -1,6 +1,7 @@
 const { loadShareConfigData, createShareRecordData, reportSystemFailureData, resolveNotificationData } = require('../../services/data')
 const { buildSharePreview } = require('../../services/share')
 const { syncPageAppearance } = require('../../utils/appearance')
+const { ensureActionAllowed } = require('../../utils/entitlement-guard')
 
 const SHARE_PURPOSES = {
   info: {
@@ -27,6 +28,10 @@ const SHARE_PURPOSES = {
 
 function normalizeMode(value) {
   return value === 'outbound' ? 'outbound' : 'info'
+}
+
+function getShareScopeName(mode) {
+  return normalizeMode(mode) === 'outbound' ? '转交项目' : '发送资料'
 }
 
 function buildVisibleFields(preview) {
@@ -68,7 +73,7 @@ function buildDefaultRuleText(preview) {
   const visibleFields = buildVisibleFields(preview)
   const contacts = Array.isArray(preview && preview.contacts) ? preview.contacts : []
   const canDirectContact = contacts.some((item) => item.phone || item.wechat)
-  const scopeName = preview && preview.tag ? preview.tag.name : '默认规则'
+  const scopeName = preview && preview.mode && preview.mode.key === 'outbound' ? '转交项目' : '发送资料'
   const scopeSummary = canDirectContact ? '包含联系方式' : '隐藏电话微信'
   return `${scopeName} · ${visibleFields.length} 项字段 · ${scopeSummary}`
 }
@@ -169,6 +174,14 @@ Page({
       return
     }
 
+    const decision = await ensureActionAllowed(
+      this.data.activeMode === 'outbound' ? 'share_out' : 'share_record',
+      { refresh: true, guide: true }
+    )
+    if (!decision.allowed) {
+      return
+    }
+
     const projectId = this.data.preview && this.data.preview.project && this.data.preview.project.id
       ? this.data.preview.project.id
       : this.data.projectId
@@ -185,7 +198,7 @@ Page({
           projectId,
           shareMode: this.data.activeMode,
           shareTagId: this.data.activeTag,
-          shareTagName: activeTag ? activeTag.name : '',
+          shareTagName: getShareScopeName(this.data.activeMode),
           shareTagFields: activeTag ? activeTag.fields : []
         })
         shareRecordId = result && result.shareRecordId ? result.shareRecordId : ''

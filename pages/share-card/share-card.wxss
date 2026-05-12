@@ -1,12 +1,3 @@
-@keyframes shareBriefSpin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
-
 .share-card-page .hero {
   padding: 32rpx;
 }
@@ -166,12 +157,7 @@
 }
 
 .share-card-page .share-config-shell {
-  padding: 20rpx 22rpx 22rpx;
-}
-
-.share-card-page .share-config-head {
-  align-items: flex-start;
-  margin-bottom: 12rpx;
+  padding: 20rpx 22rpx 20rpx;
 }
 
 .share-card-page .share-config-overview {
@@ -180,7 +166,14 @@
   background: var(--theme-soft-block-bg);
 }
 
+.share-card-page .share-config-topline {
+  align-items: flex-start;
+  gap: 16rpx;
+}
+
 .share-card-page .share-config-project-name {
+  flex: 1 1 auto;
+  min-width: 0;
   font-size: 32rpx;
   font-weight: 700;
   line-height: 1.32;
@@ -194,7 +187,7 @@
 
 .share-card-page .share-config-fields {
   margin-top: 10rpx;
-  padding: 14rpx 16rpx 16rpx;
+  padding: 14rpx 16rpx;
   border-radius: 20rpx;
   background: rgba(255, 255, 255, 0.44);
   box-shadow: inset 0 0 0 1rpx var(--theme-divider);
@@ -219,8 +212,11 @@
   color: var(--theme-text-soft);
 }
 
-.share-card-page .share-config-fields-wall {
+.share-card-page .share-config-fields-text {
   margin-top: 8rpx;
+  font-size: 22rpx;
+  line-height: 1.66;
+  color: var(--theme-text-main);
 }
 
 .share-card-page .shared-detail-value-strong {
@@ -247,11 +243,6 @@
   margin-top: 2rpx;
 }
 
-.share-card-page .share-preview-pills {
-  margin-top: 14rpx;
-  gap: 10rpx;
-}
-
 .share-card-page .share-preview-section {
   margin-top: 16rpx;
   padding: 18rpx 20rpx 20rpx;
@@ -271,10 +262,6 @@
   padding: 18rpx 20rpx 20rpx;
 }
 
-.share-card-page .visible-fields-card {
-  padding: 22rpx 24rpx;
-}
-
 .share-card-page .history-scope-card {
   padding: 18rpx 20rpx 20rpx;
   background: var(--theme-soft-block-bg);
@@ -282,7 +269,7 @@
 }
 
 .share-card-page .share-brief-card {
-  padding: 20rpx 22rpx 22rpx;
+  padding: 18rpx 20rpx 20rpx;
 }
 
 .share-card-page .share-brief-head {
@@ -292,20 +279,23 @@
 }
 
 .share-card-page .share-brief-meta {
-  margin-top: 12rpx;
+  margin-top: 10rpx;
 }
 
 .share-card-page .share-brief-source {
-  display: inline-flex;
-  align-items: center;
-  min-height: 42rpx;
-  padding: 0 14rpx;
-  border-radius: 999rpx;
-  background: var(--theme-chip-bg);
-  box-shadow: inset 0 0 0 1rpx var(--theme-divider);
-  font-size: 19rpx;
-  line-height: 1.4;
+  font-size: 20rpx;
+  line-height: 1.6;
   color: var(--theme-text-soft);
+}
+
+.share-card-page .share-brief-result-panel {
+  margin-top: 8rpx;
+  padding: 16rpx 18rpx;
+  border-radius: 20rpx;
+  background: rgba(255, 255, 255, 0.44);
+  box-shadow:
+    inset 0 0 0 1rpx var(--theme-divider),
+    0 10rpx 22rpx rgba(27, 54, 93, 0.04);
 }
 
 .share-card-page .share-brief-btn {
@@ -321,32 +311,12 @@
   box-shadow: var(--theme-button-shadow);
 }
 
-.share-card-page .share-brief-btn-spinner {
-  flex: 0 0 auto;
-  width: 28rpx;
-  height: 28rpx;
-  border-radius: 999rpx;
-  border: 3rpx solid rgba(255, 255, 255, 0.28);
-  border-top-color: var(--theme-button-primary-text);
-  box-sizing: border-box;
-  animation: shareBriefSpin 760ms linear infinite;
-}
-
 .share-card-page .share-brief-btn-text {
   flex: 0 0 auto;
   font-size: 22rpx;
   font-weight: 700;
   color: var(--theme-button-primary-text);
   text-align: center;
-}
-
-.share-card-page .share-brief-btn-spinner-ghost {
-  opacity: 0;
-}
-
-.share-card-page .share-brief-result {
-  margin-top: 10rpx;
-  padding: 16rpx 18rpx 18rpx;
 }
 
 .share-card-page .share-brief-text {
@@ -356,7 +326,7 @@
 }
 
 .share-card-page .share-summary-config {
-  margin-top: 12rpx;
+  margin-top: 10rpx;
 }
 
 .share-card-page .summary-mode-row {
@@ -504,16 +474,6 @@
   gap: 6rpx;
 }
 
-.share-card-page .share-preview-tag-row {
-  margin-top: 10rpx;
-}
-
-.share-card-page .share-preview-tag {
-  background: rgba(255, 255, 255, 0.58);
-  color: var(--theme-text-secondary);
-  box-shadow: inset 0 0 0 1rpx var(--theme-divider);
-}
-
 .share-card-page .share-bottom-space {
   height: 114rpx;
 }
@@ -526,7 +486,6 @@
 }
 
 .share-card-page .history-scope-head,
-.share-card-page .visible-fields-head,
 .share-card-page .share-timeline-head {
   align-items: flex-start;
 }
@@ -594,22 +553,8 @@
   padding: 22rpx 24rpx;
 }
 
-.share-card-page .share-timeline-pills {
-  margin-top: 12rpx;
-  gap: 8rpx;
-}
-
-.share-card-page .share-timeline-entry .field-pill {
-  background: var(--theme-field-pill-bg);
-  color: var(--theme-field-pill-text);
-}
-
 .share-card-page .share-history-note {
   padding: 22rpx 24rpx;
-}
-
-.share-card-page .visible-fields-wall {
-  gap: 8rpx;
 }
 
 .share-card-page .share-brief-card.section {
@@ -617,7 +562,6 @@
 }
 
 .share-card-page .history-scope-card.section,
-.share-card-page .visible-fields-card.section,
 .share-card-page .share-timeline-entry.section,
 .share-card-page .share-history-note.section {
   margin-top: 18rpx;
@@ -627,9 +571,29 @@
   margin-bottom: 2rpx;
 }
 
-.share-card-page .visible-fields-card .field-pill {
-  background: var(--theme-field-pill-bg);
-  color: var(--theme-field-pill-text);
+.share-card-page .share-conversion-card {
+  padding: 22rpx 24rpx 24rpx;
+  background: var(--theme-state-card-bg);
+  box-shadow: var(--theme-state-card-shadow);
+}
+
+.share-card-page .share-conversion-copy {
+  min-width: 0;
+}
+
+.share-card-page .share-conversion-action {
+  display: flex;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  margin-top: 18rpx;
+  border-radius: 22rpx;
+  box-shadow: var(--theme-button-shadow);
+  text-align: center;
+}
+
+.share-card-page .share-conversion-card.section {
+  margin-top: 18rpx;
 }
 
 .share-card-page .share-footer {

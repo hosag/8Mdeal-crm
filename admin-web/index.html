@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>成交 CRM 管理台</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <div class="admin-shell">
+    <aside class="sidebar">
+      <div class="brand-block">
+        <div class="brand-mark">八</div>
+        <div>
+          <div class="brand-title">成交 CRM 管理台</div>
+          <div class="brand-subtitle">第一版最小可运营后台</div>
+        </div>
+      </div>
+
+      <nav class="sidebar-nav">
+        <button class="nav-item is-active" data-view="overview" type="button">运营总览</button>
+        <button class="nav-item" data-view="accounts" type="button">用户与账户</button>
+        <button class="nav-item" data-view="orders" type="button">订单与支付</button>
+        <button class="nav-item" data-view="feedback" type="button">反馈与建议</button>
+        <button class="nav-item" data-view="referrals" type="button">推荐与奖励</button>
+        <div id="billingNavGroup" class="nav-group">
+          <div class="nav-group-head">
+            <button id="billingNavParent" class="nav-item nav-item-parent" data-view="billingOverview" type="button">额度与订阅</button>
+            <button id="billingNavToggle" class="nav-group-toggle" data-nav-toggle="billing" type="button" aria-label="展开额度与订阅子菜单" aria-expanded="false">
+              <span class="nav-group-toggle-icon"></span>
+            </button>
+          </div>
+          <div class="nav-submenu">
+            <button class="nav-subitem" data-view="billingOverview" type="button">
+              <span>总览</span>
+              <span id="billingOverviewCount" class="nav-subitem-badge">0</span>
+            </button>
+            <button class="nav-subitem" data-view="billingGlobalUsage" type="button">
+              <span>全局流水</span>
+              <span id="billingGlobalUsageCount" class="nav-subitem-badge">0</span>
+            </button>
+            <button class="nav-subitem" data-view="billingAccounts" type="button">
+              <span>账户与流水</span>
+              <span id="billingAccountsCount" class="nav-subitem-badge">0</span>
+            </button>
+            <button class="nav-subitem" data-view="billingPlans" type="button">
+              <span>商品目录</span>
+              <span id="billingPlansCount" class="nav-subitem-badge">0</span>
+            </button>
+          </div>
+        </div>
+        <button class="nav-item" data-view="aiConfig" type="button">AI模型配置</button>
+        <button class="nav-item" data-view="audit" type="button">审计日志</button>
+      </nav>
+
+        <div class="sidebar-note">
+          <div class="sidebar-note-title">当前状态</div>
+          <div id="sidebarStatusCopy" class="sidebar-note-copy">
+          这是独立 Web 管理台。当前可使用本地演示数据，也可切到 Cloud Bridge 读取真实后台数据。
+          </div>
+          <div id="buildStamp" class="sidebar-build">Build -</div>
+        </div>
+    </aside>
+
+    <main class="workspace">
+      <header class="workspace-header">
+        <div>
+          <div class="page-kicker">Management Console</div>
+          <h1 id="pageTitle" class="page-title">运营总览</h1>
+          <p id="pageDesc" class="page-desc">先把账户、订单、权益调整和审计日志这条管理主线立起来。</p>
+        </div>
+        <div class="workspace-actions">
+          <div class="status-stack">
+            <div id="modeBadge" class="env-badge">本地 Mock</div>
+            <div id="syncMeta" class="sync-meta">尚未同步</div>
+          </div>
+          <button id="refreshDataBtn" class="ghost-btn" type="button">刷新数据</button>
+          <button id="resetStateBtn" class="ghost-btn" type="button">重置演示数据</button>
+        </div>
+      </header>
+      <div id="runtimeNotice" class="runtime-note" hidden></div>
+
+      <section id="overviewView" class="view is-active">
+        <div class="hero-panel">
+          <div class="hero-copy">
+            <div class="hero-tag">P1 Admin</div>
+            <h2 class="hero-title">把账户、订单、额度和审计收成可运营驾驶舱</h2>
+            <p class="hero-text">
+              第一版不追求复杂后台，而是先把日常运营最常看的问题集中到首页：
+              谁还没绑定、谁已经受限、哪些订单待跟进、后台动作有没有留下留痕。
+            </p>
+          </div>
+          <div class="hero-grid" id="overviewStats"></div>
+        </div>
+
+        <div class="panel-grid panel-grid-two">
+          <section class="panel">
+            <div class="panel-head">
+              <h3 class="panel-title">当前处理队列</h3>
+            </div>
+            <div id="overviewQueueWrap"></div>
+          </section>
+
+          <section class="panel">
+            <div class="panel-head">
+              <h3 class="panel-title">运营动作建议</h3>
+            </div>
+            <div id="overviewActionsWrap"></div>
+          </section>
+        </div>
+
+        <div class="panel-grid panel-grid-two">
+          <section class="panel">
+            <div class="panel-head">
+              <h3 class="panel-title">高风险账户</h3>
+            </div>
+            <div id="overviewRiskAccountsWrap"></div>
+          </section>
+
+          <section class="panel">
+            <div class="panel-head">
+              <h3 class="panel-title">待跟进订单</h3>
+            </div>
+            <div id="overviewPendingOrdersWrap"></div>
+          </section>
+        </div>
+
+        <div id="overviewUsageSummaryWrap" class="section-summary-grid"></div>
+
+        <div class="panel-grid panel-grid-two">
+          <section class="panel">
+            <div class="panel-head">
+              <h3 class="panel-title">近 30 天额度趋势</h3>
+              <div class="panel-meta">按天看 AI 与语音的真实消耗、回补与 fallback，避免只盯当前余额。</div>
+            </div>
+            <div id="overviewUsageTrendWrap"></div>
+          </section>
+
+          <section class="panel">
+            <div class="panel-head">
+              <h3 class="panel-title">消耗热点</h3>
+              <div class="panel-meta">优先看最耗的业务场景、模型和账户，定位成本与体验的核心来源。</div>
+            </div>
+            <div id="overviewUsageHotspotsWrap"></div>
+          </section>
+        </div>
+      </section>
+
+      <section id="accountsView" class="view">
+        <div class="toolbar">
+          <div class="toolbar-group">
+            <input id="accountSearchInput" class="toolbar-input" type="search" placeholder="搜索账户 ID / 手机号 / 状态">
+            <select id="accountStatusFilter" class="toolbar-select">
+              <option value="all">全部状态</option>
+              <option value="trialing">试用中</option>
+              <option value="active_paid">付费有效</option>
+              <option value="expired_readonly">到期只读</option>
+              <option value="disabled">已禁用</option>
+            </select>
+          </div>
+          <div class="toolbar-group">
+            <button id="createTrialBtn" class="primary-btn" type="button">给选中账户延长 7 天试用</button>
+          </div>
+        </div>
+
+        <div id="accountsSummaryWrap" class="section-summary-grid"></div>
+
+        <div class="panel-grid panel-grid-split">
+          <section class="panel">
+            <div class="panel-head">
+              <h3 class="panel-title">账户列表</h3>
+              <div class="panel-meta" id="accountCountMeta"></div>
+            </div>
+            <div id="accountsTableWrap"></div>
+          </section>
+
+          <section class="panel detail-panel">
+            <div class="panel-head">
+              <h3 class="panel-title">账户详情</h3>
+              <div id="selectedAccountMeta" class="panel-meta"></div>
+            </div>
+            <div id="accountDetailWrap"></div>
+          </section>
+        </div>
+
+        <section class="panel account-adjustment-panel">
+          <div class="panel-head">
+            <div>
+              <h3 class="panel-title">人工调整记录</h3>
+              <div class="panel-meta">默认展示全部账户的人工调整，可切换为只看当前选中账户。</div>
+            </div>
+            <div class="toolbar-group">
+              <select id="adjustmentRecordScopeSelect" class="toolbar-select">
+                <option value="all">全部账户</option>
+                <option value="selected">当前选中账户</option>
+              </select>
+              <input id="adjustmentRecordSearchInput" class="toolbar-input" type="search" placeholder="搜索账户 / 操作 / 原因">
+            </div>
+          </div>
+          <div id="adjustmentRecordCountMeta" class="panel-meta"></div>
+          <div id="adjustmentRecordTableWrap"></div>
+        </section>
+      </section>
+
+      <section id="ordersView" class="view">
+        <div class="toolbar">
+          <div class="toolbar-group">
+            <input id="orderSearchInput" class="toolbar-input" type="search" placeholder="搜索订单号 / 账户 / 商品">
+            <select id="orderStatusFilter" class="toolbar-select">
+              <option value="all">全部订单状态</option>
+              <option value="pending">待支付</option>
+              <option value="paid">已支付</option>
+              <option value="failed">支付失败</option>
+              <option value="closed">已关闭</option>
+            </select>
+            <select id="orderReadinessFilter" class="toolbar-select">
+              <option value="all">全部支付准备状态</option>
+              <option value="placeholder_only">仅留痕未接通</option>
+              <option value="config_incomplete">配置待补齐</option>
+              <option value="ready">可发起支付</option>
+            </select>
+          </div>
+        </div>
+
+        <div id="ordersSummaryWrap" class="section-summary-grid"></div>
+
+        <div class="panel-grid panel-grid-split">
+          <section class="panel">
+            <div class="panel-head">
+              <h3 class="panel-title">订单列表</h3>
+              <div id="orderCountMeta" class="panel-meta"></div>
+            </div>
+            <div id="ordersTableWrap"></div>
+          </section>
+
+          <section class="panel detail-panel">
+            <div class="panel-head">
+              <h3 class="panel-title">订单详情</h3>
+              <div id="selectedOrderMeta" class="panel-meta"></div>
+            </div>
+            <div id="orderDetailWrap"></div>
+          </section>
+        </div>
+      </section>
+
+      <section id="billingOverviewView" class="view">
+        <section class="panel billing-summary-panel">
+          <div class="panel-head">
+            <div>
+              <h3 class="panel-title">运营总览</h3>
+              <div class="panel-meta">先看低余额、消耗分布和异常成本，再决定是否进入账户与流水做逐户排查。</div>
+            </div>
+          </div>
+          <div id="usageSummaryWrap" class="section-summary-grid"></div>
+        </section>
+
+        <div class="panel-grid panel-grid-two">
+          <section class="panel usage-alerts-panel">
+            <div class="panel-head">
+              <h3 class="panel-title">运营预警汇总</h3>
+              <div class="panel-meta">把待绑定、即将到期、额度告急和高风险账户先集中拉出来，便于每天先处理最紧急的问题。</div>
+            </div>
+            <div id="usageWarningSummaryWrap" class="section-summary-grid"></div>
+          </section>
+
+          <section class="panel usage-alerts-panel">
+            <div class="panel-head">
+              <h3 class="panel-title">低余额预警</h3>
+              <div class="panel-meta">按当前账户筛选口径标记语音与 AI 低余额账户，便于提前触达。</div>
+            </div>
+            <div id="usageAlertsWrap" class="usage-alert-grid"></div>
+          </section>
+        </div>
+
+        <div class="panel-grid panel-grid-two">
+          <section class="panel usage-anomaly-panel">
+            <div class="panel-head">
+              <h3 class="panel-title">异常高消耗排查</h3>
+              <div class="panel-meta">聚焦当前口径下的高消耗账户与高消耗场景，快速定位异常成本来源。</div>
+            </div>
+            <div id="usageAnomalyWrap"></div>
+          </section>
+
+          <section class="panel usage-anomaly-panel">
+            <div class="panel-head">
+              <h3 class="panel-title">高风险账户</h3>
+              <div class="panel-meta">综合只读、待绑定、订阅到期、额度告急和调用失败情况，给出优先排查名单。</div>
+            </div>
+            <div id="usageRiskAccountsWrap"></div>
+          </section>
+        </div>
+
+        <section class="panel usage-plan-panel">
+          <div class="panel-head">
+            <h3 class="panel-title">套餐健康看板</h3>
+            <div class="panel-meta">按套餐/试用分桶看账户量、健康分、低余额和项目受限情况，方便判断下一步该调价格、调权益还是做触达。</div>
+          </div>
+          <div id="usagePlanHealthWrap"></div>
+        </section>
+
+        <div class="panel-grid panel-grid-two">
+          <section class="panel usage-source-panel">
+            <div class="panel-head">
+              <h3 class="panel-title">来源场景统计</h3>
+              <div class="panel-meta">按当前筛选口径统计每类来源的消耗与回补，便于快速判断成本主要集中在哪条业务链路。</div>
+            </div>
+            <div id="usageSourceSummaryWrap" class="usage-source-summary-wrap"></div>
+          </section>
+
+          <section class="panel usage-provider-model-panel">
+            <div class="panel-head">
+              <h3 class="panel-title">供应商与模型分布</h3>
+              <div class="panel-meta">按当前筛选口径展示消耗最集中的供应商和模型，可点击卡片直接聚焦。</div>
+            </div>
+            <div class="usage-provider-model-grid">
+              <div>
+                <div class="usage-subtitle">供应商维度</div>
+                <div id="usageProviderSummaryWrap" class="usage-source-summary-wrap"></div>
+              </div>
+              <div>
+                <div class="usage-subtitle">模型维度</div>
+                <div id="usageModelSummaryWrap" class="usage-source-summary-wrap"></div>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <div class="panel-grid panel-grid-two">
+          <section class="panel usage-anomaly-panel">
+            <div class="panel-head">
+              <h3 class="panel-title">调用质量</h3>
+              <div class="panel-meta">把成功率、平均响应和单次均耗时直接拉出来，先判断问题是“贵”还是“慢”。</div>
+            </div>
+            <div id="usageCallQualityWrap" class="section-summary-grid"></div>
+          </section>
+
+          <section class="panel usage-anomaly-panel">
+            <div class="panel-head">
+              <h3 class="panel-title">路由效果</h3>
+              <div class="panel-meta">优先关注各条 AI 路由的成功率、fallback 次数和平均单次消耗。</div>
+            </div>
+            <div id="usageRouteInsightsWrap"></div>
+          </section>
+        </div>
+
+        <section class="panel usage-anomaly-panel">
+          <div class="panel-head">
+            <h3 class="panel-title">模型效率与语音场景均值</h3>
+            <div class="panel-meta">模型侧看平均单次 token，语音侧看平均单次时长与成功率，便于后续调倍率与路由。</div>
+          </div>
+          <div id="usageModelEfficiencyWrap"></div>
+        </section>
+      </section>
+
+      <section id="billingAccountsView" class="view">
+        <div class="toolbar">
+          <div class="toolbar-group">
+            <input id="usageSearchInput" class="toolbar-input" type="search" placeholder="搜索账户 ID / 手机号 / 状态">
+            <select id="usageTypeFilter" class="toolbar-select">
+              <option value="all">全部额度类型</option>
+              <option value="voice_seconds">语音额度</option>
+              <option value="ai_tokens">AI 额度</option>
+            </select>
+            <select id="usageTimeWindowFilter" class="toolbar-select">
+              <option value="all">全部时间</option>
+              <option value="today">今天</option>
+              <option value="last_7d">近 7 天</option>
+              <option value="last_30d">近 30 天</option>
+            </select>
+            <select id="usageSourceFilterSelect" class="toolbar-select">
+              <option value="all">全部来源场景</option>
+            </select>
+            <input id="usageProviderFilterInput" class="toolbar-input toolbar-input-compact" type="search" placeholder="筛选 providerKey/供应商">
+            <input id="usageModelFilterInput" class="toolbar-input toolbar-input-compact" type="search" placeholder="筛选模型名">
+          </div>
+        </div>
+
+        <div id="usageFilterStateWrap" class="usage-filter-state-wrap"></div>
+
+        <div class="panel-grid panel-grid-split">
+          <section class="panel">
+            <div class="panel-head">
+              <h3 class="panel-title">账户与额度视图</h3>
+              <div id="usageCountMeta" class="panel-meta"></div>
+            </div>
+            <div id="usageTableWrap"></div>
+          </section>
+
+          <section class="panel detail-panel">
+            <div class="panel-head">
+              <h3 class="panel-title">账户详情与流水</h3>
+              <div id="selectedUsageMeta" class="panel-meta"></div>
+            </div>
+            <div id="usageDetailWrap"></div>
+          </section>
+        </div>
+      </section>
+
+      <section id="billingGlobalUsageView" class="view">
+        <section class="panel">
+          <div class="panel-head">
+            <div>
+              <h3 class="panel-title">全局额度流水</h3>
+              <div class="panel-meta">把全站 AI token 和语音消耗、回补、异常与技术追踪独立出来，不再和逐户查账混在一起。</div>
+            </div>
+          </div>
+          <section class="ai-config-tabs" aria-label="全局流水页签" role="tablist">
+            <button class="ai-config-tab is-active" type="button" role="tab" aria-selected="true" data-global-usage-tab="ai_tokens">AI Token 流水</button>
+            <button class="ai-config-tab" type="button" role="tab" aria-selected="false" data-global-usage-tab="voice_seconds">语音流水</button>
+          </section>
+          <div class="ai-config-pane is-active">
+            <div class="toolbar">
+              <div class="toolbar-group">
+                <input id="globalUsageSearchInput" class="toolbar-input" type="search" placeholder="搜索手机号 / 账户 ID / Trace / 模型 / 项目">
+                <select id="globalUsageTimeWindowFilter" class="toolbar-select">
+                  <option value="all">全部时间</option>
+                  <option value="today">今天</option>
+                  <option value="last_7d">近 7 天</option>
+                  <option value="last_30d">近 30 天</option>
+                </select>
+                <select id="globalUsageSourceFilterSelect" class="toolbar-select">
+                  <option value="all">全部来源场景</option>
+                </select>
+                <div id="globalUsageAiOnlyFilters" class="toolbar-group">
+                  <input id="globalUsageProviderFilterInput" class="toolbar-input toolbar-input-compact" type="search" placeholder="筛选 providerKey/供应商">
+                  <input id="globalUsageModelFilterInput" class="toolbar-input toolbar-input-compact" type="search" placeholder="筛选模型名">
+                </div>
+              </div>
+            </div>
+            <div id="globalUsageFilterStateWrap" class="usage-filter-state-wrap"></div>
+          </div>
+        </section>
+
+        <div id="globalUsageSummaryWrap" class="section-summary-grid"></div>
+
+        <div class="panel-grid panel-grid-two">
+          <section class="panel usage-source-panel">
+            <div class="panel-head">
+              <h3 class="panel-title">来源场景统计</h3>
+              <div class="panel-meta">查看当前口径下，消耗和回补主要集中在哪些业务场景。</div>
+            </div>
+            <div id="globalUsageSourceSummaryWrap" class="usage-source-summary-wrap"></div>
+          </section>
+
+          <section class="panel usage-provider-model-panel">
+            <div class="panel-head">
+              <h3 id="globalUsageDistributionTitle" class="panel-title">供应商与模型分布</h3>
+              <div id="globalUsageDistributionMeta" class="panel-meta"></div>
+            </div>
+            <div id="globalUsageDistributionWrap"></div>
+          </section>
+        </div>
+
+        <section class="panel usage-anomaly-panel">
+          <div class="panel-head">
+            <h3 class="panel-title">异常与重点消耗</h3>
+            <div class="panel-meta">先看高消耗账户，再看高消耗场景，快速定位异常成本来源。</div>
+          </div>
+          <div id="globalUsageAnomalyWrap"></div>
+        </section>
+
+        <div class="panel-grid panel-grid-two">
+          <section class="panel usage-anomaly-panel">
+            <div class="panel-head">
+              <h3 class="panel-title">调用质量与路由效果</h3>
+              <div class="panel-meta">把成功率、fallback 和平均单次消耗拉平看，先判断当前链路是否稳定。</div>
+            </div>
+            <div id="globalUsageQualityWrap"></div>
+          </section>
+
+          <section class="panel usage-anomaly-panel">
+            <div class="panel-head">
+              <h3 class="panel-title">效率分析</h3>
+              <div class="panel-meta">AI 看模型与场景均值，语音看场景输出与平均时长，支持后续倍率与路由优化。</div>
+            </div>
+            <div id="globalUsageEfficiencyWrap"></div>
+          </section>
+        </div>
+
+        <section class="panel usage-anomaly-panel">
+          <div class="panel-head">
+            <h3 class="panel-title">最近调用事件</h3>
+            <div class="panel-meta">这里看最近成功 / 失败事件，比只看扣减账本更适合排查调用质量问题。</div>
+          </div>
+          <div id="globalUsageRecentEventsWrap"></div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-head">
+            <h3 class="panel-title">全局流水明细</h3>
+            <div id="globalUsageCountMeta" class="panel-meta"></div>
+          </div>
+          <div id="globalUsageLedgerWrap"></div>
+        </section>
+      </section>
+
+      <section id="billingPlansView" class="view">
+        <div id="planCatalogSummaryWrap" class="section-summary-grid"></div>
+        <section class="panel usage-plan-panel">
+          <div class="panel-head">
+            <div>
+              <h3 class="panel-title">商品目录维护</h3>
+              <div class="panel-meta">把价格、额度、启停和排序独立维护，不再和查账信息混在同一页里。</div>
+            </div>
+          </div>
+          <div id="planCatalogWrap"></div>
+        </section>
+      </section>
+
+      <section id="aiConfigView" class="view">
+        <section class="panel usage-plan-panel">
+          <div class="panel-head">
+            <div>
+              <h3 class="panel-title">AI 模型配置中心</h3>
+              <div class="panel-meta">独立维护 AI 额度策略、供应商连接（BaseURL / API Key）和闪录链路模型路由。</div>
+            </div>
+          </div>
+          <div id="aiModelConfigWrap"></div>
+        </section>
+      </section>
+
+      <section id="auditView" class="view">
+        <div class="toolbar">
+          <div class="toolbar-group">
+            <input id="auditSearchInput" class="toolbar-input" type="search" placeholder="搜索操作人 / 目标 ID / 操作类型">
+          </div>
+        </div>
+
+        <section class="panel">
+          <div class="panel-head">
+            <h3 class="panel-title">审计日志</h3>
+            <div id="auditCountMeta" class="panel-meta"></div>
+          </div>
+          <div id="auditTableWrap"></div>
+        </section>
+      </section>
+
+      <section id="feedbackView" class="view">
+        <div class="toolbar">
+          <div class="toolbar-group">
+            <input id="feedbackSearchInput" class="toolbar-input" type="search" placeholder="搜索用户 / 内容 / 联系方式">
+            <select id="feedbackStatusFilter" class="toolbar-select">
+              <option value="all">全部状态</option>
+              <option value="pending">待处理</option>
+              <option value="accepted">已采纳</option>
+              <option value="rewarded">已发奖</option>
+              <option value="rejected">不采纳</option>
+              <option value="closed">已关闭</option>
+            </select>
+          </div>
+          <div class="toolbar-group">
+            <button id="refreshFeedbackBtn" class="ghost-btn" type="button">刷新反馈</button>
+          </div>
+        </div>
+
+        <div id="feedbackSummaryWrap" class="section-summary-grid"></div>
+
+        <div class="panel-grid panel-grid-split">
+          <section class="panel">
+            <div class="panel-head">
+              <h3 class="panel-title">反馈列表</h3>
+              <div id="feedbackCountMeta" class="panel-meta"></div>
+            </div>
+            <div id="feedbackTableWrap"></div>
+          </section>
+
+          <section class="panel detail-panel">
+            <div class="panel-head">
+              <h3 class="panel-title">反馈处理</h3>
+              <div id="selectedFeedbackMeta" class="panel-meta"></div>
+            </div>
+            <div id="feedbackDetailWrap"></div>
+          </section>
+        </div>
+      </section>
+
+      <section id="referralsView" class="view">
+        <div class="toolbar">
+          <div class="toolbar-group">
+            <input id="referralSearchInput" class="toolbar-input" type="search" placeholder="搜索推荐码 / 账户 / 手机号 / 项目">
+            <select id="referralStatusFilter" class="toolbar-select">
+              <option value="all">全部状态</option>
+              <option value="pending">待首个项目</option>
+              <option value="rewarded">已奖励</option>
+              <option value="blocked">已阻止</option>
+            </select>
+            <select id="referralTimeWindowFilter" class="toolbar-select">
+              <option value="all">全部时间</option>
+              <option value="last_7d">近 7 天</option>
+              <option value="last_30d">近 30 天</option>
+            </select>
+          </div>
+          <div class="toolbar-group">
+            <button id="refreshReferralsBtn" class="ghost-btn" type="button">刷新推荐</button>
+          </div>
+        </div>
+
+        <div id="referralSummaryWrap" class="section-summary-grid"></div>
+
+        <div class="panel-grid panel-grid-split">
+          <section class="panel">
+            <div class="panel-head">
+              <h3 class="panel-title">推荐关系列表</h3>
+              <div id="referralCountMeta" class="panel-meta"></div>
+            </div>
+            <div id="referralTableWrap"></div>
+          </section>
+
+          <section class="panel detail-panel">
+            <div class="panel-head">
+              <h3 class="panel-title">推荐详情</h3>
+              <div id="selectedReferralMeta" class="panel-meta"></div>
+            </div>
+            <div id="referralDetailWrap"></div>
+          </section>
+        </div>
+      </section>
+    </main>
+  </div>
+  <div id="toastHost" class="toast-host" aria-live="polite" aria-atomic="true"></div>
+
+  <script src="./app.js?v=20260512_referrals_v1"></script>
+</body>
+</html>

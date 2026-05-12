@@ -1,0 +1,41 @@
+<view wx:if="{{visible}}">
+  <view class="sheet-mask share-entry-mask" bindtap="onClose"></view>
+  <view class="sheet-panel share-entry-sheet {{appearancePageClass}}">
+    <view class="sheet-handle"></view>
+    <view class="sheet-header">
+      <view class="sheet-title">分享项目</view>
+      <view class="sheet-close" bindtap="onClose">关闭</view>
+    </view>
+
+    <view class="share-entry-project-card">
+      <view class="share-entry-project-name">{{projectName}}</view>
+      <view class="compact-inline-metrics share-entry-project-pills">
+        <view wx:if="{{projectMeta && projectMeta.client}}" class="compact-inline-item">客户 {{projectMeta.client}}</view>
+        <view wx:if="{{projectMeta && projectMeta.stage}}" class="compact-inline-item">阶段 {{projectMeta.stage}}</view>
+        <view wx:if="{{projectMeta && projectMeta.amount}}" class="compact-inline-item">预计 {{projectMeta.amount}}</view>
+        <view wx:if="{{projectMeta && projectMeta.nextDisplay}}" class="compact-inline-item">跟进 {{projectMeta.nextDisplay}}</view>
+      </view>
+    </view>
+
+    <view class="share-entry-list">
+      <view
+        class="mode-card share-entry-card"
+        wx:for="{{options}}"
+        wx:key="key"
+        data-mode="{{item.key}}"
+        bindtap="onSelect"
+      >
+        <view class="line-between share-entry-head">
+          <view class="share-entry-copy">
+            <view class="mode-title">{{item.title}}</view>
+            <view class="mode-desc">{{item.desc}}</view>
+          </view>
+          <view class="status-badge is-brand">{{item.badge}}</view>
+        </view>
+        <view class="pill-row share-entry-option-pills">
+          <view class="field-pill">{{item.note}}</view>
+        </view>
+      </view>
+    </view>
+  </view>
+</view>

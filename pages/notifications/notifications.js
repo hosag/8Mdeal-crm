@@ -28,6 +28,10 @@ const QUICK_FILTERS = [
   { key: 'updates', label: '动态' }
 ]
 
+function normalizeText(value) {
+  return String(value || '').trim()
+}
+
 function getQuickFilterKey(item) {
   const type = String(item && item.type || '').trim()
 
@@ -43,7 +47,7 @@ function getQuickFilterKey(item) {
     return 'tomorrow'
   }
 
-  if (type === 'shared_opened' || type === 'shared_imported' || type === 'shared_followed' || type === 'project_taken_over' || type === 'ai_failed' || type === 'save_failed') {
+  if (type === 'shared_opened' || type === 'shared_imported' || type === 'shared_followed' || type === 'project_taken_over' || type === 'project_silent' || type === 'ai_failed' || type === 'save_failed') {
     return 'updates'
   }
 
@@ -70,10 +74,21 @@ function getNotificationStatusText(status) {
   }
 
   if (currentStatus === 'read') {
-    return '待收口'
+    return '已查看'
   }
 
   return '待查看'
+}
+
+function getNotificationStatusClassName(status) {
+  const currentStatus = normalizeText(status)
+  if (currentStatus === 'resolved') {
+    return 'is-success'
+  }
+  if (currentStatus === 'read') {
+    return ''
+  }
+  return 'is-danger'
 }
 
 function getNotificationToneMeta(type, status) {
@@ -109,6 +124,14 @@ function getNotificationToneMeta(type, status) {
       cardClass: 'is-tomorrow',
       toneClass: 'is-tomorrow',
       toneText: '提前准备'
+    }
+  }
+
+  if (currentType === 'project_silent') {
+    return {
+      cardClass: 'is-update',
+      toneClass: 'is-update',
+      toneText: '回看项目'
     }
   }
 
@@ -220,6 +243,10 @@ function buildNotificationOpenUrl(item) {
 
   if (type === 'todo_upcoming' && projectId) {
     return `/pages/project-detail/project-detail?projectId=${projectId}&view=projects`
+  }
+
+  if (type === 'project_silent' && projectId) {
+    return `/pages/project-detail/project-detail?projectId=${projectId}&view=notifications`
   }
 
   if (type === 'project_taken_over' && projectId) {
@@ -398,6 +425,41 @@ function normalizeNotification(item, index) {
   }
 }
 
+function patchNotificationStatus(item, status) {
+  if (!item) {
+    return item
+  }
+
+  const nextStatus = normalizeText(status) || 'read'
+  const categoryMeta = getNotificationCategoryMeta(item.type)
+  const actionUrl = buildNotificationOpenUrl(item)
+  const actions = buildNotificationActions({
+    ...item,
+    status: nextStatus,
+    canMarkRead: nextStatus === 'unread',
+    canResolve: nextStatus !== 'resolved'
+  }, categoryMeta, actionUrl)
+  const actionMeta = splitNotificationActions(actions)
+
+  return {
+    ...item,
+    status: nextStatus,
+    statusText: getNotificationStatusText(nextStatus),
+    statusClassName: getNotificationStatusClassName(nextStatus),
+    canMarkRead: nextStatus === 'unread',
+    canResolve: nextStatus !== 'resolved',
+    actions,
+    primaryAction: actionMeta.primaryAction,
+    secondaryActions: actionMeta.secondaryActions,
+    cardActionText: item.isSharedCard && item.cardActionText
+      ? item.cardActionText
+      : (actionMeta.primaryAction
+        ? (actionMeta.primaryAction.label || '点击处理')
+        : ''),
+    hasSecondaryActions: actionMeta.secondaryActions.length > 0
+  }
+}
+
 Page({
   data: {
     appearancePageClass: '',
@@ -538,6 +600,29 @@ Page({
     }, () => this.applyFilters())
   },
 
+  updateNotificationStatusLocally(id, status) {
+    const currentId = normalizeText(id)
+    if (!currentId) {
+      return
+    }
+
+    const nextStatus = normalizeText(status) || 'read'
+    const allNotifications = (Array.isArray(this.data.allNotifications) ? this.data.allNotifications : []).map((item) => {
+      return item.id === currentId ? patchNotificationStatus(item, nextStatus) : item
+    })
+    const stats = {
+      ...this.data.stats,
+      unreadCount: allNotifications.filter((item) => item.status === 'unread').length,
+      resolvedCount: allNotifications.filter((item) => item.status === 'resolved').length
+    }
+    stats.pendingCount = Math.max(allNotifications.length - stats.resolvedCount, 0)
+
+    this.setData({
+      allNotifications,
+      stats
+    }, () => this.applyFilters())
+  },
+
   applyFilters() {
     const typeFilter = this.data.typeFilter
     const quickFilter = this.data.quickFilter
@@ -638,6 +723,9 @@ Page({
       if (!result || !result.ok) {
         throw new Error(result && result.message ? result.message : '标为已查看失败')
       }
+      if (Number(result.updated || 0) <= 0) {
+        throw new Error('当前消息未成功标为已查看，请重新进入消息中心后再试')
+      }
 
       touchNotificationSync('notification_mark_read')
       await this.fetchNotifications()
@@ -724,12 +812,22 @@ Page({
 
     if (id) {
       try {
-        await markNotificationReadData({
+        const result = await markNotificationReadData({
           notificationId: id
         })
+        if (!result || !result.ok) {
+          throw new Error(result && result.message ? result.message : '标为已查看失败')
+        }
+        if (Number(result.updated || 0) <= 0) {
+          throw new Error('当前消息未成功标为已查看')
+        }
         touchNotificationSync('notification_opened')
+        this.updateNotificationStatusLocally(id, 'read')
       } catch (error) {
-        // Keep navigation available even if marking read fails.
+        wx.showToast({
+          title: error && error.message ? error.message : '标为已查看失败',
+          icon: 'none'
+        })
       }
     }
 
@@ -739,6 +837,7 @@ Page({
           notificationId: id
         })
         touchNotificationSync('notification_auto_resolved')
+        this.updateNotificationStatusLocally(id, 'resolved')
       } catch (error) {
         // Keep navigation available even if resolving fails.
       }

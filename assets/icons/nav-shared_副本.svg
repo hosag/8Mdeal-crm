@@ -1,0 +1,15 @@
+<svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+  <!-- 方形头部轮廓 -->
+  <rect x="16" y="16" width="32" height="32" rx="4" fill="none" stroke="#2563EB" stroke-width="2"/>
+  <!-- 眼睛 -->
+  <circle cx="26" cy="28" r="3" fill="none" stroke="#2563EB" stroke-width="2"/>
+  <circle cx="38" cy="28" r="3" fill="none" stroke="#2563EB" stroke-width="2"/>
+  <!-- 微笑嘴巴 -->
+  <path d="M26 40 Q32 46 38 40" stroke="#2563EB" stroke-width="2" fill="none"/>
+  <!-- 天线 -->
+  <line x1="24" y1="16" x2="24" y2="8" stroke="#2563EB" stroke-width="2"/>
+  <line x1="40" y1="16" x2="40" y2="8" stroke="#2563EB" stroke-width="2"/>
+  <!-- 天线顶端小球 -->
+  <circle cx="24" cy="6" r="2" fill="#2563EB"/>
+  <circle cx="40" cy="6" r="2" fill="#2563EB"/>
+</svg>

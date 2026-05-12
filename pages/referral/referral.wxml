@@ -1,0 +1,110 @@
+<view class="page-shell referral-page {{appearancePageClass}}">
+  <view class="hero rise-in referral-hero">
+    <view class="eyebrow-row">
+      <view class="eyebrow">{{isInviteeMode ? '朋友推荐' : '推荐有奖'}}</view>
+    </view>
+    <view class="hero-title">{{isInviteeMode ? '朋友邀请你使用八面成交' : '推荐朋友使用八面成交'}}</view>
+    <view class="hero-subtitle">{{isInviteeMode ? '创建第一个项目后，双方各得 10 万 AI 额度。' : '朋友创建第一个项目后，双方各得 10 万 AI 额度。'}}</view>
+  </view>
+
+  <block wx:if="{{isInviteeMode}}">
+    <view class="surface-card section referral-invitee-card is-{{inviteeCard.tone}} rise-in stagger-1">
+      <view class="referral-invitee-status">
+        <view class="card-title">{{isLoading ? '正在确认推荐关系' : inviteeCard.title}}</view>
+        <view class="card-subtitle">{{isLoading ? '请稍候，系统正在确认推荐资格。' : inviteeCard.desc}}</view>
+      </view>
+
+      <view wx:if="{{inviteeCard.showRules}}" class="referral-rule-grid">
+        <view class="referral-rule-item">
+          <view class="referral-rule-label">触发条件</view>
+          <view class="referral-rule-value">创建首个项目</view>
+        </view>
+        <view class="referral-rule-item">
+          <view class="referral-rule-label">奖励额度</view>
+          <view class="referral-rule-value">双方各 10 万</view>
+        </view>
+      </view>
+
+      <view class="referral-invitee-actions">
+        <button class="btn-primary referral-share-btn referral-invitee-btn" loading="{{isLoading}}" disabled="{{isLoading}}" bindtap="runInviteePrimaryAction">
+          {{isLoading ? '确认中' : inviteeCard.primaryText}}
+        </button>
+        <view class="section-link referral-secondary-action" bindtap="runInviteeSecondaryAction">{{inviteeCard.secondaryText}}</view>
+      </view>
+    </view>
+  </block>
+
+  <block wx:else>
+    <view wx:if="{{bindingNotice.visible}}" class="form-card section referral-bind-card is-{{bindingNotice.tone}} rise-in stagger-1">
+      <view class="card-title">{{bindingNotice.title}}</view>
+      <view class="card-subtitle">{{bindingNotice.desc}}</view>
+    </view>
+
+    <view class="surface-card section referral-main-card rise-in stagger-1">
+      <view class="line-between referral-main-head">
+        <view>
+          <view class="section-title">推荐奖励</view>
+          <view class="card-subtitle">双方同等奖励，额度进入当前 AI 额度。</view>
+        </view>
+        <view class="referral-reward-pill">10 万</view>
+      </view>
+
+      <view class="referral-rule-grid">
+        <view class="referral-rule-item">
+          <view class="referral-rule-label">触发条件</view>
+          <view class="referral-rule-value">朋友创建首个项目</view>
+        </view>
+        <view class="referral-rule-item">
+          <view class="referral-rule-label">奖励对象</view>
+          <view class="referral-rule-value">双方同得</view>
+        </view>
+      </view>
+
+      <view class="referral-code-card">
+        <view>
+          <view class="referral-rule-label">推荐码</view>
+          <view class="referral-code">{{isLoading ? '生成中...' : referralCode}}</view>
+        </view>
+        <view class="section-link" bindtap="copyReferralCode">复制</view>
+      </view>
+
+      <view class="referral-main-actions">
+        <button class="btn-primary referral-share-btn referral-main-share-btn" open-type="share" loading="{{isLoading}}">
+          推荐朋友
+        </button>
+      </view>
+    </view>
+
+    <view class="surface-card section referral-stats-card rise-in stagger-2">
+      <view class="section-title">推荐进展</view>
+      <view class="referral-stats-grid">
+        <view class="referral-stat-item">
+          <view class="metric-label">已邀请</view>
+          <view class="metric-value">{{stats.invitedCount}}</view>
+        </view>
+        <view class="referral-stat-item">
+          <view class="metric-label">已奖励</view>
+          <view class="metric-value">{{stats.rewardedCount}}</view>
+        </view>
+        <view class="referral-stat-item">
+          <view class="metric-label">累计奖励</view>
+          <view class="metric-value">{{stats.rewardedAiTokensText}}</view>
+        </view>
+      </view>
+    </view>
+
+    <view class="surface-card section referral-list-card rise-in stagger-3">
+      <view class="section-title">邀请记录</view>
+      <view wx:if="{{relations.length}}" class="referral-list">
+        <view class="referral-row" wx:for="{{relations}}" wx:key="relationId">
+          <view class="referral-row-main">
+            <view class="referral-row-title">{{item.title}}</view>
+            <view class="referral-row-desc">{{item.desc}}</view>
+          </view>
+          <view class="referral-row-status is-{{item.status}}">{{item.statusLabel}}</view>
+        </view>
+      </view>
+      <view wx:else class="empty-copy">还没有邀请记录</view>
+    </view>
+  </block>
+</view>

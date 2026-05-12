@@ -13,7 +13,7 @@
     <view class="bottom-nav__label">{{item.label}}</view>
   </view>
   <view class="bottom-nav__action-wrap">
-    <view class="bottom-nav__action" bindtap="onQuickEntry">
+    <view class="bottom-nav__action" catchtap="onQuickEntry">
       <view class="bottom-nav__action-icon">
         <image class="bottom-nav__action-image" src="/assets/icons/nav-flash.svg" mode="aspectFit" />
       </view>

@@ -1,6 +1,7 @@
 {
   "navigationBarTitleText": "项目详情",
   "usingComponents": {
-    "loading-panel": "/components/loading-panel/index"
+    "loading-panel": "/components/loading-panel/index",
+    "share-entry-sheet": "/components/share-entry-sheet/index"
   }
 }

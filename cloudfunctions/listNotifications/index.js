@@ -133,47 +133,34 @@ function getProjectNotificationMeta(project, reminderSettings, now = new Date())
     return null
   }
 
-  const nextFollowUpAt = parseDate(project && project.nextFollowUpDate)
-  if (!nextFollowUpAt) {
+  const silenceDays = Math.floor(Number(project && project.followUpSilenceDays) || 0)
+  if (!silenceDays) {
+    return null
+  }
+
+  if (project && project.hasOpenTask) {
+    return null
+  }
+
+  const lastFollowUpAt = parseDate(project && project.lastFollowUpAt)
+  const createdAt = parseDate(project && project.createdAt)
+  const baseAt = lastFollowUpAt || createdAt
+  if (!baseAt) {
     return null
   }
 
   const todayStart = startOfDay(now).getTime()
-  const nextDay = startOfDay(nextFollowUpAt).getTime()
-  const tomorrowStart = todayStart + 86400000
+  const baseDay = startOfDay(baseAt).getTime()
+  const silentDays = Math.max(0, Math.floor((todayStart - baseDay) / 86400000))
 
-  if (nextFollowUpAt.getTime() < now.getTime()) {
+  if (silentDays >= silenceDays) {
     return {
-      type: 'todo_overdue',
-      level: 'high',
-      title: '跟进已逾期',
-      actionLabel: '立即跟进',
-      summaryBuilder(projectName) {
-        return `${projectName} 已超过计划时间。`
-      }
-    }
-  }
-
-  if (nextDay === todayStart) {
-    return {
-      type: 'todo_due',
-      level: 'normal',
-      title: '今天需要跟进',
-      actionLabel: '去跟进',
-      summaryBuilder(projectName) {
-        return `${projectName} 已到跟进时间。`
-      }
-    }
-  }
-
-  if (settings.followUpAdvance === 'one_day_before' && nextDay === tomorrowStart) {
-    return {
-      type: 'todo_upcoming',
+      type: 'project_silent',
       level: 'info',
-      title: '明天需要跟进',
+      title: '项目较久未推进',
       actionLabel: '查看项目',
       summaryBuilder(projectName) {
-        return `${projectName} 明天到跟进时间，可以先准备本次推进内容。`
+        return `${projectName} 已 ${silentDays} 天没有新增跟进，也没有待完成任务。`
       }
     }
   }
@@ -220,7 +207,7 @@ async function cleanupTaskNotifications(openid, taskReminderMap, now = new Date(
 async function cleanupProjectNotifications(openid, projectReminderMap, now = new Date()) {
   const result = await db.collection('notifications').where({
     _openid: openid,
-    type: _.in(['todo_due', 'todo_overdue', 'todo_upcoming'])
+    type: _.in(['todo_due', 'todo_overdue', 'todo_upcoming', 'project_silent'])
   }).get()
 
   const closableItems = (result.data || []).filter((item) => {
@@ -387,8 +374,49 @@ async function generateTodoNotifications(openid, reminderSettings) {
   const bizDate = formatBizDate(now)
   const projectReminderMap = {}
   const tasks = []
+  const projects = projectResult.data || []
+  const projectMap = {}
 
-  ;(projectResult.data || []).forEach((project) => {
+  projects.forEach((project) => {
+    if (!project || !project._id) {
+      return
+    }
+    projectMap[project._id] = project
+  })
+
+  try {
+    const taskResult = await db.collection('tasks').where({
+      _openid: openid
+    }).get()
+    ;(taskResult.data || []).forEach((task) => {
+      const projectId = normalizeText(task && task.projectId)
+      const project = projectMap[projectId]
+      if (!project || isTaskClosed(task.status)) {
+        return
+      }
+      project.hasOpenTask = true
+    })
+  } catch (error) {
+    // Keep project silence reminders available even if the tasks collection is not ready.
+  }
+
+  try {
+    const followResult = await db.collection('followUps').where({
+      _openid: openid
+    }).orderBy('followUpTime', 'desc').get()
+    ;(followResult.data || []).forEach((followUp) => {
+      const projectId = normalizeText(followUp && followUp.projectId)
+      const project = projectMap[projectId]
+      if (!project || project.lastFollowUpAt) {
+        return
+      }
+      project.lastFollowUpAt = followUp.followUpTime || followUp.createdAt || null
+    })
+  } catch (error) {
+    // New projects can still use createdAt as the silence baseline.
+  }
+
+  projects.forEach((project) => {
     if (!isVisibleProject(project) || isClosedProject(project)) {
       return
     }
@@ -399,9 +427,7 @@ async function generateTodoNotifications(openid, reminderSettings) {
     }
 
     const projectName = buildProjectName(project)
-    const actionUrl = reminderMeta.type === 'todo_upcoming'
-      ? `/pages/project-detail/project-detail?projectId=${project._id}&view=projects`
-      : `/pages/follow-up/follow-up?projectId=${project._id}&entry=notification&type=${reminderMeta.type}`
+    const actionUrl = `/pages/project-detail/project-detail?projectId=${project._id}&view=notifications`
     const dedupeKey = `${reminderMeta.type}_${project._id}_${bizDate}`
 
     projectReminderMap[project._id] = {
@@ -421,7 +447,8 @@ async function generateTodoNotifications(openid, reminderSettings) {
       bizDate,
       dedupeKey,
       extra: {
-        nextFollowUpDate: project.nextFollowUpDate || ''
+        followUpSilenceDays: Number(project.followUpSilenceDays || 0),
+        lastFollowUpAt: project.lastFollowUpAt || ''
       }
     }))
   })
@@ -583,85 +610,12 @@ function buildActionUrl(item) {
   return ''
 }
 
-function getNotificationTypeWeight(type) {
-  const current = normalizeText(type)
-  if (current === 'task_overdue') {
-    return 0
-  }
-
-  if (current === 'todo_overdue') {
-    return 1
-  }
-
-  if (current === 'task_due') {
-    return 2
-  }
-
-  if (current === 'todo_due') {
-    return 3
-  }
-
-  if (current === 'save_failed') {
-    return 4
-  }
-
-  if (current === 'task_upcoming') {
-    return 5
-  }
-
-  if (current === 'todo_upcoming') {
-    return 6
-  }
-
-  if (current === 'project_taken_over') {
-    return 7
-  }
-
-  if (current === 'shared_followed') {
-    return 8
-  }
-
-  if (current === 'shared_imported') {
-    return 9
-  }
-
-  if (current === 'shared_opened') {
-    return 10
-  }
-
-  if (current === 'ai_failed') {
-    return 11
-  }
-
-  return 12
+function getNotificationTime(item = {}) {
+  return item.notifyTime || item.createdAt || item.updatedAt || null
 }
 
-function getNotificationResolveWeight(status) {
-  return normalizeText(status) === 'resolved' ? 1 : 0
-}
-
-function getNotificationReadWeight(status) {
-  return normalizeText(status) === 'read' ? 1 : 0
-}
-
-function getNotificationLevelWeight(level) {
-  const current = normalizeText(level)
-  if (current === 'high') {
-    return 0
-  }
-
-  if (current === 'normal') {
-    return 1
-  }
-
-  if (current === 'info') {
-    return 2
-  }
-
-  return 3
-}
-
-function getNotificationCreatedAtWeight(value) {
+function getNotificationTimeWeight(item = {}) {
+  const value = getNotificationTime(item)
   const date = value instanceof Date ? value : new Date(value)
   if (Number.isNaN(date.getTime())) {
     return 0
@@ -671,27 +625,7 @@ function getNotificationCreatedAtWeight(value) {
 }
 
 function compareNotifications(left, right) {
-  const resolveDiff = getNotificationResolveWeight(left.status) - getNotificationResolveWeight(right.status)
-  if (resolveDiff !== 0) {
-    return resolveDiff
-  }
-
-  const typeDiff = getNotificationTypeWeight(left.type) - getNotificationTypeWeight(right.type)
-  if (typeDiff !== 0) {
-    return typeDiff
-  }
-
-  const readDiff = getNotificationReadWeight(left.status) - getNotificationReadWeight(right.status)
-  if (readDiff !== 0) {
-    return readDiff
-  }
-
-  const levelDiff = getNotificationLevelWeight(left.level) - getNotificationLevelWeight(right.level)
-  if (levelDiff !== 0) {
-    return levelDiff
-  }
-
-  return getNotificationCreatedAtWeight(right.createdAt) - getNotificationCreatedAtWeight(left.createdAt)
+  return getNotificationTimeWeight(right) - getNotificationTimeWeight(left)
 }
 
 exports.main = async (event) => {
@@ -753,7 +687,9 @@ exports.main = async (event) => {
         canMarkRead: (normalizeText(item.status) || 'unread') === 'unread',
         canResolve: (normalizeText(item.status) || 'unread') !== 'resolved',
         createdAt: item.createdAt || null,
-        createdAtText: formatDateTime(item.createdAt),
+        notifyTime: item.notifyTime || null,
+        updatedAt: item.updatedAt || null,
+        createdAtText: formatDateTime(getNotificationTime(item)),
         bizDate: normalizeText(item.bizDate),
         sourceName: normalizeText(item.sourceName)
       }

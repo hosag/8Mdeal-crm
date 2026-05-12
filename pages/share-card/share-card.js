@@ -15,11 +15,50 @@ const {
   filterTimelineForHistoryScope
 } = require('../../services/share')
 const { syncPageAppearance } = require('../../utils/appearance')
+const { ensureActionAllowed } = require('../../utils/entitlement-guard')
 
 function countTimelineRecords(followTimeline) {
   return (Array.isArray(followTimeline) ? followTimeline : []).reduce((total, group) => {
     return total + (Array.isArray(group.items) ? group.items.length : 0)
   }, 0)
+}
+
+function getShareScopeName(mode) {
+  return mode === 'outbound' ? '转交项目' : '发送资料'
+}
+
+function buildDeniedPreview(mode) {
+  const scopeName = getShareScopeName(mode)
+  return {
+    mode: {
+      key: mode === 'outbound' ? 'outbound' : 'info',
+      title: scopeName
+    },
+    tag: {
+      id: mode === 'outbound' ? 't2' : 't1',
+      name: scopeName,
+      fields: []
+    },
+    project: {
+      id: '',
+      name: '当前无法生成分享卡',
+      client: '',
+      stage: '',
+      estimatedAmount: '',
+      description: '',
+      nextFollowUp: '',
+      summary: '当前账号权益不足，请先确认套餐后再继续。'
+    },
+    contacts: [],
+    contactPolicyText: '',
+    shareSourceText: '',
+    showClient: false,
+    showStage: false,
+    showEstimatedAmount: false,
+    showDescription: false,
+    showNextFollowUp: false,
+    showSummary: true
+  }
 }
 
 function getLatestTimelineItem(followTimeline) {
@@ -32,6 +71,19 @@ function getLatestTimelineItem(followTimeline) {
   }
 
   return null
+}
+
+function padNumber(value) {
+  return `${value}`.padStart(2, '0')
+}
+
+function formatAiGeneratedTime(value) {
+  const date = value instanceof Date ? value : new Date(value)
+  if (Number.isNaN(date.getTime())) {
+    return ''
+  }
+
+  return `${padNumber(date.getMonth() + 1)}-${padNumber(date.getDate())} ${padNumber(date.getHours())}:${padNumber(date.getMinutes())}`
 }
 
 function buildTimelineSummary(followTimeline) {
@@ -70,8 +122,11 @@ function normalizeShareBrief(value) {
   const brief = value && typeof value === 'object' && !Array.isArray(value) ? value : {}
   const tone = String(brief.tone || '').trim()
   const sourceType = String(brief.sourceType || '').trim() === 'fallback' ? 'fallback' : 'model'
-  const providerLabel = String(brief.providerLabel || (sourceType === 'fallback' ? '本地规则引擎' : 'CloudBase AI')).trim()
+  const providerLabel = String(brief.providerLabel || (sourceType === 'fallback' ? '' : 'CloudBase AI')).trim()
   const modelName = String(brief.modelName || (sourceType === 'fallback' ? '' : 'hunyuan-exp / hunyuan-turbos-latest')).trim()
+  const sourceLabel = String(brief.sourceLabel || (sourceType === 'fallback' ? '系统基础建议' : '云端模型')).trim()
+  const generatedAt = String(brief.generatedAt || '').trim()
+  const generatedAtText = formatAiGeneratedTime(brief.generatedAt)
   const overviewLines = Array.isArray(brief.overviewLines)
     ? brief.overviewLines
     : brief.briefLines
@@ -81,6 +136,13 @@ function normalizeShareBrief(value) {
     || brief.aiSummaryText
     || [String(brief.title || '').trim(), (Array.isArray(overviewLines) ? overviewLines.join(' ') : ''), timelineInsight].filter(Boolean).join(' ')
   ).trim()
+  const sourceMetaParts = [sourceLabel]
+  if (sourceType !== 'fallback' && modelName) {
+    sourceMetaParts.push(modelName)
+  }
+  if (generatedAtText) {
+    sourceMetaParts.push(`生成于 ${generatedAtText}`)
+  }
   return {
     title: String(brief.title || '').trim(),
     overviewLines: Array.isArray(overviewLines)
@@ -92,12 +154,17 @@ function normalizeShareBrief(value) {
     tone,
     toneText: tone === 'outbound_handover' ? '接手导向' : '同步导向',
     sourceType,
-    sourceLabel: String(brief.sourceLabel || (sourceType === 'fallback' ? '基础建议' : '大模型建议')).trim(),
+    sourceLabel,
     providerLabel,
     modelName,
+    generatedAt,
+    generatedAtText,
+    sourceMetaText: sourceMetaParts.join(' · '),
     sourceCaption: modelName ? `${providerLabel} · ${modelName}` : providerLabel,
-    sourceOriginText: `来自 ${modelName ? `${providerLabel} · ${modelName}` : providerLabel}`,
-    regenerateLabel: sourceType === 'fallback' ? 'AI整理' : '重新整理'
+    sourceOriginText: sourceType === 'fallback'
+      ? '来自：系统基础建议'
+      : `来自：云端模型${modelName ? ` · ${modelName}` : ''}`,
+    regenerateLabel: sourceType === 'fallback' ? '获取云端结果' : '重新生成'
   }
 }
 
@@ -108,6 +175,14 @@ function normalizeSummaryMode(value) {
   }
 
   return 'system'
+}
+
+function cloneSnapshot(value) {
+  if (!value || typeof value !== 'object') {
+    return null
+  }
+
+  return JSON.parse(JSON.stringify(value))
 }
 
 function buildShareBriefSummaryText(brief) {
@@ -178,14 +253,14 @@ function getSummaryModeOptions(hasAiSummary) {
     },
     {
       key: 'replace',
-      label: '替换为AI摘要',
-      desc: '用 AI 摘要替换系统摘要',
+      label: '替换为整理摘要',
+      desc: '用整理摘要替换系统摘要',
       disabled: !hasAiSummary
     },
     {
       key: 'append',
       label: '追加并修改',
-      desc: '在系统摘要后补充 AI 摘要',
+      desc: '在系统摘要后补充整理摘要',
       disabled: !hasAiSummary
     }
   ]
@@ -216,7 +291,7 @@ function hasShareBriefContent(brief) {
 function buildTimelinePills(historyScope) {
   const scope = normalizeHistoryScope(historyScope)
   if (scope === 'key') {
-    return ['AI 摘要', '任务结果', '阶段变更']
+    return ['整理摘要', '任务结果', '阶段变更']
   }
 
   if (scope === 'none') {
@@ -281,6 +356,15 @@ function buildVisibleFields(preview) {
   return fields
 }
 
+function buildVisibleFieldsSummary(visibleFields) {
+  const list = Array.isArray(visibleFields) ? visibleFields : []
+  if (!list.length) {
+    return '项目名称'
+  }
+
+  return list.join('、')
+}
+
 function hasField(tag, fieldName) {
   const fields = Array.isArray(tag && tag.fields) ? tag.fields : []
   return fields.indexOf('全部字段') > -1 || fields.indexOf(fieldName) > -1
@@ -303,10 +387,12 @@ function resolveDefaultTagId(tags, mode) {
 
 function buildSenderState(preview) {
   const mode = preview && preview.mode ? preview.mode.key : 'info'
+  const flowMode = preview && preview.flowMode ? preview.flowMode : ''
+  const isCloneSeed = mode === 'outbound' && flowMode === 'clone_seed'
 
   return {
-    heroEyebrow: '分享设置',
-    heroTitle: mode === 'outbound' ? '转交项目' : '发送资料',
+    heroEyebrow: '分享项目',
+    heroTitle: isCloneSeed ? '新建转交' : (mode === 'outbound' ? '转交项目' : '发送资料'),
     heroSubtitle: '确认当前内容后发送。',
     stateTitle: '',
     stateDesc: '',
@@ -319,7 +405,7 @@ function buildSenderState(preview) {
     showImportedActions: false,
     showSenderActions: true,
     showShareFooter: true,
-    footerShareText: mode === 'outbound' ? '发送交接卡' : '发送资料卡'
+    footerShareText: isCloneSeed ? '发送新建转交卡' : (mode === 'outbound' ? '发送交接卡' : '发送资料卡')
   }
 }
 
@@ -330,7 +416,7 @@ function buildImportedState(preview) {
   return {
     heroEyebrow: '接手成功',
     heroTitle: '项目已进入“我的项目”',
-    heroSubtitle: '项目已写入你的项目列表，后续直接在项目内推进。',
+    heroSubtitle: '后续直接在项目内推进。',
     stateTitle: '已完成接手',
     stateDesc: '当前项目已进入“我的项目”。',
     stateTag: '已接手',
@@ -347,20 +433,17 @@ function buildImportedState(preview) {
 }
 
 function buildViewerState(preview) {
-  const contacts = Array.isArray(preview && preview.contacts) ? preview.contacts : []
-  const canDirectContact = contacts.some((item) => item.phone || item.wechat)
-
   return {
     heroEyebrow: '查看资料',
-    heroTitle: '资料卡',
-    heroSubtitle: '当前仅可查看项目资料。',
-    stateTitle: '仅查看',
-    stateDesc: '本次分享不转移管理权。',
-    stateTag: '仅查看',
-    ownershipLabel: '仍由分享方维护',
-    contactPolicy: canDirectContact ? '按当前范围可直接联系' : '联系方式按当前范围隐藏',
+    heroTitle: '项目资料',
+    heroSubtitle: '',
+    stateTitle: '',
+    stateDesc: '',
+    stateTag: '',
+    ownershipLabel: '',
+    contactPolicy: '',
     stateSteps: [],
-    showStateCard: true,
+    showStateCard: false,
     showVisibleFields: true,
     showImportedActions: false,
     showSenderActions: false,
@@ -379,7 +462,7 @@ function buildLockedState(preview, receiverName) {
     heroTitle: '这张交接卡已失效',
     heroSubtitle: `${lockedReceiverName} 已先完成接手。`,
     stateTitle: '当前已锁定接手人',
-    stateDesc: '该交接卡已被其他接手方使用。',
+    stateDesc: '该项目已由其他接手方继续维护。',
     stateTag: '已锁定',
     ownershipLabel: `当前由 ${lockedReceiverName} 继续维护`,
     contactPolicy: canDirectContact ? '当前展示内容仅用于识别项目背景' : '当前仅保留基础项目信息',
@@ -409,12 +492,26 @@ function buildCardState(options = {}) {
   return buildViewerState(options.preview)
 }
 
+function resolveShareRecordSenderEntry(options = {}, result = {}) {
+  const entry = String(options.entry || '').trim()
+  const projectId = String(options.projectId || '').trim()
+  const hasSenderProjectContext = entry === 'sender' && !!projectId
+
+  if (typeof result.isShareOwner === 'boolean') {
+    return result.isShareOwner && hasSenderProjectContext
+  }
+
+  return hasSenderProjectContext
+}
+
 Page({
   data: {
     appearancePageClass: '',
     projectId: '',
     shareRecordId: '',
     activeMode: 'info',
+    activeFlowMode: '',
+    seedProjectName: '',
     activeTag: 't1',
     entry: '',
     preview: null,
@@ -426,6 +523,7 @@ Page({
     stateTag: '',
     stateSteps: [],
     visibleFields: [],
+    visibleFieldsSummary: '',
     originalFollowTimeline: [],
     followTimeline: [],
     timelineSummaryText: '',
@@ -442,8 +540,10 @@ Page({
     showImportedActions: false,
     showSenderActions: false,
     showShareFooter: false,
+    showReceiverConversion: false,
     footerShareText: '转发资料卡',
     shareBrief: null,
+    shareBriefBackup: null,
     hasShareBrief: false,
     showShareBriefCard: false,
     summaryMode: 'system',
@@ -525,6 +625,8 @@ Page({
   async persistShareRecord(payload) {
     const result = await createShareRecordData({
       shareRecordId: payload && payload.shareRecordId ? payload.shareRecordId : this.data.shareRecordId,
+      flowMode: payload && payload.flowMode !== undefined ? payload.flowMode : this.data.activeFlowMode,
+      seedProjectName: payload && payload.seedProjectName !== undefined ? payload.seedProjectName : this.data.seedProjectName,
       ...payload
     })
 
@@ -543,6 +645,10 @@ Page({
     const projectId = options.projectId || ''
     const shareRecordId = options.shareRecordId || ''
     const activeMode = options.mode || 'info'
+    const activeFlowMode = activeMode === 'outbound'
+      ? (options.flowMode === 'clone_seed' ? 'clone_seed' : 'transfer_original')
+      : ''
+    const seedProjectName = decodeURIComponent(options.seedProjectName || '').trim()
     const activeTag = options.tagId || 't1'
     const entry = options.entry || ''
 
@@ -557,10 +663,31 @@ Page({
           result.shareTag && result.shareTag.id ? result.shareTag.id : activeTag,
           [result.shareTag]
         )
+        preview.flowMode = result.flowMode || ''
+        if (preview.flowMode === 'clone_seed' && preview.project) {
+          preview.project.name = result.seedProjectName || preview.project.name
+          preview.project.stage = '线索'
+          preview.project.estimatedAmount = ''
+          preview.project.description = ''
+          preview.project.summary = ''
+          preview.showStage = true
+          preview.showEstimatedAmount = false
+          preview.showDescription = false
+          preview.showNextFollowUp = false
+          preview.showSummary = false
+        }
+        const isSenderEntry = resolveShareRecordSenderEntry(options, result)
+        const effectiveEntry = isSenderEntry ? 'sender' : ''
+        console.info('[share-card] entry decision', {
+          options,
+          isShareOwner: result.isShareOwner,
+          isSenderEntry,
+          showReceiverConversion: !isSenderEntry
+        })
         const cardState = buildCardState({
           preview,
           imported: !!result.imported,
-          entry,
+          entry: effectiveEntry,
           blocked: !!result.blocked,
           blockedReceiverName: result.blockedReceiverName || ''
         })
@@ -583,13 +710,14 @@ Page({
           summaryMode,
           summaryDraftText
         })
-
         this.safeSetData({
           projectId: result.importedProjectId || projectId || (preview.project && preview.project.id) || '',
           shareRecordId,
           activeMode: result.shareMode || activeMode,
+          activeFlowMode: result.flowMode || '',
+          seedProjectName: result.seedProjectName || '',
           activeTag: result.shareTag && result.shareTag.id ? result.shareTag.id : activeTag,
-          entry,
+          entry: effectiveEntry,
           importedProjectId: result.importedProjectId || '',
           isImported: !!result.imported,
           preview: summaryState.preview,
@@ -601,6 +729,7 @@ Page({
           stateTag: cardState.stateTag,
           stateSteps: cardState.stateSteps,
           visibleFields: buildVisibleFields(preview),
+          visibleFieldsSummary: buildVisibleFieldsSummary(buildVisibleFields(preview)),
           originalFollowTimeline,
           followTimeline: historyState.followTimeline,
           timelineSummaryText: historyState.timelineSummaryText,
@@ -620,13 +749,14 @@ Page({
           footerShareText: cardState.footerShareText,
           shareBrief: summaryState.shareBrief,
           hasShareBrief: summaryState.hasShareBrief,
-          showShareBriefCard: summaryState.showShareBriefCard,
+          showShareBriefCard: preview.flowMode === 'clone_seed' ? false : summaryState.showShareBriefCard,
           summaryMode: summaryState.summaryMode,
           summaryModeOptions: summaryState.summaryModeOptions,
           systemSummaryText: summaryState.systemSummaryText,
           summaryDraftText: summaryState.summaryDraftText,
           appliedSummaryText: summaryState.appliedSummaryText,
-          isSenderEntry: entry === 'sender',
+          isSenderEntry,
+          showReceiverConversion: !isSenderEntry,
           isLoading: false,
           dataSource: 'CloudBase'
         })
@@ -640,11 +770,64 @@ Page({
         return
       }
 
+      const decision = await ensureActionAllowed(activeMode === 'outbound' ? 'share_out' : 'share_record', {
+        refresh: true,
+        guide: true
+      })
+      if (!decision.allowed) {
+        const preview = buildDeniedPreview(activeMode)
+        this.safeSetData({
+          projectId,
+          activeMode,
+          activeFlowMode,
+          seedProjectName,
+          activeTag,
+          entry: 'sender',
+          preview,
+          heroEyebrow: '分享项目',
+          heroTitle: activeMode === 'outbound' ? '转交项目暂不可用' : '发送资料暂不可用',
+          heroSubtitle: decision.message || '当前账号权益不足，请先确认套餐后再继续。',
+          stateTitle: '当前权益不足',
+          stateDesc: decision.message || '请先订阅套餐或恢复账号可写权限，再生成分享卡。',
+          stateTag: '受限',
+          visibleFields: [],
+          visibleFieldsSummary: '',
+          ownershipLabel: '',
+          contactPolicy: '',
+          showStateCard: true,
+          showVisibleFields: false,
+          showImportedActions: false,
+          showSenderActions: false,
+          showShareFooter: false,
+          showShareBriefCard: false,
+          isSenderEntry: true,
+          showReceiverConversion: false,
+          isLoading: false,
+          dataSource: ''
+        })
+        return
+      }
+
       const { data, source } = await loadShareConfigData(projectId)
       const nextActiveTag = String(activeTag || '').trim() || resolveDefaultTagId(data.shareTags, activeMode)
       const preview = buildSharePreview(data.shareProject, activeMode, nextActiveTag, data.shareTags)
+      preview.flowMode = activeFlowMode
+      if (activeFlowMode === 'clone_seed' && preview.project) {
+        preview.project.name = seedProjectName || preview.project.name
+        preview.project.stage = '线索'
+        preview.project.estimatedAmount = ''
+        preview.project.description = ''
+        preview.project.summary = ''
+        preview.showStage = true
+        preview.showEstimatedAmount = false
+        preview.showDescription = false
+        preview.showNextFollowUp = false
+        preview.showSummary = false
+      }
       const cardState = buildSenderState(preview)
-      const defaultHistoryScope = normalizeHistoryScope(options.historyScope, activeMode) || getDefaultHistoryScope(activeMode)
+      const defaultHistoryScope = activeFlowMode === 'clone_seed'
+        ? 'none'
+        : (normalizeHistoryScope(options.historyScope, activeMode) || getDefaultHistoryScope(activeMode))
       const originalFollowTimeline = Array.isArray(data.shareProject && data.shareProject.followTimeline)
         ? data.shareProject.followTimeline
         : []
@@ -657,8 +840,10 @@ Page({
           createdRecord = await this.persistShareRecord({
             projectId,
             shareMode: activeMode,
+            flowMode: activeFlowMode,
+            seedProjectName,
             shareTagId: nextActiveTag,
-            shareTagName: preview && preview.tag ? preview.tag.name : '',
+            shareTagName: getShareScopeName(activeMode),
             shareTagFields: preview && preview.tag ? preview.tag.fields : [],
             historyScope: defaultHistoryScope,
             summaryMode: 'system',
@@ -692,6 +877,8 @@ Page({
         projectId,
         shareRecordId: createdRecord && createdRecord.shareRecordId ? createdRecord.shareRecordId : '',
         activeMode,
+        activeFlowMode,
+        seedProjectName: createdRecord && createdRecord.seedProjectName ? createdRecord.seedProjectName : seedProjectName,
         activeTag: nextActiveTag,
         entry: 'sender',
         preview: summaryState.preview,
@@ -703,6 +890,7 @@ Page({
         stateTag: cardState.stateTag,
         stateSteps: cardState.stateSteps,
         visibleFields: buildVisibleFields(preview),
+        visibleFieldsSummary: buildVisibleFieldsSummary(buildVisibleFields(preview)),
         originalFollowTimeline,
         followTimeline: historyState.followTimeline,
         timelineSummaryText: historyState.timelineSummaryText,
@@ -722,13 +910,14 @@ Page({
         footerShareText: cardState.footerShareText,
         shareBrief: summaryState.shareBrief,
         hasShareBrief: summaryState.hasShareBrief,
-        showShareBriefCard: true,
+        showShareBriefCard: activeFlowMode === 'clone_seed' ? false : true,
         summaryMode: summaryState.summaryMode,
         summaryModeOptions: summaryState.summaryModeOptions,
         systemSummaryText: summaryState.systemSummaryText,
         summaryDraftText: summaryState.summaryDraftText,
         appliedSummaryText: summaryState.appliedSummaryText,
         isSenderEntry: true,
+        showReceiverConversion: false,
         isLoading: false,
         dataSource: source
       })
@@ -790,6 +979,12 @@ Page({
     })
   },
 
+  openHomePage() {
+    wx.reLaunch({
+      url: '/pages/index/index'
+    })
+  },
+
   openTimelinePage() {
     const baseUrl = '/pages/share-timeline/share-timeline'
 
@@ -817,8 +1012,15 @@ Page({
       return
     }
 
+    const decision = await ensureActionAllowed('ai', { guide: true })
+    if (!decision.allowed) {
+      return
+    }
+
+    const previousBrief = hasShareBriefContent(this.data.shareBrief) ? cloneSnapshot(this.data.shareBrief) : null
     this.setData({
-      isBriefLoading: true
+      isBriefLoading: true,
+      shareBriefBackup: previousBrief || this.data.shareBriefBackup
     })
 
     try {
@@ -832,7 +1034,10 @@ Page({
         throw new Error(result && result.message ? result.message : 'AI 分享摘要生成失败')
       }
 
-      const normalizedBrief = normalizeShareBrief(result)
+      const normalizedBrief = normalizeShareBrief({
+        ...result,
+        generatedAt: result.generatedAt || new Date().toISOString()
+      })
       const summaryState = this.syncSummaryState({
         preview: this.data.preview,
         shareBrief: normalizedBrief,
@@ -843,14 +1048,18 @@ Page({
       const recordResult = await this.persistShareRecord({
         projectId: this.data.projectId,
         shareMode: this.data.activeMode,
+        flowMode: this.data.activeFlowMode,
+        seedProjectName: this.data.seedProjectName,
         shareTagId: this.data.activeTag,
-        shareTagName: this.data.preview && this.data.preview.tag ? this.data.preview.tag.name : '',
+        shareTagName: getShareScopeName(this.data.activeMode),
         shareTagFields: this.data.preview && this.data.preview.tag ? this.data.preview.tag.fields : [],
         historyScope: this.data.currentHistoryScope,
         aiBrief: normalizedBrief,
         summaryMode: summaryState.summaryMode,
         summaryText: summaryState.summaryDraftText
       })
+
+      const hadPreviousVersion = !!previousBrief
 
       this.setData({
         shareRecordId: recordResult && recordResult.shareRecordId ? recordResult.shareRecordId : this.data.shareRecordId,
@@ -866,17 +1075,72 @@ Page({
       })
 
       wx.showToast({
-        title: 'AI 摘要已生成',
-        icon: 'success'
+        title: hadPreviousVersion ? '新摘要已生成，可恢复上一版' : '项目摘要已生成',
+        icon: 'none'
       })
     } catch (error) {
       wx.showToast({
-        title: error.message || '当前无法生成 AI 摘要',
+        title: error.message || '当前无法生成项目摘要',
         icon: 'none'
       })
     } finally {
       this.setData({
         isBriefLoading: false
+      })
+    }
+  },
+
+  async restoreShareBriefVersion() {
+    if (!this.data.shareBriefBackup) {
+      return
+    }
+
+    const currentBrief = cloneSnapshot(this.data.shareBrief)
+    const restoredBrief = cloneSnapshot(this.data.shareBriefBackup)
+    const summaryState = this.syncSummaryState({
+      preview: this.data.preview,
+      shareBrief: restoredBrief,
+      systemSummaryText: this.data.systemSummaryText,
+      summaryMode: this.data.summaryMode,
+      summaryDraftText: this.data.summaryDraftText
+    })
+
+    try {
+      const recordResult = await this.persistShareRecord({
+        projectId: this.data.projectId,
+        shareMode: this.data.activeMode,
+        flowMode: this.data.activeFlowMode,
+        seedProjectName: this.data.seedProjectName,
+        shareTagId: this.data.activeTag,
+        shareTagName: getShareScopeName(this.data.activeMode),
+        shareTagFields: this.data.preview && this.data.preview.tag ? this.data.preview.tag.fields : [],
+        historyScope: this.data.currentHistoryScope,
+        aiBrief: restoredBrief,
+        summaryMode: summaryState.summaryMode,
+        summaryText: summaryState.summaryDraftText
+      })
+
+      this.safeSetData({
+        shareRecordId: recordResult && recordResult.shareRecordId ? recordResult.shareRecordId : this.data.shareRecordId,
+        shareBrief: summaryState.shareBrief,
+        shareBriefBackup: currentBrief,
+        hasShareBrief: summaryState.hasShareBrief,
+        preview: summaryState.preview,
+        summaryMode: summaryState.summaryMode,
+        summaryModeOptions: summaryState.summaryModeOptions,
+        systemSummaryText: summaryState.systemSummaryText,
+        summaryDraftText: summaryState.summaryDraftText,
+        appliedSummaryText: summaryState.appliedSummaryText
+      })
+
+      wx.showToast({
+        title: '已恢复上一版摘要',
+        icon: 'success'
+      })
+    } catch (error) {
+      wx.showToast({
+        title: error.message || '当前无法恢复上一版摘要',
+        icon: 'none'
       })
     }
   },
@@ -899,8 +1163,10 @@ Page({
       const recordResult = await this.persistShareRecord({
         projectId: this.data.projectId,
         shareMode: this.data.activeMode,
+        flowMode: this.data.activeFlowMode,
+        seedProjectName: this.data.seedProjectName,
         shareTagId: this.data.activeTag,
-        shareTagName: this.data.preview && this.data.preview.tag ? this.data.preview.tag.name : '',
+        shareTagName: getShareScopeName(this.data.activeMode),
         shareTagFields: this.data.preview && this.data.preview.tag ? this.data.preview.tag.fields : [],
         historyScope: nextScope,
         aiBrief: this.data.shareBrief,
@@ -964,8 +1230,10 @@ Page({
       const recordResult = await this.persistShareRecord({
         projectId: this.data.projectId,
         shareMode: this.data.activeMode,
+        flowMode: this.data.activeFlowMode,
+        seedProjectName: this.data.seedProjectName,
         shareTagId: this.data.activeTag,
-        shareTagName: this.data.preview && this.data.preview.tag ? this.data.preview.tag.name : '',
+        shareTagName: getShareScopeName(this.data.activeMode),
         shareTagFields: this.data.preview && this.data.preview.tag ? this.data.preview.tag.fields : [],
         historyScope: this.data.currentHistoryScope,
         aiBrief: this.data.shareBrief,
@@ -1014,8 +1282,10 @@ Page({
       const recordResult = await this.persistShareRecord({
         projectId: this.data.projectId,
         shareMode: this.data.activeMode,
+        flowMode: this.data.activeFlowMode,
+        seedProjectName: this.data.seedProjectName,
         shareTagId: this.data.activeTag,
-        shareTagName: this.data.preview && this.data.preview.tag ? this.data.preview.tag.name : '',
+        shareTagName: getShareScopeName(this.data.activeMode),
         shareTagFields: this.data.preview && this.data.preview.tag ? this.data.preview.tag.fields : [],
         historyScope: this.data.currentHistoryScope,
         aiBrief: this.data.shareBrief,

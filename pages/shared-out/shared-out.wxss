@@ -1,3 +1,7 @@
+.page-shell.shared-page {
+  padding-bottom: calc(252rpx + env(safe-area-inset-bottom));
+}
+
 .shared-page .hero {
   padding: 26rpx 28rpx 28rpx;
   border-radius: 32rpx;
@@ -10,9 +14,9 @@
 }
 
 .shared-page .hero-subtitle {
-  margin-top: 10rpx;
-  font-size: 22rpx;
-  line-height: 1.5;
+  margin-top: 8rpx;
+  font-size: 21rpx;
+  line-height: 1.46;
 }
 
 .shared-page .search-panel {
@@ -110,7 +114,7 @@
 }
 
 .shared-page .summary-card {
-  padding: 15rpx 14rpx 13rpx;
+  padding: 14rpx 13rpx 12rpx;
   border-radius: 22rpx;
   background: var(--theme-project-card-bg);
   box-shadow: var(--theme-project-card-shadow);
@@ -138,18 +142,18 @@
 
 .shared-page .result-bar,
 .shared-page .state-card {
-  padding: 16rpx 20rpx;
+  padding: 14rpx 18rpx;
 }
 
 .shared-page .result-bar {
-  margin-top: 12rpx;
+  margin-top: 10rpx;
   background: var(--theme-glass-bg);
   box-shadow: var(--theme-surface-shadow);
 }
 
 .shared-page .result-bar-text {
-  font-size: 21rpx;
-  line-height: 1.6;
+  font-size: 20rpx;
+  line-height: 1.55;
   color: var(--theme-text-soft);
 }
 
@@ -162,7 +166,7 @@
 }
 
 .shared-page .practical-project-card {
-  padding: 20rpx;
+  padding: 18rpx;
 }
 
 .shared-page .project-main {
@@ -183,11 +187,28 @@
   max-width: 220rpx;
   min-height: 44rpx;
   padding: 0 12rpx;
+  gap: 8rpx;
   font-size: 19rpx;
   line-height: 1.2;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.shared-page .shared-status-count {
+  min-width: 28rpx;
+  height: 28rpx;
+  padding: 0 8rpx;
+  border-radius: 999rpx;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18rpx;
+  font-weight: 700;
+  line-height: 1;
+  background: rgba(255, 255, 255, 0.74);
+  color: var(--theme-brand-text);
 }
 
 .shared-page .project-pill-row {
@@ -199,11 +220,15 @@
 }
 
 .shared-page .shared-summary-card {
-  margin-top: 10rpx;
+  margin-top: 8rpx;
+}
+
+.shared-page .shared-core-card .project-summary-label {
+  min-width: 48rpx;
 }
 
 .shared-page .shared-card-metrics {
-  margin-top: 8rpx;
+  margin-top: 6rpx;
   gap: 6rpx;
 }
 
@@ -212,15 +237,15 @@
 }
 
 .shared-page .compact-inline-actions {
-  margin-top: 8rpx;
+  margin-top: 10rpx;
   gap: 8rpx;
 }
 
 .shared-page .compact-inline-actions .btn-primary {
   min-width: 220rpx;
-  height: 72rpx;
-  font-size: 24rpx;
-  border-radius: 20rpx;
+  height: 70rpx;
+  font-size: 22rpx;
+  border-radius: 18rpx;
 }
 
 .page-shell.shared-page.appearance-font-large .shared-card-metrics .compact-inline-item {
@@ -256,9 +281,33 @@
   line-height: 1.68;
 }
 
+.page-shell.shared-page.appearance-font-large .shared-control-card,
+.page-shell.shared-page.appearance-font-large .result-bar,
+.page-shell.shared-page.appearance-font-large .state-card {
+  padding: 18rpx 20rpx;
+}
+
 .page-shell.shared-page.appearance-font-large .summary-card,
 .page-shell.shared-page.appearance-font-large .practical-project-card {
   border-radius: 24rpx;
+}
+
+.page-shell.shared-page.appearance-font-large .summary-card {
+  padding: 16rpx 15rpx 14rpx;
+}
+
+.page-shell.shared-page.appearance-font-large .summary-card-label,
+.page-shell.shared-page.appearance-font-large .shared-control-label,
+.page-shell.shared-page.appearance-font-large .result-bar-text {
+  font-size: 23rpx;
+}
+
+.page-shell.shared-page.appearance-font-large .summary-card-value {
+  font-size: 36rpx;
+}
+
+.page-shell.shared-page.appearance-font-large .summary-card-note {
+  font-size: 21rpx;
 }
 
 .page-shell.shared-page.appearance-font-large .compact-inline-metrics {
@@ -288,6 +337,24 @@
 .page-shell.shared-page.appearance-font-readable .summary-card,
 .page-shell.shared-page.appearance-font-readable .practical-project-card {
   border-radius: 26rpx;
+}
+
+.page-shell.shared-page.appearance-font-readable .summary-card {
+  padding: 18rpx 18rpx 16rpx;
+}
+
+.page-shell.shared-page.appearance-font-readable .summary-card-label,
+.page-shell.shared-page.appearance-font-readable .shared-control-label,
+.page-shell.shared-page.appearance-font-readable .result-bar-text {
+  font-size: 28rpx;
+}
+
+.page-shell.shared-page.appearance-font-readable .summary-card-value {
+  font-size: 42rpx;
+}
+
+.page-shell.shared-page.appearance-font-readable .summary-card-note {
+  font-size: 26rpx;
 }
 
 .page-shell.shared-page.appearance-font-readable .compact-inline-metrics {

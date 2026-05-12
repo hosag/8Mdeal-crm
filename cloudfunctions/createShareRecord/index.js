@@ -8,6 +8,64 @@ function normalizeText(value) {
   return String(value || '').trim()
 }
 
+async function resolveAccountAccessContext(openid) {
+  const identityResult = await db.collection('accountIdentities').where({
+    provider: 'wechat_mp',
+    openid
+  }).limit(1).get()
+  const identity = identityResult.data[0] || null
+  const accountId = normalizeText(identity && identity.accountId)
+
+  if (!accountId) {
+    throw new Error('ACCOUNT_NOT_INITIALIZED: 当前账号尚未初始化，请重新进入小程序后再试')
+  }
+
+  const accountResult = await db.collection('accounts').where({
+    accountId
+  }).limit(1).get()
+  const entitlementsResult = await db.collection('entitlements').where({
+    accountId
+  }).limit(1).get()
+
+  return {
+    accountId,
+    account: accountResult.data[0] || null,
+    entitlements: entitlementsResult.data[0] || null
+  }
+}
+
+function ensureShareOutAccess(context) {
+  const account = context && context.account ? context.account : {}
+  const entitlements = context && context.entitlements ? context.entitlements : {}
+  const status = normalizeText(entitlements.status || account.status || 'trialing')
+
+  if (status === 'disabled') {
+    throw new Error('ACCOUNT_DISABLED: 当前账号已被禁用')
+  }
+
+  if (entitlements && entitlements.bindRequiredForWrite) {
+    throw new Error('ACCOUNT_PHONE_REQUIRED: 保存正式数据前需要先绑定手机号')
+  }
+
+  if (!entitlements || !Object.keys(entitlements).length) {
+    if (status === 'free_limited' || status === 'expired_readonly') {
+      throw new Error('ENTITLEMENT_WRITE_DISABLED: 当前账号为只读状态')
+    }
+    return
+  }
+
+  if (!entitlements.canSaveFollowUp && !entitlements.canCreateProject && !entitlements.canEditProject) {
+    throw new Error('ENTITLEMENT_WRITE_DISABLED: 当前账号为只读状态')
+  }
+}
+
+function ensureOutboundShareAccess(context) {
+  const entitlements = context && context.entitlements ? context.entitlements : {}
+  if (!entitlements.canShareOut) {
+    throw new Error('ENTITLEMENT_SHARE_OUT_DISABLED: 当前套餐暂不支持项目外发')
+  }
+}
+
 function normalizeStringArray(value) {
   if (!Array.isArray(value)) {
     return []
@@ -66,6 +124,24 @@ function getModeTitle(mode) {
   return mode === 'outbound' ? '项目外发' : '分享信息'
 }
 
+function normalizeFlowMode(value, shareMode) {
+  const text = normalizeText(value)
+  if (shareMode !== 'outbound') {
+    return ''
+  }
+
+  if (text === 'clone_seed') {
+    return 'clone_seed'
+  }
+
+  return 'transfer_original'
+}
+
+function buildDefaultSeedProjectName(project) {
+  const clientName = normalizeText(project && project.clientName)
+  return clientName ? `${clientName} · 新需求` : '新需求项目'
+}
+
 function pickPreferredOutboundRecord(records = []) {
   const list = Array.isArray(records) ? records.slice() : []
   if (!list.length) {
@@ -87,11 +163,14 @@ function pickPreferredOutboundRecord(records = []) {
 
 exports.main = async (event) => {
   const wxContext = cloud.getWXContext()
+  const accessContext = await resolveAccountAccessContext(wxContext.OPENID)
   const projectId = normalizeText(event.projectId)
   const shareRecordId = normalizeText(event.shareRecordId)
   const shareMode = normalizeText(event.shareMode) || 'info'
+  const flowMode = normalizeFlowMode(event.flowMode, shareMode)
+  const isCloneSeed = flowMode === 'clone_seed'
   const shareTagId = normalizeText(event.shareTagId)
-  const shareTagName = normalizeText(event.shareTagName) || '未命名标签'
+  const shareTagName = shareMode === 'outbound' ? '转交项目' : '发送资料'
   const shareTagFields = normalizeStringArray(event.shareTagFields)
   const historyScope = normalizeHistoryScope(event.historyScope, shareMode)
   const aiBrief = normalizeBriefPayload(event.aiBrief)
@@ -122,6 +201,11 @@ exports.main = async (event) => {
   let existingRecord = null
   let existingOutboundRecord = null
 
+  ensureShareOutAccess(accessContext)
+  if (shareMode === 'outbound') {
+    ensureOutboundShareAccess(accessContext)
+  }
+
   if (shareRecordId) {
     const existingResult = await db.collection('shareRecords').where({
       _id: shareRecordId,
@@ -145,7 +229,7 @@ exports.main = async (event) => {
 
     existingOutboundRecord = pickPreferredOutboundRecord(outboundRecords)
 
-    if (project.handoverStatus === 'handed_over' && !project.isSharedProject) {
+    if (!isCloneSeed && project.handoverStatus === 'handed_over' && !project.isSharedProject) {
       return {
         ok: false,
         code: 'PROJECT_ALREADY_HANDED_OVER',
@@ -154,14 +238,21 @@ exports.main = async (event) => {
     }
   }
 
-  if (shareMode === 'outbound' && !existingRecord && existingOutboundRecord) {
+  if (shareMode === 'outbound' && !isCloneSeed && !existingRecord && existingOutboundRecord) {
     existingRecord = existingOutboundRecord
   }
 
+  const seedProjectName = isCloneSeed
+    ? (normalizeText(event.seedProjectName) || buildDefaultSeedProjectName(project))
+    : ''
+
   const payload = {
+    accountId: accessContext.accountId,
     projectId,
     shareMode,
     shareModeTitle: getModeTitle(shareMode),
+    flowMode,
+    seedProjectName,
     shareTagId,
     shareTagName,
     shareTagFields,
@@ -169,9 +260,9 @@ exports.main = async (event) => {
     aiBrief,
     summaryMode,
     summaryText,
-    projectName: normalizeText(project.projectName) || '未命名项目',
+    projectName: isCloneSeed ? seedProjectName : (normalizeText(project.projectName) || '未命名项目'),
     clientName: normalizeText(project.clientName) || '未填写客户',
-    projectStage: normalizeText(project.stage) || '线索',
+    projectStage: isCloneSeed ? '线索' : (normalizeText(project.stage) || '线索'),
     viewCount: Number(existingRecord && existingRecord.viewCount ? existingRecord.viewCount : 0),
     viewerCount: Number(existingRecord && existingRecord.viewerCount ? existingRecord.viewerCount : 0),
     viewLogs: Array.isArray(existingRecord && existingRecord.viewLogs) ? existingRecord.viewLogs : [],
@@ -194,7 +285,9 @@ exports.main = async (event) => {
     return {
       ok: true,
       shareRecordId: existingRecord._id,
-      reusedExistingOutbound: shareMode === 'outbound' && existingRecord._id === (existingOutboundRecord && existingOutboundRecord._id),
+      reusedExistingOutbound: shareMode === 'outbound' && !isCloneSeed && existingRecord._id === (existingOutboundRecord && existingOutboundRecord._id),
+      flowMode,
+      seedProjectName,
       historyScope,
       aiBrief,
       summaryMode,
@@ -205,6 +298,7 @@ exports.main = async (event) => {
   const addResult = await db.collection('shareRecords').add({
     data: {
       _openid: wxContext.OPENID,
+      accountId: accessContext.accountId,
       createdAt: now,
       ...payload
     }
@@ -213,6 +307,8 @@ exports.main = async (event) => {
   return {
     ok: true,
     shareRecordId: addResult._id,
+    flowMode,
+    seedProjectName,
     historyScope,
     aiBrief,
     summaryMode,

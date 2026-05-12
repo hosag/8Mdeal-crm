@@ -21,6 +21,53 @@ function normalizeStatus(stage) {
   return '进行中'
 }
 
+function buildProgressStatus(record = {}, shareViewMeta = {}, collaboratorFollow = {}) {
+  const firstOpenedAt = shareViewMeta.firstOpenedAt || parseDate(record.firstOpenedAt)
+  if (Number(collaboratorFollow.count || 0) > 0) {
+    return {
+      key: 'followed',
+      text: '已跟进'
+    }
+  }
+
+  if (normalizeText(record.importedProjectId)) {
+    return {
+      key: 'taken_over',
+      text: '已接手'
+    }
+  }
+
+  if (firstOpenedAt || Number(shareViewMeta.totalViewCount || 0) > 0) {
+    return {
+      key: 'opened',
+      text: '已打开'
+    }
+  }
+
+  return {
+    key: 'unopened',
+    text: '未打开'
+  }
+}
+
+function countUnreadProgress(record = {}, collaboratorFollow = {}) {
+  const lastReadAt = parseDate(record.senderLastViewedAt || record.senderViewedAt || record.ownerLastViewedAt)
+  const followItems = Array.isArray(collaboratorFollow.items) ? collaboratorFollow.items : []
+
+  if (!followItems.length) {
+    return 0
+  }
+
+  if (!lastReadAt) {
+    return followItems.length
+  }
+
+  return followItems.filter((item) => {
+    const createdAt = parseDate(item && (item.followUpTime || item.createdAt || item.updatedAt))
+    return createdAt && createdAt.getTime() > lastReadAt.getTime()
+  }).length
+}
+
 function formatDateTime(value) {
   const date = value instanceof Date ? value : new Date(value)
   if (Number.isNaN(date.getTime())) {
@@ -249,11 +296,13 @@ exports.main = async () => {
       if (!collaboratorFollowCountMap[projectId]) {
         collaboratorFollowCountMap[projectId] = {
           count: 0,
-          latestAt: ''
+          latestAt: '',
+          items: []
         }
       }
 
       collaboratorFollowCountMap[projectId].count += 1
+      collaboratorFollowCountMap[projectId].items.push(followUp)
       collaboratorFollowCountMap[projectId].latestAt = formatDateTime(followUp.followUpTime || followUp.createdAt)
     })
   }
@@ -263,24 +312,21 @@ exports.main = async () => {
     records: records.map((item) => {
       const project = projectMap[item.projectId] || {}
       const stage = project.stage || item.projectStage || '线索'
-      const collaboratorFollow = collaboratorFollowCountMap[item.importedProjectId] || { count: 0, latestAt: '' }
+      const collaboratorFollow = collaboratorFollowCountMap[item.importedProjectId] || { count: 0, latestAt: '', items: [] }
       const shareViewMeta = buildShareViewMeta(item)
       const receiverName = shareViewMeta.latestViewerName || normalizeText(item.receiverName) || '待接手方'
       const receiverOpenidMasked = maskOpenid(shareViewMeta.latestViewerOpenid || item.receiverOpenid)
       const firstOpenedAt = shareViewMeta.firstOpenedAt || parseDate(item.firstOpenedAt)
       const lastViewedAt = shareViewMeta.lastViewedAt || parseDate(item.lastViewedAt)
-      const statusText = collaboratorFollow.count > 0
-        ? '已跟进'
-        : (item.importedProjectId
-          ? '已导入'
-          : ((firstOpenedAt || shareViewMeta.totalViewCount > 0) ? '已打开' : '未打开'))
+      const progressStatus = buildProgressStatus(item, shareViewMeta, collaboratorFollow)
+      const unreadProgressCount = countUnreadProgress(item, collaboratorFollow)
 
       return {
         id: item._id,
         projectId: item.projectId,
         importedProjectId: item.importedProjectId || '',
         name: project.projectName || item.projectName || '未命名项目',
-        partner: item.shareTagName || '未命名标签',
+        partner: item.shareMode === 'outbound' ? '转交项目' : '发送资料',
         mode: '项目外发',
         viewed: formatViewLabel(shareViewMeta.totalViewCount),
         viewCount: shareViewMeta.totalViewCount,
@@ -295,9 +341,11 @@ exports.main = async () => {
         lastViewedAt: lastViewedAt ? formatDateTime(lastViewedAt) : '',
         importedAt: item.importedAt ? formatDateTime(item.importedAt) : '',
         importedAtRaw: item.importedAt ? new Date(item.importedAt).toISOString() : '',
-        statusText,
+        statusKey: progressStatus.key,
+        statusText: progressStatus.text,
         collaboratorFollowCount: collaboratorFollow.count,
         collaboratorLatestFollowAt: collaboratorFollow.latestAt,
+        unreadProgressCount,
         status: normalizeStatus(stage),
         stage
       }
