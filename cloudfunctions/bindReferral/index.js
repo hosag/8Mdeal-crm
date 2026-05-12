@@ -234,6 +234,9 @@ exports.main = async (event = {}) => {
         referrerRewardAiTokens: REFERRAL_REWARD_AI_TOKENS,
         inviteeRewardAiTokens: REFERRAL_REWARD_AI_TOKENS,
         triggerScene: 'first_project_created',
+        sourceType: 'referral_code',
+        sourceId: referrerCode,
+        sourceReferrerCode: referrerCode,
         boundAt: now,
         createdAt: now,
         updatedAt: now

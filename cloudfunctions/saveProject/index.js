@@ -189,6 +189,16 @@ function isTransferredReadonlyProject(project) {
   return project && project.handoverStatus === 'handed_over' && !project.isSharedProject
 }
 
+function isAttributionEligibleProject(project) {
+  if (!project || isTransferredReadonlyProject(project)) {
+    return false
+  }
+  if (project.isSharedProject || project.importedFromShare || normalizeText(project.sharedFromOpenid) || normalizeText(project.sourceShareRecordId)) {
+    return false
+  }
+  return true
+}
+
 async function countOwnedVisibleProjects(accountId, openid) {
   const [projectsByOwner, projectsByAccount, projectsByOpenid] = await Promise.all([
     safeGetList('projects', {
@@ -221,7 +231,7 @@ async function countOwnedVisibleProjects(accountId, openid) {
     })
   })
 
-  return Object.values(projectMap).filter((item) => !isTransferredReadonlyProject(item)).length
+  return Object.values(projectMap).filter(isAttributionEligibleProject).length
 }
 
 async function upsertReferralRewardEntitlements(accountId, amount, now) {
@@ -260,7 +270,7 @@ async function upsertReferralRewardEntitlements(accountId, amount, now) {
   }
 }
 
-async function ensureReferralGrantLedger(accountId, relationId, role, amount, beforeBalance, occurredAt) {
+async function ensureReferralGrantLedger(accountId, relationId, role, amount, beforeBalance, occurredAt, attributionSourceType = '') {
   const traceId = `referral:${relationId}:${role}:ai_tokens:reward`
   const existing = await safeGetOne('usageLedger', {
     traceId
@@ -274,6 +284,8 @@ async function ensureReferralGrantLedger(accountId, relationId, role, amount, be
 
   const before = Math.max(0, normalizeNumber(beforeBalance))
   const after = Math.max(0, before + amount)
+
+  const relationSourceType = normalizeText(attributionSourceType || 'referral_code')
 
   await db.collection('usageLedger').add({
     data: {
@@ -290,9 +302,10 @@ async function ensureReferralGrantLedger(accountId, relationId, role, amount, be
         relationId,
         role,
         rewardAiTokens: amount,
+        attributionSourceType: relationSourceType,
         reason: role === 'referrer'
-          ? '推荐朋友创建首个项目，发放 AI 额度奖励'
-          : '通过朋友推荐创建首个项目，发放 AI 额度奖励'
+          ? '传播带来新用户创建首个项目，发放 AI 额度奖励'
+          : '通过传播入口创建首个项目，发放 AI 额度奖励'
       },
       occurredAt
     }
@@ -403,7 +416,8 @@ async function tryGrantReferralReward(accessContext, openid, projectId, now) {
       'referrer',
       rewardAiTokens,
       referrerEntitlements.aiTokensRemaining,
-      now
+      now,
+      relation.sourceType
     )
     if (!referrerLedger.reused) {
       await upsertReferralRewardEntitlements(referrerAccountId, rewardAiTokens, now)
@@ -415,7 +429,8 @@ async function tryGrantReferralReward(accessContext, openid, projectId, now) {
       'invitee',
       rewardAiTokens,
       inviteeEntitlements.aiTokensRemaining,
-      now
+      now,
+      relation.sourceType
     )
     if (!inviteeLedger.reused) {
       await upsertReferralRewardEntitlements(accessContext.accountId, rewardAiTokens, now)

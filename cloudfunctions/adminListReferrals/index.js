@@ -181,6 +181,14 @@ function getStatusLabel(status = '') {
   }[toText(status)] || toText(status || 'pending')
 }
 
+function getSourceTypeLabel(sourceType = '') {
+  return {
+    referral_code: '推荐码',
+    share_material: '分享资料',
+    project_handover: '外发项目'
+  }[toText(sourceType)] || '推荐码'
+}
+
 function getLedgerByRole(ledger = [], relationId = '', role = '') {
   const currentRole = toText(role)
   return (Array.isArray(ledger) ? ledger : []).find((item) => {
@@ -232,6 +240,12 @@ function buildReferralSummary(record = {}, maps = {}) {
     inviteeAccount,
     referrerAccountId,
     inviteeAccountId,
+    sourceType: toText(record.sourceType || 'referral_code'),
+    sourceTypeLabel: getSourceTypeLabel(record.sourceType || 'referral_code'),
+    sourceId: toText(record.sourceId),
+    sourceProjectId: toText(record.sourceProjectId),
+    sourceShareMode: toText(record.sourceShareMode),
+    sourceFlowMode: toText(record.sourceFlowMode),
     triggerScene: toText(record.triggerScene || 'first_project_created'),
     qualifiedProjectId: toText(record.qualifiedProjectId),
     qualifiedProjectName: toText(project.projectName || project.name),

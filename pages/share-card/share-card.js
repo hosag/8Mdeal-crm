@@ -4,7 +4,8 @@ const {
   createShareRecordData,
   requestShareBrief,
   reportSystemFailureData,
-  resolveNotificationData
+  resolveNotificationData,
+  resolveAccountData
 } = require('../../services/data')
 const {
   buildSharePreview,
@@ -654,6 +655,7 @@ Page({
 
     try {
       if (shareRecordId) {
+        await resolveAccountData()
         const result = await openSharedProjectData({
           shareRecordId
         })

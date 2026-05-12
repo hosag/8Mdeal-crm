@@ -3500,10 +3500,18 @@ function normalizeReferralForUi(record = {}) {
   const anomalyLabels = Array.isArray(record.anomalyLabels)
     ? record.anomalyLabels.map((item) => toText(item)).filter(Boolean)
     : []
+  const sourceType = toText(record.sourceType || 'referral_code')
+  const sourceTypeLabel = toText(record.sourceTypeLabel || getReferralSourceTypeLabel(sourceType))
 
   return {
     relationId: toText(record.relationId || record._id),
     referrerCode: toText(record.referrerCode),
+    sourceType,
+    sourceTypeLabel,
+    sourceId: toText(record.sourceId),
+    sourceProjectId: toText(record.sourceProjectId),
+    sourceShareMode: toText(record.sourceShareMode),
+    sourceFlowMode: toText(record.sourceFlowMode),
     status,
     statusLabel: toText(record.statusLabel || getReferralStatusLabel(status)),
     rewardAiTokens: Math.max(0, Math.floor(toNumber(record.rewardAiTokens, 100000))),
@@ -5205,6 +5213,14 @@ function getReferralStatusLabel(status = '') {
   }[toText(status)] || toText(status || 'pending')
 }
 
+function getReferralSourceTypeLabel(sourceType = '') {
+  return {
+    referral_code: '推荐码',
+    share_material: '分享资料',
+    project_handover: '外发项目'
+  }[toText(sourceType)] || '推荐码'
+}
+
 function getReferralStatusBadgeClass(status = '') {
   const current = toText(status)
   if (current === 'rewarded') {
@@ -5294,6 +5310,10 @@ function referralMatches(item, keyword, statusFilter, timeWindow) {
   return [
     item.relationId,
     item.referrerCode,
+    item.sourceType,
+    item.sourceTypeLabel,
+    item.sourceId,
+    item.sourceProjectId,
     item.referrerAccountId,
     item.inviteeAccountId,
     item.referrerAccount && item.referrerAccount.displayName,
@@ -6341,22 +6361,22 @@ function renderReferrals() {
     refreshBtn.disabled = state.runtime.referralLoading || state.runtime.loading
   }
   countMeta.textContent = state.runtime.referralLoading
-    ? '正在刷新推荐...'
-    : `共 ${filteredItems.length} 条推荐`
+    ? '正在刷新传播关系...'
+    : `共 ${filteredItems.length} 条传播关系`
   selectedMeta.textContent = selectedReferral
     ? `${selectedReferral.referrerAccount.displayName || selectedReferral.referrerAccount.phone || selectedReferral.referrerAccountId} → ${selectedReferral.inviteeAccount.displayName || selectedReferral.inviteeAccount.phone || selectedReferral.inviteeAccountId}`
-    : '未选择推荐关系'
+    : '未选择传播关系'
 
   summaryWrap.innerHTML = [
     {
-      label: '推荐关系',
+      label: '传播关系',
       value: `${stats.totalCount || 0} 条`,
       note: `已奖励 ${stats.rewardedCount || 0} 条，待首个项目 ${stats.pendingCount || 0} 条。`
     },
     {
       label: '已发放 AI',
       value: formatAiQuotaText(stats.ledgerGrantedAiTokens || 0),
-      note: '按推荐奖励真实写入的额度流水汇总。'
+      note: '按传播奖励真实写入的额度流水汇总。'
     },
     {
       label: '异常提示',
@@ -6372,13 +6392,13 @@ function renderReferrals() {
   `).join('')
 
   if (!filteredItems.length) {
-    tableWrap.innerHTML = '<div class="empty-card">当前没有匹配到推荐关系。</div>'
+    tableWrap.innerHTML = '<div class="empty-card">当前没有匹配到传播关系。</div>'
   } else {
     tableWrap.innerHTML = `
       <table class="data-table">
         <thead>
           <tr>
-            <th>推荐关系</th>
+            <th>传播关系</th>
             <th>状态</th>
             <th>双方权益</th>
             <th>奖励</th>
@@ -6391,11 +6411,13 @@ function renderReferrals() {
             const statusMeta = item.status === 'blocked'
               ? `阻止原因：${blockReasonLabel}`
               : getReferralLedgerStatusLabel(item.ledgerStatus)
+            const sourceLabel = item.sourceTypeLabel || getReferralSourceTypeLabel(item.sourceType)
+            const sourceIdentity = item.referrerCode || item.sourceId || '-'
             return `
               <tr class="${selectedReferral && selectedReferral.relationId === item.relationId ? 'is-selected' : ''}">
                 <td>
                   <button class="data-row-button" data-referral-id="${escapeHtml(item.relationId)}">
-                    ${buildTableMainCell(item.referrerAccount.displayName || item.referrerAccount.phone || item.referrerAccountId, item.referrerCode || '-')}
+                    ${buildTableMainCell(item.referrerAccount.displayName || item.referrerAccount.phone || item.referrerAccountId, `${sourceLabel} · ${sourceIdentity}`)}
                   </button>
                 </td>
                 <td>
@@ -6427,7 +6449,7 @@ function renderReferrals() {
 
   detailWrap.innerHTML = selectedReferral
     ? buildReferralDetailMarkup(selectedReferral)
-    : '<div class="empty-card">请选择一条推荐关系后查看详情。</div>'
+    : '<div class="empty-card">请选择一条传播关系后查看详情。</div>'
 
   document.querySelectorAll('[data-copy-referral-code]').forEach((button) => {
     button.addEventListener('click', () => {
@@ -6452,7 +6474,7 @@ function renderReferrals() {
         document.execCommand('copy')
         document.body.removeChild(tempInput)
       }
-      showToast('推荐码已复制', 'success')
+      showToast('来源标识已复制', 'success')
     })
   })
 }
@@ -6465,6 +6487,8 @@ function buildReferralDetailMarkup(item) {
   const anomalyText = Array.isArray(item.anomalyLabels) && item.anomalyLabels.length
     ? item.anomalyLabels.join(' · ')
     : '当前没有明显异常'
+  const sourceLabel = item.sourceTypeLabel || getReferralSourceTypeLabel(item.sourceType)
+  const sourceIdentity = item.referrerCode || item.sourceId || '-'
   const primaryNotice = item.status === 'blocked'
     ? `阻止原因：${blockReasonLabel}`
     : (item.qualifiedProjectName ? `首个项目：${item.qualifiedProjectName}` : '等待被推荐人创建首个项目后触发奖励。')
@@ -6474,7 +6498,7 @@ function buildReferralDetailMarkup(item) {
       <section class="detail-card detail-card-hero">
         <div class="purchase-hero">
           <div class="purchase-hero-main">
-            <div class="mini-kicker">推荐码 ${escapeHtml(item.referrerCode || '-')}</div>
+            <div class="mini-kicker">${escapeHtml(sourceLabel)} ${escapeHtml(sourceIdentity)}</div>
             <h4 class="purchase-title">${escapeHtml(referrer.displayName || referrer.phone || referrer.accountId || '推荐人')}</h4>
             <div class="purchase-subtitle">${escapeHtml(invitee.displayName || invitee.phone || invitee.accountId || '被推荐人')}</div>
           </div>
@@ -6482,6 +6506,14 @@ function buildReferralDetailMarkup(item) {
         </div>
         <div class="feedback-content-block">${escapeHtml(primaryNotice)}</div>
         <div class="detail-grid">
+          <div>
+            <div class="detail-item-label">传播来源</div>
+            <div class="detail-item-value">${escapeHtml(sourceLabel)}</div>
+          </div>
+          <div>
+            <div class="detail-item-label">来源标识</div>
+            <div class="detail-item-value">${escapeHtml(sourceIdentity)}</div>
+          </div>
           <div>
             <div class="detail-item-label">推荐人</div>
             <div class="detail-item-value">${escapeHtml(referrer.displayName || referrer.phone || referrer.accountId || '-')}</div>
@@ -6522,7 +6554,7 @@ function buildReferralDetailMarkup(item) {
           </div>
         </div>
         <div class="inline-actions">
-          <button class="ghost-btn" type="button" data-copy-referral-code="${escapeHtml(item.referrerCode || '')}">复制推荐码</button>
+          <button class="ghost-btn" type="button" data-copy-referral-code="${escapeHtml(sourceIdentity === '-' ? '' : sourceIdentity)}">复制来源标识</button>
         </div>
       </section>
 
@@ -6540,6 +6572,10 @@ function buildReferralDetailMarkup(item) {
           <div>
             <div class="detail-item-label">首个项目</div>
             <div class="detail-item-value">${escapeHtml(item.qualifiedProjectName || item.qualifiedProjectId || '-')}</div>
+          </div>
+          <div>
+            <div class="detail-item-label">来源项目</div>
+            <div class="detail-item-value">${escapeHtml(item.sourceProjectId || '-')}</div>
           </div>
           <div>
             <div class="detail-item-label">异常提示</div>

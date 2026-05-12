@@ -8,6 +8,7 @@ const _ = db.command
 const CONTACT_CRYPTO_SECRET = process.env.CONTACT_CRYPTO_SECRET || 'deal-crm-contact-v1'
 const CONTACT_CRYPTO_PREFIX = 'enc:v1'
 const CONTACT_CRYPTO_KEY = crypto.createHash('sha256').update(CONTACT_CRYPTO_SECRET).digest()
+const REFERRAL_REWARD_AI_TOKENS = 100000
 
 const defaultShareTags = [
   {
@@ -63,6 +64,188 @@ async function resolveAccountIdByOpenid(openid = '') {
     return normalizeText(result.data[0] && result.data[0].accountId)
   } catch (error) {
     return ''
+  }
+}
+
+function isTransferredReadonlyProject(project) {
+  return project && project.handoverStatus === 'handed_over' && !project.isSharedProject
+}
+
+function isAttributionEligibleProject(project) {
+  if (!project || isTransferredReadonlyProject(project)) {
+    return false
+  }
+  if (project.isSharedProject || project.importedFromShare || normalizeText(project.sharedFromOpenid) || normalizeText(project.sourceShareRecordId)) {
+    return false
+  }
+  return true
+}
+
+async function safeGetOne(collectionName, query, options = {}) {
+  try {
+    let request = db.collection(collectionName).where(query)
+    if (options.orderByField && options.orderByDirection) {
+      request = request.orderBy(options.orderByField, options.orderByDirection)
+    }
+    const result = await request.limit(1).get()
+    return result.data[0] || null
+  } catch (error) {
+    return null
+  }
+}
+
+async function safeGetList(collectionName, query, options = {}) {
+  try {
+    let request = db.collection(collectionName).where(query)
+    if (options.orderByField && options.orderByDirection) {
+      request = request.orderBy(options.orderByField, options.orderByDirection)
+    }
+    if (options.limit) {
+      request = request.limit(options.limit)
+    }
+    const result = await request.get()
+    return Array.isArray(result.data) ? result.data : []
+  } catch (error) {
+    return []
+  }
+}
+
+async function countAttributionEligibleProjects(accountId, openid) {
+  const [projectsByOwner, projectsByAccount, projectsByOpenid] = await Promise.all([
+    safeGetList('projects', {
+      ownerAccountId: accountId
+    }, {
+      limit: 1000
+    }),
+    safeGetList('projects', {
+      accountId
+    }, {
+      limit: 1000
+    }),
+    openid
+      ? safeGetList('projects', {
+        _openid: openid
+      }, {
+        limit: 1000
+      })
+      : Promise.resolve([])
+  ])
+  const projectMap = {}
+
+  ;[projectsByOwner, projectsByAccount, projectsByOpenid].forEach((list) => {
+    list.forEach((item) => {
+      const key = normalizeText(item && item._id)
+      if (!key || projectMap[key]) {
+        return
+      }
+      projectMap[key] = item
+    })
+  })
+
+  return Object.values(projectMap).filter(isAttributionEligibleProject).length
+}
+
+function getShareAttributionSourceType(shareRecord = {}) {
+  return normalizeText(shareRecord.shareMode) === 'outbound'
+    ? 'project_handover'
+    : 'share_material'
+}
+
+async function ensureShareAttributionRelation(options = {}) {
+  const referrerAccountId = normalizeText(options.referrerAccountId)
+  const referrerOpenid = normalizeText(options.referrerOpenid)
+  const inviteeAccountId = normalizeText(options.inviteeAccountId)
+  const inviteeOpenid = normalizeText(options.inviteeOpenid)
+  const shareRecord = options.shareRecord || {}
+  const now = options.now instanceof Date ? options.now : new Date()
+
+  if (!referrerAccountId || !inviteeAccountId || !inviteeOpenid) {
+    return {
+      ok: false,
+      skipped: true,
+      reason: 'account_not_ready'
+    }
+  }
+
+  if (referrerAccountId === inviteeAccountId || referrerOpenid === inviteeOpenid) {
+    return {
+      ok: false,
+      skipped: true,
+      reason: 'self_attribution'
+    }
+  }
+
+  const existing = await safeGetOne('referralRelations', {
+    inviteeAccountId
+  }, {
+    orderByField: 'createdAt',
+    orderByDirection: 'asc'
+  })
+
+  if (existing && existing._id) {
+    return {
+      ok: true,
+      alreadyBound: true,
+      relationId: existing._id,
+      status: normalizeText(existing.status || 'pending'),
+      sourceType: normalizeText(existing.sourceType || 'referral_code')
+    }
+  }
+
+  const inviteeProjectCount = await countAttributionEligibleProjects(inviteeAccountId, inviteeOpenid)
+  if (inviteeProjectCount > 0) {
+    return {
+      ok: false,
+      skipped: true,
+      reason: 'invitee_already_used_project_feature',
+      inviteeProjectCount
+    }
+  }
+
+  const sourceType = getShareAttributionSourceType(shareRecord)
+  const sourceShareMode = normalizeText(shareRecord.shareMode) || 'info'
+
+  try {
+    const result = await db.collection('referralRelations').add({
+      data: {
+        _openid: inviteeOpenid,
+        referrerAccountId,
+        referrerOpenid,
+        referrerCode: '',
+        inviteeAccountId,
+        inviteeOpenid,
+        status: 'pending',
+        rewardAiTokens: REFERRAL_REWARD_AI_TOKENS,
+        referrerRewardAiTokens: REFERRAL_REWARD_AI_TOKENS,
+        inviteeRewardAiTokens: REFERRAL_REWARD_AI_TOKENS,
+        triggerScene: 'first_project_created',
+        sourceType,
+        sourceId: normalizeText(shareRecord._id),
+        sourceProjectId: normalizeText(shareRecord.projectId),
+        sourceShareMode,
+        sourceFlowMode: normalizeText(shareRecord.flowMode),
+        sourceShareTagId: normalizeText(shareRecord.shareTagId),
+        sourceShareTagName: normalizeText(shareRecord.shareTagName),
+        boundAt: now,
+        createdAt: now,
+        updatedAt: now
+      }
+    })
+
+    return {
+      ok: true,
+      alreadyBound: false,
+      relationId: result._id,
+      status: 'pending',
+      sourceType
+    }
+  } catch (error) {
+    return {
+      ok: false,
+      skipped: true,
+      reason: 'relation_create_failed',
+      message: error && error.message ? error.message : 'relation create failed'
+    }
   }
 }
 
@@ -886,6 +1069,20 @@ exports.main = async (event) => {
   const receiverOpenid = wxContext.OPENID
   const ownerAccountId = await resolveAccountIdByOpenid(ownerOpenid)
   const receiverAccountId = await resolveAccountIdByOpenid(receiverOpenid)
+  const now = new Date()
+  let attributionResult = null
+
+  if (receiverOpenid && receiverOpenid !== ownerOpenid) {
+    attributionResult = await ensureShareAttributionRelation({
+      referrerAccountId: ownerAccountId,
+      referrerOpenid: ownerOpenid,
+      inviteeAccountId: receiverAccountId,
+      inviteeOpenid: receiverOpenid,
+      shareRecord,
+      now
+    })
+  }
+
   const ownerUserResult = await db.collection('users').where({
     _openid: ownerOpenid
   }).limit(1).get()
@@ -970,7 +1167,6 @@ exports.main = async (event) => {
             sharedFromOpenid: ownerOpenid
           }).limit(1).get()
 
-      const now = new Date()
       const importPayload = isCloneSeed
         ? buildSeedProjectPayload(
             sourceProject,
@@ -1124,7 +1320,6 @@ exports.main = async (event) => {
       }
     }
   } else if (receiverOpenid && receiverOpenid !== ownerOpenid) {
-    const now = new Date()
     const viewUpdate = upsertShareViewLog(existingViewLogs, {
       viewerOpenid: receiverOpenid,
       viewerName: receiverName,
@@ -1184,6 +1379,7 @@ exports.main = async (event) => {
     blockedReason,
     blockedMessage,
     blockedReceiverName,
+    attributionResult,
     summaryMode: normalizeSummaryMode(shareRecord.summaryMode),
     summaryText: normalizeText(shareRecord.summaryText),
     aiBrief: normalizeBriefPayload(shareRecord.aiBrief),
