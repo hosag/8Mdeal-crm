@@ -5155,6 +5155,37 @@ function getReferralStatusBadgeClass(status = '') {
   return 'is-soft'
 }
 
+function getReferralBlockReasonLabel(reason = '', item = {}) {
+  const current = toText(reason)
+  const label = {
+    invitee_already_used_project_feature: '被推荐人已使用过项目功能，不符合新用户推荐条件',
+    self_referral_or_missing_referrer: '推荐关系无效：推荐人与被推荐人相同或推荐人缺失',
+    invalid_relation: '推荐关系无效，已跳过奖励',
+    not_first_project: '被推荐人不是首次创建项目，未触发奖励',
+    reward_failed: '奖励发放失败，需检查额度流水'
+  }[current]
+
+  if (label) {
+    return label
+  }
+
+  if (current) {
+    return current
+  }
+
+  if (item && item.status === 'blocked') {
+    if (item.referrerAccountId && item.inviteeAccountId && item.referrerAccountId === item.inviteeAccountId) {
+      return '推荐人与被推荐人为同一账户'
+    }
+    if (Array.isArray(item.anomalyLabels) && item.anomalyLabels.length) {
+      return item.anomalyLabels.join(' · ')
+    }
+    return '未记录阻止原因，请检查 referralRelations.blockReason'
+  }
+
+  return ''
+}
+
 function getReferralLedgerStatusLabel(status = '') {
   return {
     complete: '流水完整',
@@ -5209,6 +5240,8 @@ function referralMatches(item, keyword, statusFilter, timeWindow) {
     item.inviteeAccount && item.inviteeAccount.displayName,
     item.inviteeAccount && item.inviteeAccount.phone,
     item.statusLabel,
+    item.blockReason,
+    getReferralBlockReasonLabel(item.blockReason, item),
     item.qualifiedProjectName,
     item.qualifiedProjectId,
     item.anomalyLabels.join(' ')
@@ -6292,26 +6325,33 @@ function renderReferrals() {
           </tr>
         </thead>
         <tbody>
-          ${filteredItems.map((item) => `
-            <tr class="${selectedReferral && selectedReferral.relationId === item.relationId ? 'is-selected' : ''}">
-              <td>
-                <button class="data-row-button" data-referral-id="${escapeHtml(item.relationId)}">
-                  ${buildTableMainCell(item.referrerAccount.displayName || item.referrerAccount.phone || item.referrerAccountId, item.referrerCode || '-')}
-                </button>
-              </td>
-              <td>
-                ${buildBadgeListMarkup([
-                  `<span class="badge ${getReferralStatusBadgeClass(item.status)}">${escapeHtml(item.statusLabel)}</span>`,
-                  item.ledgerStatus === 'complete'
-                    ? '<span class="badge is-success">流水完整</span>'
-                    : (item.ledgerStatus === 'missing' ? '<span class="badge is-danger">流水缺失</span>' : '<span class="badge is-neutral">未触发</span>')
-                ])}
-              </td>
-              <td>${buildTableMainCell(item.referrerAccount.displayName || item.referrerAccount.phone || item.referrerAccount.accountId, item.inviteeAccount.displayName || item.inviteeAccount.phone || item.inviteeAccount.accountId)}</td>
-              <td>${buildTableMainCell(formatAiQuotaText(item.rewardAiTokens), item.qualifiedProjectName || '双方各奖励')}</td>
-              <td>${buildTableMainCell(item.rewardedAt || item.boundAt || '-', item.qualifiedProjectName || item.qualifiedProjectId || '等待触发')}</td>
-            </tr>
-          `).join('')}
+          ${filteredItems.map((item) => {
+            const blockReasonLabel = getReferralBlockReasonLabel(item.blockReason, item)
+            const statusMeta = item.status === 'blocked'
+              ? `阻止原因：${blockReasonLabel}`
+              : getReferralLedgerStatusLabel(item.ledgerStatus)
+            return `
+              <tr class="${selectedReferral && selectedReferral.relationId === item.relationId ? 'is-selected' : ''}">
+                <td>
+                  <button class="data-row-button" data-referral-id="${escapeHtml(item.relationId)}">
+                    ${buildTableMainCell(item.referrerAccount.displayName || item.referrerAccount.phone || item.referrerAccountId, item.referrerCode || '-')}
+                  </button>
+                </td>
+                <td>
+                  ${buildBadgeListMarkup([
+                    `<span class="badge ${getReferralStatusBadgeClass(item.status)}">${escapeHtml(item.statusLabel)}</span>`,
+                    item.ledgerStatus === 'complete'
+                      ? '<span class="badge is-success">流水完整</span>'
+                      : (item.ledgerStatus === 'missing' ? '<span class="badge is-danger">流水缺失</span>' : '<span class="badge is-neutral">未触发</span>')
+                  ])}
+                  <div class="table-main-meta">${escapeHtml(statusMeta)}</div>
+                </td>
+                <td>${buildTableMainCell(item.referrerAccount.displayName || item.referrerAccount.phone || item.referrerAccount.accountId, item.inviteeAccount.displayName || item.inviteeAccount.phone || item.inviteeAccount.accountId)}</td>
+                <td>${buildTableMainCell(formatAiQuotaText(item.rewardAiTokens), item.qualifiedProjectName || '双方各奖励')}</td>
+                <td>${buildTableMainCell(item.rewardedAt || item.boundAt || '-', item.qualifiedProjectName || item.qualifiedProjectId || '等待触发')}</td>
+              </tr>
+            `
+          }).join('')}
         </tbody>
       </table>
     `
@@ -6360,9 +6400,13 @@ function buildReferralDetailMarkup(item) {
   const referrer = item.referrerAccount || {}
   const invitee = item.inviteeAccount || {}
   const ledgerStatusLabel = getReferralLedgerStatusLabel(item.ledgerStatus)
+  const blockReasonLabel = getReferralBlockReasonLabel(item.blockReason, item)
   const anomalyText = Array.isArray(item.anomalyLabels) && item.anomalyLabels.length
     ? item.anomalyLabels.join(' · ')
     : '当前没有明显异常'
+  const primaryNotice = item.status === 'blocked'
+    ? `阻止原因：${blockReasonLabel}`
+    : (item.qualifiedProjectName ? `首个项目：${item.qualifiedProjectName}` : '等待被推荐人创建首个项目后触发奖励。')
 
   return `
     <div class="detail-stack">
@@ -6375,7 +6419,7 @@ function buildReferralDetailMarkup(item) {
           </div>
           <span class="badge ${getReferralStatusBadgeClass(item.status)}">${escapeHtml(item.statusLabel)}</span>
         </div>
-        <div class="feedback-content-block">${escapeHtml(item.qualifiedProjectName ? `首个项目：${item.qualifiedProjectName}` : '等待被推荐人创建首个项目后触发奖励。')}</div>
+        <div class="feedback-content-block">${escapeHtml(primaryNotice)}</div>
         <div class="detail-grid">
           <div>
             <div class="detail-item-label">推荐人</div>
@@ -6439,6 +6483,10 @@ function buildReferralDetailMarkup(item) {
           <div>
             <div class="detail-item-label">异常提示</div>
             <div class="detail-item-value">${escapeHtml(anomalyText)}</div>
+          </div>
+          <div>
+            <div class="detail-item-label">阻止原因</div>
+            <div class="detail-item-value">${escapeHtml(item.status === 'blocked' ? blockReasonLabel : '-')}</div>
           </div>
         </div>
       </section>
