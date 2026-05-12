@@ -49,6 +49,7 @@ const APP_BUILD_ID = '2026-05-06 22:34'
 const BILLING_VIEW_KEYS = ['billingOverview', 'billingGlobalUsage', 'billingAccounts', 'billingPlans']
 const LOW_VOICE_ALERT_THRESHOLD = 120
 const LOW_AI_ALERT_THRESHOLD = 10000
+const CLOUD_CONFIG_STORAGE_KEY = 'deal_crm_admin_cloud_config_v1'
 
 function reportFatalUiError(message) {
   try {
@@ -64,25 +65,85 @@ function reportFatalUiError(message) {
   }
 }
 
-const DEFAULT_CLOUD_CONFIG = {
-  providerMode: readQueryParam('provider') === 'cloud' ? 'cloud' : 'mock',
-  bridgeBase: normalizeBridgeBase(readQueryParam('bridgeBase') || 'http://127.0.0.1:8788'),
-  bridgeKey: toText(readQueryParam('bridgeKey')),
-  operatorKey: toText(readQueryParam('operatorKey')),
-  usersPath: '/adminListUsers',
-  ordersPath: '/adminListOrders',
-  usagePath: '/adminListUsage',
-  auditPath: '/adminListAuditLogs',
-  manualAdjustmentsPath: '/adminListManualAdjustments',
-  feedbackPath: '/adminListFeedback',
-  referralsPath: '/adminListReferrals',
-  updateFeedbackPath: '/adminUpdateFeedback',
-  updatePath: '/adminUpdateEntitlements',
-  updatePlanPath: '/adminUpsertPlan',
-  updateOrderPath: '/updateBillingOrderStatus',
-  getAiModelConfigPath: '/adminGetAiModelConfig',
-  updateAiModelConfigPath: '/adminUpdateAiModelConfig',
-  testAiModelConfigPath: '/adminTestAiModelConfig'
+const DEFAULT_CLOUD_CONFIG = buildDefaultCloudConfig()
+
+function buildDefaultCloudConfig() {
+  const savedConfig = readSavedCloudConfig()
+  const queryProvider = toText(readQueryParam('provider'))
+  const queryBridgeBase = toText(readQueryParam('bridgeBase'))
+  const queryBridgeKey = toText(readQueryParam('bridgeKey'))
+  const queryOperatorKey = toText(readQueryParam('operatorKey'))
+  const hasCloudQuery = queryProvider === 'cloud' || Boolean(queryBridgeBase || queryBridgeKey || queryOperatorKey)
+  const providerMode = hasCloudQuery
+    ? (queryProvider === 'mock' ? 'mock' : 'cloud')
+    : (savedConfig.providerMode === 'cloud' ? 'cloud' : 'mock')
+  const baseConfig = {
+    providerMode,
+    bridgeBase: normalizeBridgeBase(queryBridgeBase || savedConfig.bridgeBase || 'http://127.0.0.1:8788'),
+    bridgeKey: toText(queryBridgeKey || savedConfig.bridgeKey),
+    operatorKey: toText(queryOperatorKey || savedConfig.operatorKey),
+    usersPath: '/adminListUsers',
+    ordersPath: '/adminListOrders',
+    usagePath: '/adminListUsage',
+    auditPath: '/adminListAuditLogs',
+    manualAdjustmentsPath: '/adminListManualAdjustments',
+    feedbackPath: '/adminListFeedback',
+    referralsPath: '/adminListReferrals',
+    updateFeedbackPath: '/adminUpdateFeedback',
+    updatePath: '/adminUpdateEntitlements',
+    updatePlanPath: '/adminUpsertPlan',
+    updateOrderPath: '/updateBillingOrderStatus',
+    getAiModelConfigPath: '/adminGetAiModelConfig',
+    updateAiModelConfigPath: '/adminUpdateAiModelConfig',
+    testAiModelConfigPath: '/adminTestAiModelConfig'
+  }
+
+  if (baseConfig.providerMode === 'cloud') {
+    saveCloudConfig(baseConfig)
+  } else if (queryProvider === 'mock') {
+    clearSavedCloudConfig()
+  }
+
+  return baseConfig
+}
+
+function readSavedCloudConfig() {
+  try {
+    const raw = window.localStorage && window.localStorage.getItem(CLOUD_CONFIG_STORAGE_KEY)
+    if (!raw) {
+      return {}
+    }
+    const parsed = JSON.parse(raw)
+    return parsed && typeof parsed === 'object' ? parsed : {}
+  } catch (error) {
+    return {}
+  }
+}
+
+function saveCloudConfig(config = {}) {
+  try {
+    if (!window.localStorage) {
+      return
+    }
+    window.localStorage.setItem(CLOUD_CONFIG_STORAGE_KEY, JSON.stringify({
+      providerMode: toText(config.providerMode),
+      bridgeBase: normalizeBridgeBase(config.bridgeBase),
+      bridgeKey: toText(config.bridgeKey),
+      operatorKey: toText(config.operatorKey)
+    }))
+  } catch (error) {
+    // localStorage may be blocked in some embedded browsers.
+  }
+}
+
+function clearSavedCloudConfig() {
+  try {
+    if (window.localStorage) {
+      window.localStorage.removeItem(CLOUD_CONFIG_STORAGE_KEY)
+    }
+  } catch (error) {
+    // localStorage may be blocked in some embedded browsers.
+  }
 }
 
 const AI_PROVIDER_LIBRARY = {
