@@ -410,7 +410,10 @@
         <view class="form-card-title project-ai-state-title">当前无法生成项目研判</view>
         <view class="form-card-desc project-ai-state-desc">{{projectAiError}}</view>
         <view class="inline-actions project-ai-actions">
-          <view class="btn-ghost" bindtap="regenerateProjectAiJudge">重新生成</view>
+          <view class="btn-ghost ai-entry ai-entry-button" bindtap="regenerateProjectAiJudge">
+            <image class="ai-entry-icon" src="/assets/icons/ai-agent-dark.svg" mode="aspectFit" />
+            <view class="ai-entry-text">重新生成</view>
+          </view>
         </view>
       </view>
 

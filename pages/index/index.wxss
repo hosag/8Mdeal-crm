@@ -1274,11 +1274,21 @@
 }
 
 .quick-entry-ai-link {
-  font-size: 21rpx;
+  font-size: 24rpx;
+  font-weight: 700;
+  line-height: 1.2;
 }
 
 .quick-entry-ai-link.is-disabled {
   opacity: 0.56;
+}
+
+.page-shell.appearance-font-large .quick-entry-ai-link {
+  font-size: 26rpx;
+}
+
+.page-shell.appearance-font-readable .quick-entry-ai-link {
+  font-size: 32rpx;
 }
 
 .quick-entry-ai-state-title,
@@ -1395,7 +1405,17 @@
 
 .quick-entry-ai-card-link {
   flex-shrink: 0;
-  font-size: 20rpx;
+  font-size: 24rpx;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.page-shell.appearance-font-large .quick-entry-ai-card-link {
+  font-size: 26rpx;
+}
+
+.page-shell.appearance-font-readable .quick-entry-ai-card-link {
+  font-size: 32rpx;
 }
 
 .quick-entry-ai-block + .quick-entry-ai-block {

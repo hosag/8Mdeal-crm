@@ -632,6 +632,13 @@
   white-space: nowrap;
 }
 
+.project-review-sheet .project-ai-head-actions .btn-ghost.ai-entry-button {
+  min-height: var(--ai-entry-control-height);
+  padding: 0 var(--ai-entry-padding-x);
+  font-size: var(--ai-entry-font-size);
+  font-weight: var(--ai-entry-font-weight);
+}
+
 .project-detail-page .task-latest-done {
   margin-top: 10rpx;
 }

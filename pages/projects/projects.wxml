@@ -144,7 +144,7 @@
             <text>{{item.taskActionText}}</text>
             <text wx:if="{{item.taskActionBadgeText}}" class="project-task-action-badge">{{item.taskActionBadgeText}}</text>
           </view>
-          <view wx:if="{{item.canReviewProject}}" class="btn-secondary ai-entry project-review-action-btn" data-project-id="{{item.id}}" catchtap="openProjectReviewSheet">
+          <view wx:if="{{item.canReviewProject}}" class="btn-secondary ai-entry ai-entry-button project-review-action-btn" data-project-id="{{item.id}}" catchtap="openProjectReviewSheet">
             <image class="ai-entry-icon" src="/assets/icons/ai-agent-dark.svg" mode="aspectFit" />
             <view class="ai-entry-text">{{item.reviewActionText}}</view>
           </view>
@@ -216,7 +216,10 @@
         <view class="form-card-title project-review-state-title">当前无法生成项目复盘</view>
         <view class="form-card-desc project-review-state-desc">{{projectReviewError}}</view>
         <view class="inline-actions project-review-actions">
-          <view class="btn-ghost" bindtap="regenerateProjectReview">重新生成</view>
+          <view class="btn-ghost ai-entry ai-entry-button" bindtap="regenerateProjectReview">
+            <image class="ai-entry-icon" src="/assets/icons/ai-agent-dark.svg" mode="aspectFit" />
+            <view class="ai-entry-text">重新生成</view>
+          </view>
         </view>
       </view>
 
@@ -329,7 +332,10 @@
         <view class="form-card-title project-wake-state-title">当前无法生成项目唤醒</view>
         <view class="form-card-desc project-wake-state-desc">{{projectWakeError}}</view>
         <view class="inline-actions project-wake-actions">
-          <view class="btn-ghost" bindtap="regenerateDormantWake">重新生成</view>
+          <view class="btn-ghost ai-entry ai-entry-button" bindtap="regenerateDormantWake">
+            <image class="ai-entry-icon" src="/assets/icons/ai-agent-dark.svg" mode="aspectFit" />
+            <view class="ai-entry-text">重新生成</view>
+          </view>
         </view>
       </view>
 
@@ -353,7 +359,22 @@
           </view>
 
           <view class="inline-actions project-wake-actions">
-            <view class="btn-ghost" bindtap="regenerateDormantWake">{{isProjectWakeLoading ? '生成中...' : projectWakeResult.regenerateLabel}}</view>
+            <view class="btn-ghost ai-entry ai-entry-button" bindtap="regenerateDormantWake">
+              <image wx:if="{{!isProjectWakeLoading}}" class="ai-entry-icon" src="/assets/icons/ai-agent-dark.svg" mode="aspectFit" />
+              <view wx:else class="ai-agent-loader">
+                <view class="ai-agent-loader-antenna is-left"><view class="ai-agent-loader-dot"></view></view>
+                <view class="ai-agent-loader-antenna is-right"><view class="ai-agent-loader-dot"></view></view>
+                <view class="ai-agent-loader-cap"></view>
+                <view class="ai-agent-loader-ear is-left"></view>
+                <view class="ai-agent-loader-ear is-right"></view>
+                <view class="ai-agent-loader-head">
+                  <view class="ai-agent-loader-eye is-left"></view>
+                  <view class="ai-agent-loader-eye is-right"></view>
+                  <view class="ai-agent-loader-mouth"></view>
+                </view>
+              </view>
+              <view class="ai-entry-text">{{isProjectWakeLoading ? '生成中...' : projectWakeResult.regenerateLabel}}</view>
+            </view>
             <view wx:if="{{projectWakeResultBackup}}" class="btn-ghost" bindtap="restoreDormantWakeVersion">恢复上一版</view>
             <view class="btn-ghost" bindtap="openWakeProjectDetail">查看项目</view>
             <view class="btn-primary" bindtap="openWakeFollowUp">新增跟进</view>

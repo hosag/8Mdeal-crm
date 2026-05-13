@@ -299,21 +299,27 @@
 }
 
 .share-card-page .share-brief-btn {
+  --ai-entry-control-height: 56rpx;
+  --ai-entry-icon-size: 40rpx;
+  --ai-entry-font-size: 24rpx;
+  --ai-entry-padding-x: 18rpx;
+  --ai-entry-radius: 18rpx;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8rpx;
+  gap: var(--ai-entry-gap);
   min-width: 176rpx;
-  height: 64rpx;
-  padding: 0 14rpx;
-  border-radius: 18rpx;
+  min-height: var(--ai-entry-control-height);
+  height: var(--ai-entry-control-height);
+  padding: 0 var(--ai-entry-padding-x);
+  border-radius: var(--ai-entry-radius);
   background: var(--theme-button-primary-bg);
   box-shadow: var(--theme-button-shadow);
 }
 
 .share-card-page .share-brief-btn-text {
   flex: 0 0 auto;
-  font-size: 22rpx;
+  font-size: var(--ai-entry-font-size);
   font-weight: 700;
   color: var(--theme-button-primary-text);
   text-align: center;
