@@ -14,9 +14,7 @@
       </view>
       <view class="brand-lockup">
         <view class="brand-lockup-logo-shell">
-          <view class="brand-lockup-mark">
-            <image class="brand-lockup-image" src="/assets/brand/logo-core-transparent.png" mode="aspectFit" />
-          </view>
+          <image class="brand-lockup-image" src="/assets/brand/logo-home-8mdeal.png" mode="aspectFit" />
         </view>
         <view class="brand-lockup-slogan">
           <text class="brand-lockup-slogan-prefix">您的私人</text>
