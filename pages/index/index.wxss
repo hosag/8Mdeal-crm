@@ -31,21 +31,14 @@
   justify-content: center;
   min-width: 0;
   max-width: 100%;
-  box-sizing: border-box;
   width: 178rpx;
   height: 190rpx;
-  padding: 12rpx;
-  border-radius: 28rpx;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.16) 0%, rgba(255, 255, 255, 0.08) 100%);
-  border: 1rpx solid rgba(255, 255, 255, 0.16);
-  box-shadow: 0 18rpx 34rpx rgba(15, 28, 38, 0.12);
-  backdrop-filter: blur(14rpx);
 }
 
 .home-page .brand-lockup-image {
   flex: 0 0 auto;
-  width: 154rpx;
-  height: 166rpx;
+  width: 178rpx;
+  height: 190rpx;
   display: block;
 }
 
@@ -72,12 +65,6 @@
   color: #f1d69a;
   font-weight: 800;
   white-space: nowrap;
-}
-
-.page-shell.home-page.appearance-theme-cloud_mist .brand-lockup-logo-shell {
-  background: linear-gradient(180deg, rgba(255, 248, 238, 0.22) 0%, rgba(255, 252, 246, 0.14) 100%);
-  border-color: rgba(255, 236, 209, 0.16);
-  box-shadow: 0 16rpx 30rpx rgba(92, 86, 61, 0.1);
 }
 
 .page-shell.home-page.appearance-theme-cloud_mist .brand-lockup-slogan {
@@ -787,13 +774,11 @@
 .page-shell.home-page.appearance-font-large .brand-lockup-logo-shell {
   width: 190rpx;
   height: 204rpx;
-  padding: 14rpx;
-  border-radius: 30rpx;
 }
 
 .page-shell.home-page.appearance-font-large .brand-lockup-image {
-  width: 164rpx;
-  height: 176rpx;
+  width: 190rpx;
+  height: 204rpx;
 }
 
 .page-shell.home-page.appearance-font-large .brand-lockup-slogan {
@@ -869,13 +854,11 @@
 .page-shell.home-page.appearance-font-readable .brand-lockup-logo-shell {
   width: 206rpx;
   height: 220rpx;
-  padding: 16rpx;
-  border-radius: 32rpx;
 }
 
 .page-shell.home-page.appearance-font-readable .brand-lockup-image {
-  width: 178rpx;
-  height: 192rpx;
+  width: 206rpx;
+  height: 220rpx;
 }
 
 .page-shell.home-page.appearance-font-readable .brand-lockup-slogan {
