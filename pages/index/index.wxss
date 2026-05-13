@@ -69,16 +69,16 @@
   font-weight: 700;
   line-height: 1.18;
   letter-spacing: 0.3rpx;
-  color: rgba(255, 241, 221, 0.92);
-  text-shadow: 0 4rpx 12rpx rgba(14, 25, 36, 0.16);
+  color: rgba(222, 236, 234, 0.9);
+  text-shadow: 0 4rpx 10rpx rgba(14, 25, 36, 0.12);
 }
 
 .home-page .brand-lockup-slogan-prefix {
-  color: rgba(255, 239, 216, 0.84);
+  color: rgba(201, 227, 221, 0.92);
 }
 
 .home-page .brand-lockup-slogan-core {
-  color: #fff8eb;
+  color: #f1d69a;
   font-weight: 800;
   white-space: nowrap;
 }
@@ -95,15 +95,15 @@
 }
 
 .page-shell.home-page.appearance-theme-cloud_mist .brand-lockup-slogan {
-  color: rgba(255, 239, 215, 0.92);
+  color: rgba(226, 236, 219, 0.9);
 }
 
 .page-shell.home-page.appearance-theme-cloud_mist .brand-lockup-slogan-prefix {
-  color: rgba(255, 240, 215, 0.82);
+  color: rgba(204, 222, 198, 0.92);
 }
 
 .page-shell.home-page.appearance-theme-cloud_mist .brand-lockup-slogan-core {
-  color: #fff7ea;
+  color: #e4c48c;
 }
 
 .page-shell.home-page.appearance-theme-cloud_mist .hero-message-strip {
