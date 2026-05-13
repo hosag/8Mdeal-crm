@@ -13,17 +13,15 @@
         </view>
       </view>
       <view class="brand-lockup">
-        <view class="brand-lockup-signature">
+        <view class="brand-lockup-wordmark">
           <view class="brand-lockup-mark">
             <image class="brand-lockup-image" src="/assets/brand/logo-core-transparent.png" mode="aspectFit" />
           </view>
-          <view class="brand-lockup-copy">
-            <view class="brand-lockup-title">八面成交</view>
-            <view class="brand-lockup-subtitle">
-              <text class="brand-lockup-subtitle-prefix">您的私人</text>
-              <text class="brand-lockup-subtitle-core">CRM 引擎</text>
-            </view>
-          </view>
+          <view class="brand-lockup-wordmark-text">八面成交</view>
+        </view>
+        <view class="brand-lockup-slogan">
+          <text class="brand-lockup-slogan-prefix">您的私人</text>
+          <text class="brand-lockup-slogan-core">CRM 引擎</text>
         </view>
       </view>
       <view class="hero-title">今天先处理 {{dashboard.taskBoard.summary.openCount || 0}} 条推进动作</view>
