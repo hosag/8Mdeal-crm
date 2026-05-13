@@ -48,7 +48,7 @@
           <view class="voice-preview-text">{{voicePreviewText}}</view>
         </view>
         <view class="content-action-row">
-          <view wx:if="{{isVoiceSupported}}" class="btn-ghost content-action voice-entry-btn {{isVoiceRecording ? 'is-recording' : ''}} {{isVoiceRecognizing ? 'is-busy' : ''}}" bindtap="handleVoiceInput">
+          <view class="btn-ghost content-action voice-entry-btn {{isVoiceSupported ? '' : 'is-disabled'}} {{isVoiceRecording ? 'is-recording' : ''}} {{isVoiceRecognizing ? 'is-busy' : ''}}" bindtap="handleVoiceInput">
             <view class="voice-button-content">
               <view wx:if="{{isVoiceRecording}}" class="voice-receiver">
                 <view class="voice-receiver-bar is-one"></view>

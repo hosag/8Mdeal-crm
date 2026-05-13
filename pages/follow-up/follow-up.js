@@ -471,7 +471,7 @@ Page({
     showAiDialog: false,
     draftUpdatedAt: '',
     dataSource: 'Mock Demo',
-    isVoiceSupported: false,
+    isVoiceSupported: true,
     isVoiceRecording: false,
     isVoiceRecognizing: false,
     voiceRecordingElapsedText: '',
