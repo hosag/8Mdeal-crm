@@ -95,6 +95,53 @@ function getVoiceFileExtension(filePath = '') {
   return 'mp3'
 }
 
+function extractWxErrorMessage(error) {
+  if (!error) {
+    return ''
+  }
+
+  if (typeof error === 'string') {
+    return error.trim()
+  }
+
+  const messages = [
+    error.errMsg,
+    error.message,
+    error.reason
+  ]
+    .map((item) => String(item || '').trim())
+    .filter(Boolean)
+
+  return Array.from(new Set(messages)).join('；')
+}
+
+function normalizeVoiceUploadError(error) {
+  const rawMessage = extractWxErrorMessage(error)
+
+  if (/ERR_PROXY_CONNECTION_FAILED|proxy|代理/i.test(rawMessage)) {
+    const normalized = new Error('录音上传失败：当前网络代理连接失败，请关闭开发者工具代理或系统代理后重试')
+    normalized.code = 'VOICE_UPLOAD_PROXY_FAILED'
+    normalized.rawMessage = rawMessage
+    return normalized
+  }
+
+  if (/timeout|timed out|超时/i.test(rawMessage)) {
+    const normalized = new Error('录音上传超时，请检查网络后重试')
+    normalized.code = 'VOICE_UPLOAD_TIMEOUT'
+    normalized.rawMessage = rawMessage
+    return normalized
+  }
+
+  if (/uploadFile|request:fail|network|Network Error|ERR_INTERNET|abort|socket|fail/i.test(rawMessage)) {
+    const normalized = new Error('录音上传失败，请检查网络和云环境后重试')
+    normalized.code = 'VOICE_UPLOAD_FAILED'
+    normalized.rawMessage = rawMessage
+    return normalized
+  }
+
+  return new Error(rawMessage || '录音上传失败，请重新试一次')
+}
+
 const TASK_TEMPLATES = [
   { type: 'send_solution', label: '待发方案' },
   { type: 'send_quote', label: '待报价' },
@@ -1075,13 +1122,18 @@ Page({
 
     const extension = getVoiceFileExtension(filePath)
     const cloudPath = `voiceInputs/${this.data.projectId || 'draft'}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${extension}`
-    const result = await wx.cloud.uploadFile({
-      cloudPath,
-      filePath
-    })
+    let result
+    try {
+      result = await wx.cloud.uploadFile({
+        cloudPath,
+        filePath
+      })
+    } catch (error) {
+      throw normalizeVoiceUploadError(error)
+    }
 
     if (!result || !result.fileID) {
-      throw new Error('录音上传失败，请重新试一次')
+      throw normalizeVoiceUploadError(new Error('uploadFile missing fileID'))
     }
 
     return {
@@ -1158,7 +1210,7 @@ Page({
         isVoiceRecording: false,
         isVoiceRecognizing: false,
         voicePreviewText: '',
-        voiceStatusText: errMsg ? `语音识别失败：${errMsg}` : '语音识别失败，请稍后再试'
+        voiceStatusText: errMsg || '语音处理失败，请稍后再试'
       })
 
       if (/密钥|SECRET|语音识别服务/.test(errMsg)) {
@@ -1166,8 +1218,18 @@ Page({
         return
       }
 
+      if (error && error.code === 'VOICE_UPLOAD_PROXY_FAILED') {
+        wx.showModal({
+          title: '网络代理连接失败',
+          content: '录音已生成，但上传云存储时无法连接代理。请关闭微信开发者工具代理或系统代理/VPN，确认网络可访问 CloudBase 后再重试。',
+          showCancel: false,
+          confirmText: '知道了'
+        })
+        return
+      }
+
       wx.showToast({
-        title: '语音识别失败',
+        title: /上传/.test(errMsg) ? '录音上传失败' : '语音识别失败',
         icon: 'none'
       })
     }
