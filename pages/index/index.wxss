@@ -916,6 +916,51 @@
   top: 16vh;
 }
 
+.quick-entry-title-wrap {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+}
+
+.quick-entry-ai-badge {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6rpx;
+  min-height: 38rpx;
+  padding: 0 12rpx;
+  border-radius: 999rpx;
+  background: var(--theme-brand-bg);
+  color: var(--theme-brand-text);
+  box-shadow: inset 0 0 0 1rpx rgba(24, 39, 51, 0.06);
+}
+
+.quick-entry-ai-badge.is-running {
+  background: rgba(245, 166, 35, 0.12);
+  color: #8b5a11;
+  box-shadow: inset 0 0 0 1rpx rgba(245, 166, 35, 0.16);
+}
+
+.quick-entry-ai-badge-icon,
+.quick-entry-ai-badge-loader {
+  width: 28rpx;
+  height: 28rpx;
+}
+
+.quick-entry-ai-badge-loader {
+  --ai-loader-size: 28rpx;
+  --ai-loader-stroke: 1.8rpx;
+}
+
+.quick-entry-ai-badge-text {
+  font-size: 20rpx;
+  font-weight: 700;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
 .quick-entry-head {
   display: flex;
   align-items: flex-start;
@@ -1990,6 +2035,25 @@
   font-size: 30rpx;
 }
 
+.quick-entry-sheet.appearance-font-large .quick-entry-ai-badge {
+  min-height: 42rpx;
+  padding: 0 14rpx;
+}
+
+.quick-entry-sheet.appearance-font-large .quick-entry-ai-badge-icon,
+.quick-entry-sheet.appearance-font-large .quick-entry-ai-badge-loader {
+  width: 30rpx;
+  height: 30rpx;
+}
+
+.quick-entry-sheet.appearance-font-large .quick-entry-ai-badge-loader {
+  --ai-loader-size: 30rpx;
+}
+
+.quick-entry-sheet.appearance-font-large .quick-entry-ai-badge-text {
+  font-size: 22rpx;
+}
+
 .quick-entry-sheet.appearance-font-large .card-subtitle,
 .quick-entry-sheet.appearance-font-large .sheet-close,
 .quick-entry-sheet.appearance-font-large .field-label,
@@ -2047,6 +2111,26 @@
 .quick-entry-sheet.appearance-font-readable .sheet-title,
 .quick-entry-sheet.appearance-font-readable .card-title {
   font-size: 38rpx;
+}
+
+.quick-entry-sheet.appearance-font-readable .quick-entry-ai-badge {
+  min-height: 50rpx;
+  padding: 0 18rpx;
+}
+
+.quick-entry-sheet.appearance-font-readable .quick-entry-ai-badge-icon,
+.quick-entry-sheet.appearance-font-readable .quick-entry-ai-badge-loader {
+  width: 36rpx;
+  height: 36rpx;
+}
+
+.quick-entry-sheet.appearance-font-readable .quick-entry-ai-badge-loader {
+  --ai-loader-size: 36rpx;
+  --ai-loader-stroke: 2.2rpx;
+}
+
+.quick-entry-sheet.appearance-font-readable .quick-entry-ai-badge-text {
+  font-size: 28rpx;
 }
 
 .quick-entry-sheet.appearance-font-readable .card-subtitle,
