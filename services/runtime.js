@@ -1,6 +1,7 @@
 const cloudConfig = require('../config/cloud')
 
 let initialized = false
+let initFailure = null
 
 function hasCloud() {
   return typeof wx !== 'undefined' && !!wx.cloud
@@ -38,6 +39,15 @@ function getCloudStatus() {
     }
   }
 
+  if (initFailure) {
+    return {
+      ready: false,
+      useCloud: false,
+      label: 'Mock Demo · 云初始化失败',
+      reason: initFailure.message || 'wx.cloud.init 初始化失败'
+    }
+  }
+
   return {
     ready: true,
     useCloud: true,
@@ -50,22 +60,70 @@ function canUseCloud() {
   return getCloudStatus().useCloud
 }
 
-function initCloud() {
-  const status = getCloudStatus()
+function normalizeCloudInitFailure(error) {
+  const rawMessage = extractErrorMessage(error)
 
+  if (/webapi_getwxaasyncsecinfo|-80001/i.test(rawMessage)) {
+    const normalized = new Error('开发者工具未能获取小程序安全信息，云环境初始化失败；请确认已登录正确的小程序账号，并关闭系统代理或开发者工具代理后重试')
+    normalized.code = 'CLOUD_INIT_SECURITY_INFO_FAILED'
+    normalized.rawMessage = rawMessage
+    return normalized
+  }
+
+  if (/ERR_PROXY_CONNECTION_FAILED|proxy|代理/i.test(rawMessage)) {
+    const normalized = new Error('开发者工具代理连接失败，云环境初始化失败；请关闭系统代理或开发者工具代理后重试')
+    normalized.code = 'CLOUD_INIT_PROXY_FAILED'
+    normalized.rawMessage = rawMessage
+    return normalized
+  }
+
+  if (!rawMessage) {
+    const normalized = new Error('云环境初始化失败')
+    normalized.code = 'CLOUD_INIT_FAILED'
+    return normalized
+  }
+
+  const normalized = new Error(`云环境初始化失败：${rawMessage}`)
+  normalized.code = 'CLOUD_INIT_FAILED'
+  normalized.rawMessage = rawMessage
+  return normalized
+}
+
+function initCloud() {
   if (!hasCloud()) {
     return false
   }
 
-  if (!initialized) {
+  if (cloudConfig.useMock || !isRealEnvId(cloudConfig.envId)) {
+    return false
+  }
+
+  if (initialized) {
+    return true
+  }
+
+  if (initFailure) {
+    return false
+  }
+
+  try {
     wx.cloud.init({
       env: isRealEnvId(cloudConfig.envId) ? cloudConfig.envId : undefined,
       traceUser: cloudConfig.traceUser
     })
     initialized = true
-  }
+    initFailure = null
+    return true
+  } catch (error) {
+    initialized = false
+    initFailure = normalizeCloudInitFailure(error)
 
-  return status.ready
+    if (typeof console !== 'undefined' && console.warn) {
+      console.warn('[cloud] init failed, fallback to mock mode', initFailure)
+    }
+
+    return false
+  }
 }
 
 function clone(data) {
@@ -237,7 +295,8 @@ function normalizeCloudError(error) {
 
 async function callCloudFunction(name, data = {}) {
   if (!canUseCloud()) {
-    throw normalizeCloudError(new Error('CloudBase unavailable'))
+    const status = getCloudStatus()
+    throw normalizeCloudError(new Error(status.reason || 'CloudBase unavailable'))
   }
 
   try {
