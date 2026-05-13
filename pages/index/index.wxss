@@ -1830,6 +1830,19 @@
   box-shadow: var(--theme-button-shadow);
 }
 
+.quick-entry-submit-btn.ai-entry {
+  --ai-entry-control-height: 88rpx;
+  --ai-entry-icon-size: 42rpx;
+  --ai-entry-font-size: 26rpx;
+  --ai-entry-gap: 10rpx;
+  --ai-entry-padding-x: 22rpx;
+  --ai-entry-radius: 24rpx;
+}
+
+.quick-entry-submit-btn.ai-entry .ai-entry-text {
+  font-size: 26rpx;
+}
+
 .quick-entry-submit-btn.is-disabled {
   opacity: 0.58;
   box-shadow: none;

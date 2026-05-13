@@ -1210,7 +1210,8 @@ function buildQuickEntryFollowUpSubmitState(options = {}) {
     return {
       quickEntryFollowUpCanSubmit: false,
       quickEntryFollowUpSubmitText: '提交中...',
-      quickEntryFollowUpSubmitHint: '正在保存这条闪录，请稍候。'
+      quickEntryFollowUpSubmitHint: '正在保存这条闪录，请稍候。',
+      quickEntryFollowUpSubmitIsAiAction: false
     }
   }
 
@@ -1218,7 +1219,8 @@ function buildQuickEntryFollowUpSubmitState(options = {}) {
     return {
       quickEntryFollowUpCanSubmit: false,
       quickEntryFollowUpSubmitText: '先结束录音',
-      quickEntryFollowUpSubmitHint: '结束录音后会先转成文字。'
+      quickEntryFollowUpSubmitHint: '结束录音后会先转成文字。',
+      quickEntryFollowUpSubmitIsAiAction: false
     }
   }
 
@@ -1226,7 +1228,8 @@ function buildQuickEntryFollowUpSubmitState(options = {}) {
     return {
       quickEntryFollowUpCanSubmit: false,
       quickEntryFollowUpSubmitText: '智能处理中...',
-      quickEntryFollowUpSubmitHint: '系统正在处理中，请稍候。'
+      quickEntryFollowUpSubmitHint: '系统正在处理中，请稍候。',
+      quickEntryFollowUpSubmitIsAiAction: isAiLoading
     }
   }
 
@@ -1234,7 +1237,8 @@ function buildQuickEntryFollowUpSubmitState(options = {}) {
     return {
       quickEntryFollowUpCanSubmit: false,
       quickEntryFollowUpSubmitText: '先录入内容',
-      quickEntryFollowUpSubmitHint: '先把这次情况记下来。'
+      quickEntryFollowUpSubmitHint: '先把这次情况记下来。',
+      quickEntryFollowUpSubmitIsAiAction: false
     }
   }
 
@@ -1242,7 +1246,8 @@ function buildQuickEntryFollowUpSubmitState(options = {}) {
     return {
       quickEntryFollowUpCanSubmit: true,
       quickEntryFollowUpSubmitText: aiError ? '重新AI整理' : 'AI整理',
-      quickEntryFollowUpSubmitHint: aiError ? '修改内容后可重新发起 AI 整理。' : '确认内容后再发起 AI 整理。'
+      quickEntryFollowUpSubmitHint: aiError ? '修改内容后可重新发起 AI 整理。' : '确认内容后再发起 AI 整理。',
+      quickEntryFollowUpSubmitIsAiAction: true
     }
   }
 
@@ -1250,7 +1255,8 @@ function buildQuickEntryFollowUpSubmitState(options = {}) {
     return {
       quickEntryFollowUpCanSubmit: false,
       quickEntryFollowUpSubmitText: '先确认项目',
-      quickEntryFollowUpSubmitHint: '先点一个项目，再继续保存。'
+      quickEntryFollowUpSubmitHint: '先点一个项目，再继续保存。',
+      quickEntryFollowUpSubmitIsAiAction: false
     }
   }
 
@@ -1258,14 +1264,16 @@ function buildQuickEntryFollowUpSubmitState(options = {}) {
     return {
       quickEntryFollowUpCanSubmit: true,
       quickEntryFollowUpSubmitText: '直接保存',
-      quickEntryFollowUpSubmitHint: '智能理解失败，但你仍可先保存原始跟进内容。'
+      quickEntryFollowUpSubmitHint: '智能理解失败，但你仍可先保存原始跟进内容。',
+      quickEntryFollowUpSubmitIsAiAction: false
     }
   }
 
   return {
     quickEntryFollowUpCanSubmit: true,
     quickEntryFollowUpSubmitText: '保存本次闪录',
-    quickEntryFollowUpSubmitHint: '系统已经补好下一步，确认后会写入跟进。'
+    quickEntryFollowUpSubmitHint: '系统已经补好下一步，确认后会写入跟进。',
+    quickEntryFollowUpSubmitIsAiAction: false
   }
 }
 
@@ -2676,6 +2684,7 @@ Page({
     quickEntryAiShowFullResult: false,
     quickEntryFollowUpCanSubmit: false,
     quickEntryFollowUpSubmitText: '先录入内容',
+    quickEntryFollowUpSubmitIsAiAction: false,
     quickEntryFollowUpSubmitHint: '先说一句，或手动补一句关键跟进。',
     quickEntryManualInputEnabled: false,
     quickEntryShowFollowUpDetails: false,
