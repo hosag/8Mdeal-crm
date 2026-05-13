@@ -1289,6 +1289,10 @@
   color: var(--theme-title);
 }
 
+.quick-entry-ai-state-loader {
+  margin-bottom: 12rpx;
+}
+
 .quick-entry-ai-state-desc,
 .quick-entry-ai-tip-text {
   margin-top: 8rpx;

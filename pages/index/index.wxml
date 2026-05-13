@@ -307,6 +307,18 @@
           <view class="helper-text quick-entry-ai-state-desc">{{quickEntryAiError}}</view>
         </view>
         <view wx:if="{{isQuickEntryAiLoading}}" class="quick-entry-ai-state-card">
+          <view class="ai-agent-loader quick-entry-ai-state-loader">
+            <view class="ai-agent-loader-antenna is-left"><view class="ai-agent-loader-dot"></view></view>
+            <view class="ai-agent-loader-antenna is-right"><view class="ai-agent-loader-dot"></view></view>
+            <view class="ai-agent-loader-cap"></view>
+            <view class="ai-agent-loader-ear is-left"></view>
+            <view class="ai-agent-loader-ear is-right"></view>
+            <view class="ai-agent-loader-head">
+              <view class="ai-agent-loader-eye is-left"></view>
+              <view class="ai-agent-loader-eye is-right"></view>
+              <view class="ai-agent-loader-mouth"></view>
+            </view>
+          </view>
           <view class="quick-entry-ai-state-title">正在理解这条闪录</view>
           <view class="helper-text quick-entry-ai-state-desc">{{quickEntryAiLoadingHint}}</view>
         </view>

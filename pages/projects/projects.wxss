@@ -586,15 +586,6 @@
   text-align: center;
 }
 
-.projects-page .project-wake-spinner {
-  width: 42rpx;
-  height: 42rpx;
-  border-radius: 999rpx;
-  border: 4rpx solid rgba(109, 123, 136, 0.18);
-  border-top-color: var(--theme-accent);
-  animation: projectWakeSpin 0.9s linear infinite;
-}
-
 .projects-page .project-wake-state-title,
 .projects-page .project-review-state-title {
   margin-top: 14rpx;
@@ -695,15 +686,6 @@
   min-height: 52rpx;
   padding: 0 18rpx;
   white-space: nowrap;
-}
-
-@keyframes projectWakeSpin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
 }
 
 .page-shell.projects-page.appearance-font-large .hero {
