@@ -101,6 +101,13 @@ function normalizeCloudError(error) {
     return new Error('云环境未连接，请先确认开发者工具已连接 CloudBase')
   }
 
+  if (/ERR_PROXY_CONNECTION_FAILED|proxy|代理/i.test(rawMessage)) {
+    const normalized = new Error('云端请求失败：当前网络代理连接失败，请关闭开发者工具代理或系统代理后重试')
+    normalized.code = 'CLOUD_PROXY_CONNECTION_FAILED'
+    normalized.rawMessage = rawMessage
+    return normalized
+  }
+
   if (/timeout|timed out|超时/i.test(rawMessage)) {
     return new Error('云端请求超时，请稍后重试')
   }

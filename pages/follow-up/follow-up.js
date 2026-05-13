@@ -142,6 +142,39 @@ function normalizeVoiceUploadError(error) {
   return new Error(rawMessage || '录音上传失败，请重新试一次')
 }
 
+function normalizeVoiceRecognitionError(error) {
+  const message = String(error && error.message ? error.message : '').trim()
+  const code = String(error && error.code ? error.code : '').trim()
+
+  if (code === 'CLOUD_PROXY_CONNECTION_FAILED' || /ERR_PROXY_CONNECTION_FAILED|proxy|代理/i.test(message)) {
+    return {
+      message: '云端识别请求失败：当前网络代理连接失败，请关闭开发者工具代理或系统代理后重试',
+      toastTitle: '代理连接失败',
+      modalTitle: '云端识别请求失败',
+      modalContent: '录音已上传，但调用 speechToText 云函数时无法连接代理。请关闭微信开发者工具代理或系统代理/VPN，确认 CloudBase 可访问后再重试。',
+      showModal: true
+    }
+  }
+
+  if (code === 'NETWORK_ERROR' || /网络连接异常|Network Error|request:fail|Failed to fetch|socket|abort/i.test(message)) {
+    return {
+      message: '云端识别请求失败：网络连接异常，请检查网络、代理和 CloudBase 连接后重试',
+      toastTitle: '云端识别失败',
+      modalTitle: '云端识别请求失败',
+      modalContent: '录音已上传，但调用 speechToText 云函数时网络异常。请先确认微信开发者工具没有使用失效代理，系统代理/VPN 可用，并且当前环境能访问 CloudBase。',
+      showModal: true
+    }
+  }
+
+  return {
+    message: message || '语音处理失败，请稍后再试',
+    toastTitle: /上传/.test(message) ? '录音上传失败' : '语音识别失败',
+    modalTitle: '',
+    modalContent: '',
+    showModal: false
+  }
+}
+
 const TASK_TEMPLATES = [
   { type: 'send_solution', label: '待发方案' },
   { type: 'send_quote', label: '待报价' },
@@ -1205,12 +1238,13 @@ Page({
         icon: 'success'
       })
     } catch (error) {
-      const errMsg = error && error.message ? error.message : ''
+      const recognitionError = normalizeVoiceRecognitionError(error)
+      const errMsg = recognitionError.message
       this.setData({
         isVoiceRecording: false,
         isVoiceRecognizing: false,
         voicePreviewText: '',
-        voiceStatusText: errMsg || '语音处理失败，请稍后再试'
+        voiceStatusText: errMsg
       })
 
       if (/密钥|SECRET|语音识别服务/.test(errMsg)) {
@@ -1228,8 +1262,18 @@ Page({
         return
       }
 
+      if (recognitionError.showModal) {
+        wx.showModal({
+          title: recognitionError.modalTitle,
+          content: recognitionError.modalContent,
+          showCancel: false,
+          confirmText: '知道了'
+        })
+        return
+      }
+
       wx.showToast({
-        title: /上传/.test(errMsg) ? '录音上传失败' : '语音识别失败',
+        title: recognitionError.toastTitle,
         icon: 'none'
       })
     }
