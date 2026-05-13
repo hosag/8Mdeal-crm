@@ -17,37 +17,93 @@
 
 .home-page .brand-lockup {
   display: flex;
-  align-items: center;
-  gap: 16rpx;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10rpx;
   max-width: calc(100% - 170rpx);
-  margin-bottom: 12rpx;
+  margin-bottom: 14rpx;
+}
+
+.home-page .brand-lockup-signature {
+  display: inline-flex;
+  align-items: center;
+  gap: 18rpx;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+  padding: 12rpx 20rpx 12rpx 12rpx;
+  border-radius: 28rpx;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.16) 0%, rgba(255, 255, 255, 0.08) 100%);
+  border: 1rpx solid rgba(255, 255, 255, 0.16);
+  box-shadow: 0 18rpx 34rpx rgba(15, 28, 38, 0.12);
+  backdrop-filter: blur(14rpx);
+}
+
+.home-page .brand-lockup-mark {
+  flex: 0 0 auto;
+  width: 88rpx;
+  height: 88rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 24rpx;
+  background: linear-gradient(180deg, rgba(18, 34, 48, 0.32) 0%, rgba(255, 255, 255, 0.08) 100%);
+  box-shadow: inset 0 0 0 1rpx rgba(255, 255, 255, 0.14);
 }
 
 .home-page .brand-lockup-image {
   flex: 0 0 auto;
-  width: 96rpx;
-  height: 78rpx;
+  width: 72rpx;
+  height: 58rpx;
   display: block;
 }
 
 .home-page .brand-lockup-copy {
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6rpx;
 }
 
 .home-page .brand-lockup-title {
-  font-size: 34rpx;
-  font-weight: 700;
-  line-height: 1.08;
-  letter-spacing: 1rpx;
-  color: #f0d8ab;
+  font-size: 38rpx;
+  font-weight: 800;
+  line-height: 1.04;
+  letter-spacing: 0.5rpx;
+  color: #fff2d7;
   text-shadow: 0 4rpx 12rpx rgba(14, 25, 36, 0.18);
 }
 
 .home-page .brand-lockup-subtitle {
-  margin-top: 6rpx;
-  font-size: 16rpx;
-  letter-spacing: 2rpx;
-  color: rgba(231, 215, 190, 0.78);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2rpx;
+  font-size: 22rpx;
+  font-weight: 600;
+  line-height: 1.34;
+  letter-spacing: 0.4rpx;
+  color: rgba(255, 241, 221, 0.82);
+}
+
+.home-page .brand-lockup-subtitle-prefix {
+  color: rgba(255, 239, 216, 0.76);
+}
+
+.home-page .brand-lockup-subtitle-core {
+  color: #fff8eb;
+  font-weight: 800;
+}
+
+.page-shell.home-page.appearance-theme-cloud_mist .brand-lockup-signature {
+  background: linear-gradient(180deg, rgba(255, 248, 238, 0.22) 0%, rgba(255, 252, 246, 0.14) 100%);
+  border-color: rgba(255, 236, 209, 0.16);
+  box-shadow: 0 16rpx 30rpx rgba(92, 86, 61, 0.1);
+}
+
+.page-shell.home-page.appearance-theme-cloud_mist .brand-lockup-mark {
+  background: linear-gradient(180deg, rgba(185, 165, 126, 0.24) 0%, rgba(255, 249, 239, 0.12) 100%);
+  box-shadow: inset 0 0 0 1rpx rgba(255, 241, 219, 0.18);
 }
 
 .page-shell.home-page.appearance-theme-cloud_mist .brand-lockup-title {
@@ -56,7 +112,15 @@
 }
 
 .page-shell.home-page.appearance-theme-cloud_mist .brand-lockup-subtitle {
-  color: rgba(255, 239, 215, 0.82);
+  color: rgba(255, 239, 215, 0.88);
+}
+
+.page-shell.home-page.appearance-theme-cloud_mist .brand-lockup-subtitle-prefix {
+  color: rgba(255, 240, 215, 0.76);
+}
+
+.page-shell.home-page.appearance-theme-cloud_mist .brand-lockup-subtitle-core {
+  color: #fff7ea;
 }
 
 .page-shell.home-page.appearance-theme-cloud_mist .hero-message-strip {
@@ -325,18 +389,6 @@
 
 .home-page .source-badge {
   font-size: 18rpx;
-}
-
-.home-page .eyebrow-row {
-  gap: 12rpx;
-  justify-content: flex-start;
-  align-items: center;
-}
-
-.home-page .eyebrow {
-  padding: 7rpx 16rpx;
-  font-size: 18rpx;
-  letter-spacing: 1rpx;
 }
 
 .home-page .hero-title {
@@ -759,12 +811,32 @@
   padding: 30rpx;
 }
 
+.page-shell.home-page.appearance-font-large .brand-lockup {
+  max-width: calc(100% - 188rpx);
+}
+
+.page-shell.home-page.appearance-font-large .brand-lockup-signature {
+  gap: 20rpx;
+  padding: 14rpx 22rpx 14rpx 14rpx;
+  border-radius: 30rpx;
+}
+
+.page-shell.home-page.appearance-font-large .brand-lockup-mark {
+  width: 96rpx;
+  height: 96rpx;
+}
+
+.page-shell.home-page.appearance-font-large .brand-lockup-image {
+  width: 78rpx;
+  height: 62rpx;
+}
+
 .page-shell.home-page.appearance-font-large .brand-lockup-title {
-  font-size: 38rpx;
+  font-size: 42rpx;
 }
 
 .page-shell.home-page.appearance-font-large .brand-lockup-subtitle {
-  font-size: 18rpx;
+  font-size: 24rpx;
 }
 
 .page-shell.home-page.appearance-font-large .hero-title {
@@ -829,12 +901,32 @@
   padding: 34rpx;
 }
 
+.page-shell.home-page.appearance-font-readable .brand-lockup {
+  max-width: calc(100% - 206rpx);
+}
+
+.page-shell.home-page.appearance-font-readable .brand-lockup-signature {
+  gap: 22rpx;
+  padding: 16rpx 24rpx 16rpx 16rpx;
+  border-radius: 32rpx;
+}
+
+.page-shell.home-page.appearance-font-readable .brand-lockup-mark {
+  width: 106rpx;
+  height: 106rpx;
+}
+
+.page-shell.home-page.appearance-font-readable .brand-lockup-image {
+  width: 84rpx;
+  height: 68rpx;
+}
+
 .page-shell.home-page.appearance-font-readable .brand-lockup-title {
-  font-size: 44rpx;
+  font-size: 48rpx;
 }
 
 .page-shell.home-page.appearance-font-readable .brand-lockup-subtitle {
-  font-size: 22rpx;
+  font-size: 28rpx;
 }
 
 .page-shell.home-page.appearance-font-readable .hero-title {
