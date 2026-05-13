@@ -972,7 +972,7 @@
 }
 
 .task-complete-voice-btn {
-  min-width: 168rpx;
+  min-width: 220rpx;
   height: 64rpx;
   border-radius: 18rpx;
   background: var(--theme-button-secondary-bg);

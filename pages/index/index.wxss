@@ -1124,20 +1124,6 @@
   position: relative;
 }
 
-.quick-entry-voice-wave {
-  position: absolute;
-  inset: -10rpx;
-  border-radius: 34rpx;
-  background: rgba(204, 106, 84, 0.16);
-  opacity: 0;
-  pointer-events: none;
-  animation: quick-entry-voice-wave 1.8s ease-out infinite;
-}
-
-.quick-entry-voice-wave.wave-two {
-  animation-delay: 0.8s;
-}
-
 .quick-entry-voice-btn {
   position: relative;
   z-index: 1;
@@ -1294,22 +1280,6 @@
   50% {
     transform: scale(1.015);
     box-shadow: 0 14rpx 34rpx rgba(178, 76, 61, 0.28);
-  }
-}
-
-@keyframes quick-entry-voice-wave {
-  0% {
-    transform: scale(0.92);
-    opacity: 0;
-  }
-
-  18% {
-    opacity: 0.6;
-  }
-
-  100% {
-    transform: scale(1.08);
-    opacity: 0;
   }
 }
 
@@ -1942,7 +1912,7 @@
 }
 
 .task-complete-voice-btn {
-  min-width: 168rpx;
+  min-width: 220rpx;
   height: 64rpx;
   border-radius: 18rpx;
   background: var(--theme-button-secondary-bg);

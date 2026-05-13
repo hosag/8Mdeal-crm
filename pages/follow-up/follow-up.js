@@ -11,6 +11,7 @@ const { buildFollowUpEntryHint } = require('../../utils/navigation-context')
 const { touchNotificationSync } = require('../../utils/notification-sync')
 const { syncPageAppearance } = require('../../utils/appearance')
 const { ensureActionAllowed, getEntitlementSnapshot, buildEntitlementPagePrompt } = require('../../utils/entitlement-guard')
+const { startVoiceRecordingTicker, stopVoiceRecordingTicker } = require('../../utils/voice-recording')
 
 const MAX_RECORD_DURATION = 60000
 const FOLLOW_UP_METHODS = ['电话', '微信', '邮件', '面谈', '其他']
@@ -473,6 +474,7 @@ Page({
     isVoiceSupported: false,
     isVoiceRecording: false,
     isVoiceRecognizing: false,
+    voiceRecordingElapsedText: '',
     voiceStatusText: '点击语音录入，可把口述内容自动追加到记录框',
     voicePreviewText: '',
     taskTemplates: TASK_TEMPLATES,
@@ -542,6 +544,7 @@ Page({
     this.stopVoiceInput({
       silent: true
     })
+    stopVoiceRecordingTicker(this, 'voiceRecordingTimer', 'voiceRecordingElapsedText')
   },
 
   onUnload() {
@@ -553,6 +556,7 @@ Page({
     this.stopVoiceInput({
       silent: true
     })
+    stopVoiceRecordingTicker(this, 'voiceRecordingTimer', 'voiceRecordingElapsedText')
   },
 
   async refreshEntitlementPrompt(options = {}) {
@@ -972,6 +976,7 @@ Page({
       }
 
       this.skipNextVoiceCommit = false
+      startVoiceRecordingTicker(this, 'voiceRecordingTimer', 'voiceRecordingElapsedText')
       this.setData({
         isVoiceSupported: true,
         isVoiceRecording: true,
@@ -982,6 +987,8 @@ Page({
     })
 
     manager.onStop(async (result) => {
+      stopVoiceRecordingTicker(this, 'voiceRecordingTimer', 'voiceRecordingElapsedText')
+
       if (this.skipNextVoiceCommit) {
         this.skipNextVoiceCommit = false
         this.setData({
@@ -1012,6 +1019,7 @@ Page({
         return
       }
 
+      stopVoiceRecordingTicker(this, 'voiceRecordingTimer', 'voiceRecordingElapsedText')
       const errMsg = error && (error.retmsg || error.msg || error.errMsg) ? (error.retmsg || error.msg || error.errMsg) : ''
       this.setData({
         isVoiceRecording: false,
@@ -1285,6 +1293,7 @@ Page({
     }
 
     this.skipNextVoiceCommit = Boolean(options.silent)
+    stopVoiceRecordingTicker(this, 'voiceRecordingTimer', 'voiceRecordingElapsedText')
 
     this.setData({
       isVoiceRecording: false,

@@ -268,9 +268,18 @@
         <view wx:if="{{!quickEntryShowFollowUpDetails && !quickEntryManualInputEnabled}}" class="quick-entry-voice-card is-idle">
           <view class="quick-entry-voice-primary is-idle">
             <view class="quick-entry-voice-btn-shell {{isQuickEntryVoiceRecording ? 'is-recording' : ''}}">
-              <view wx:if="{{isQuickEntryVoiceRecording}}" class="quick-entry-voice-wave wave-one"></view>
-              <view wx:if="{{isQuickEntryVoiceRecording}}" class="quick-entry-voice-wave wave-two"></view>
-              <view class="btn-secondary quick-entry-voice-btn {{isQuickEntryVoiceRecording ? 'is-recording' : ''}} {{(isQuickEntryVoiceRecognizing || isQuickEntryAiLoading) ? 'is-busy' : ''}}" bindtap="startQuickEntryVoiceInput">{{isQuickEntryVoiceRecording ? '结束录音' : (isQuickEntryVoiceRecognizing ? '识别中...' : (isQuickEntryAiLoading ? 'AI整理中...' : '开始录音'))}}</view>
+              <view class="btn-secondary quick-entry-voice-btn {{isQuickEntryVoiceRecording ? 'is-recording' : ''}} {{(isQuickEntryVoiceRecognizing || isQuickEntryAiLoading) ? 'is-busy' : ''}}" bindtap="startQuickEntryVoiceInput">
+                <view class="voice-button-content">
+                  <view wx:if="{{isQuickEntryVoiceRecording}}" class="voice-receiver">
+                    <view class="voice-receiver-bar is-one"></view>
+                    <view class="voice-receiver-bar is-two"></view>
+                    <view class="voice-receiver-bar is-three"></view>
+                    <view class="voice-receiver-bar is-four"></view>
+                  </view>
+                  <text class="voice-button-label">{{isQuickEntryVoiceRecording ? '结束录音' : (isQuickEntryVoiceRecognizing ? '识别中...' : (isQuickEntryAiLoading ? 'AI整理中...' : '语音录入'))}}</text>
+                  <text wx:if="{{isQuickEntryVoiceRecording && quickEntryVoiceElapsedText}}" class="voice-button-timer">{{quickEntryVoiceElapsedText}}</text>
+                </view>
+              </view>
             </view>
             <view wx:if="{{quickEntryVoiceStatusText && (quickEntryVoicePhase !== 'idle' || isQuickEntryVoiceRecording || isQuickEntryVoiceRecognizing || isQuickEntryAiLoading)}}" class="helper-text quick-entry-voice-status is-centered">{{quickEntryVoiceStatusText}}</view>
             <view wx:if="{{!quickEntryShowFollowUpDetails && quickEntrySelectedProjectMeta}}" class="quick-entry-continue-project">
@@ -297,9 +306,18 @@
           </view>
           <view wx:if="{{!quickEntryManualInputEnabled}}" class="quick-entry-inline-voice-actions">
             <view class="quick-entry-voice-btn-shell quick-entry-inline-voice-shell {{isQuickEntryVoiceRecording ? 'is-recording' : ''}}">
-              <view wx:if="{{isQuickEntryVoiceRecording}}" class="quick-entry-voice-wave wave-one"></view>
-              <view wx:if="{{isQuickEntryVoiceRecording}}" class="quick-entry-voice-wave wave-two"></view>
-              <view class="btn-secondary quick-entry-voice-btn quick-entry-inline-voice-btn {{isQuickEntryVoiceRecording ? 'is-recording' : ''}} {{(isQuickEntryVoiceRecognizing || isQuickEntryAiLoading) ? 'is-busy' : ''}}" bindtap="startQuickEntryVoiceInput">{{isQuickEntryVoiceRecording ? '结束录音' : (isQuickEntryVoiceRecognizing ? '识别中...' : '继续语音录入')}}</view>
+              <view class="btn-secondary quick-entry-voice-btn quick-entry-inline-voice-btn {{isQuickEntryVoiceRecording ? 'is-recording' : ''}} {{(isQuickEntryVoiceRecognizing || isQuickEntryAiLoading) ? 'is-busy' : ''}}" bindtap="startQuickEntryVoiceInput">
+                <view class="voice-button-content">
+                  <view wx:if="{{isQuickEntryVoiceRecording}}" class="voice-receiver">
+                    <view class="voice-receiver-bar is-one"></view>
+                    <view class="voice-receiver-bar is-two"></view>
+                    <view class="voice-receiver-bar is-three"></view>
+                    <view class="voice-receiver-bar is-four"></view>
+                  </view>
+                  <text class="voice-button-label">{{isQuickEntryVoiceRecording ? '结束录音' : (isQuickEntryVoiceRecognizing ? '识别中...' : '语音录入')}}</text>
+                  <text wx:if="{{isQuickEntryVoiceRecording && quickEntryVoiceElapsedText}}" class="voice-button-timer">{{quickEntryVoiceElapsedText}}</text>
+                </view>
+              </view>
             </view>
           </view>
           <textarea
@@ -694,7 +712,16 @@
         ></textarea>
         <view wx:if="{{isTaskCompletionVoiceSupported}}" class="task-complete-voice-row">
           <view class="btn-ghost task-complete-voice-btn {{isTaskCompletionVoiceRecording ? 'is-recording' : ''}} {{isTaskCompletionVoiceRecognizing ? 'is-busy' : ''}}" bindtap="handleTaskCompletionVoiceInput">
-            {{isTaskCompletionVoiceRecording ? '结束录音' : (isTaskCompletionVoiceRecognizing ? '识别中...' : '语音录入')}}
+            <view class="voice-button-content">
+              <view wx:if="{{isTaskCompletionVoiceRecording}}" class="voice-receiver">
+                <view class="voice-receiver-bar is-one"></view>
+                <view class="voice-receiver-bar is-two"></view>
+                <view class="voice-receiver-bar is-three"></view>
+                <view class="voice-receiver-bar is-four"></view>
+              </view>
+              <text class="voice-button-label">{{isTaskCompletionVoiceRecording ? '结束录音' : (isTaskCompletionVoiceRecognizing ? '识别中...' : '语音录入')}}</text>
+              <text wx:if="{{isTaskCompletionVoiceRecording && taskCompletionVoiceElapsedText}}" class="voice-button-timer">{{taskCompletionVoiceElapsedText}}</text>
+            </view>
           </view>
         </view>
       </view>

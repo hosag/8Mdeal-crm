@@ -22,6 +22,7 @@ const { getNotificationSyncVersion, touchNotificationSync } = require('../../uti
 const { syncPageAppearance } = require('../../utils/appearance')
 const { ensureActionAllowed, getEntitlementSnapshot, buildEntitlementPagePrompt, buildEntitlementOverview } = require('../../utils/entitlement-guard')
 const { formatAiQuotaValue } = require('../../utils/quota-format')
+const { startVoiceRecordingTicker, stopVoiceRecordingTicker } = require('../../utils/voice-recording')
 
 function getAppInstance() {
   return typeof getApp === 'function' ? getApp() : null
@@ -1404,6 +1405,7 @@ function buildQuickEntryEmptyState(mode, projects = []) {
     quickEntryForm: form,
     isQuickEntryVoiceRecording: false,
     isQuickEntryVoiceRecognizing: false,
+    quickEntryVoiceElapsedText: '',
     quickEntryVoicePhase: 'idle',
     quickEntryShowVoiceExampleHint: false,
     quickEntryVoiceStatusText: '',
@@ -2658,6 +2660,7 @@ Page({
     isQuickEntryVoiceSupported: true,
     isQuickEntryVoiceRecording: false,
     isQuickEntryVoiceRecognizing: false,
+    quickEntryVoiceElapsedText: '',
     quickEntryVoicePhase: 'idle',
     quickEntryShowVoiceExampleHint: false,
     quickEntryVoiceStatusText: '',
@@ -2704,6 +2707,7 @@ Page({
     isTaskCompletionVoiceSupported: true,
     isTaskCompletionVoiceRecording: false,
     isTaskCompletionVoiceRecognizing: false,
+    taskCompletionVoiceElapsedText: '',
     taskFeedback: {
       title: '',
       detail: ''
@@ -2776,6 +2780,8 @@ Page({
     this.isPageActive = false
     this.stopQuickEntryVoiceInput({ silent: true })
     this.stopTaskCompletionVoiceInput({ silent: true })
+    stopVoiceRecordingTicker(this, 'quickEntryVoiceTimer', 'quickEntryVoiceElapsedText')
+    stopVoiceRecordingTicker(this, 'taskCompletionVoiceTimer', 'taskCompletionVoiceElapsedText')
     this.persistCurrentQuickEntryDraft()
     this.clearQuickEntryAiDebounceTimer()
     this.clearTaskFeedbackTimer()
@@ -2787,6 +2793,8 @@ Page({
     this.isPageActive = false
     this.stopQuickEntryVoiceInput({ silent: true })
     this.stopTaskCompletionVoiceInput({ silent: true })
+    stopVoiceRecordingTicker(this, 'quickEntryVoiceTimer', 'quickEntryVoiceElapsedText')
+    stopVoiceRecordingTicker(this, 'taskCompletionVoiceTimer', 'taskCompletionVoiceElapsedText')
     this.persistCurrentQuickEntryDraft()
     this.clearQuickEntryAiDebounceTimer()
     this.clearTaskFeedbackTimer()
@@ -3284,6 +3292,7 @@ Page({
       }
 
       this.skipTaskCompletionVoiceCommit = false
+      startVoiceRecordingTicker(this, 'taskCompletionVoiceTimer', 'taskCompletionVoiceElapsedText')
       this.setData({
         isTaskCompletionVoiceSupported: true,
         isTaskCompletionVoiceRecording: true,
@@ -3292,6 +3301,8 @@ Page({
     })
 
     manager.onStop(async (result) => {
+      stopVoiceRecordingTicker(this, 'taskCompletionVoiceTimer', 'taskCompletionVoiceElapsedText')
+
       if (this.activeVoiceScene !== 'task_completion') {
         return
       }
@@ -3325,6 +3336,7 @@ Page({
       }
 
       this.activeVoiceScene = ''
+      stopVoiceRecordingTicker(this, 'taskCompletionVoiceTimer', 'taskCompletionVoiceElapsedText')
       const errMsg = error && (error.retmsg || error.msg || error.errMsg)
         ? (error.retmsg || error.msg || error.errMsg)
         : ''
@@ -3408,6 +3420,7 @@ Page({
     }
 
     this.skipTaskCompletionVoiceCommit = Boolean(options.silent)
+    stopVoiceRecordingTicker(this, 'taskCompletionVoiceTimer', 'taskCompletionVoiceElapsedText')
 
     this.setData({
       isTaskCompletionVoiceRecording: false,
@@ -4977,6 +4990,7 @@ Page({
       }
 
       this.skipQuickEntryVoiceCommit = false
+      startVoiceRecordingTicker(this, 'quickEntryVoiceTimer', 'quickEntryVoiceElapsedText')
       this.hideQuickEntryVoiceExampleHint()
       const displayState = buildQuickEntryFollowUpDisplayState({
         followUpContent: this.data.quickEntryForm.followUpContent,
@@ -5010,6 +5024,8 @@ Page({
     })
 
     manager.onStop(async (result) => {
+      stopVoiceRecordingTicker(this, 'quickEntryVoiceTimer', 'quickEntryVoiceElapsedText')
+
       if (this.activeVoiceScene && this.activeVoiceScene !== 'quick_entry') {
         return
       }
@@ -5067,6 +5083,7 @@ Page({
       }
 
       this.activeVoiceScene = ''
+      stopVoiceRecordingTicker(this, 'quickEntryVoiceTimer', 'quickEntryVoiceElapsedText')
       const errMsg = error && (error.retmsg || error.msg || error.errMsg)
         ? (error.retmsg || error.msg || error.errMsg)
         : ''
@@ -5178,6 +5195,7 @@ Page({
     }
 
     this.skipQuickEntryVoiceCommit = Boolean(options.silent)
+    stopVoiceRecordingTicker(this, 'quickEntryVoiceTimer', 'quickEntryVoiceElapsedText')
 
     this.setData({
       isQuickEntryVoiceRecording: false,

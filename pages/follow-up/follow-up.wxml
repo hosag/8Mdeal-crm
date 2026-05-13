@@ -49,7 +49,16 @@
         </view>
         <view class="content-action-row">
           <view wx:if="{{isVoiceSupported}}" class="btn-ghost content-action voice-entry-btn {{isVoiceRecording ? 'is-recording' : ''}} {{isVoiceRecognizing ? 'is-busy' : ''}}" bindtap="handleVoiceInput">
-            {{isVoiceRecording ? '结束录音' : (isVoiceRecognizing ? '识别中...' : '语音录入')}}
+            <view class="voice-button-content">
+              <view wx:if="{{isVoiceRecording}}" class="voice-receiver">
+                <view class="voice-receiver-bar is-one"></view>
+                <view class="voice-receiver-bar is-two"></view>
+                <view class="voice-receiver-bar is-three"></view>
+                <view class="voice-receiver-bar is-four"></view>
+              </view>
+              <text class="voice-button-label">{{isVoiceRecording ? '结束录音' : (isVoiceRecognizing ? '识别中...' : '语音录入')}}</text>
+              <text wx:if="{{isVoiceRecording && voiceRecordingElapsedText}}" class="voice-button-timer">{{voiceRecordingElapsedText}}</text>
+            </view>
           </view>
           <view class="btn-secondary content-action ai-entry ai-entry-button" bindtap="handleAiSummary">
             <image wx:if="{{!isAiLoading}}" class="ai-entry-icon" src="/assets/icons/ai-agent-dark.svg" mode="aspectFit" />

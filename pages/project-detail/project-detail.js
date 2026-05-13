@@ -12,6 +12,7 @@ const {
 const { touchNotificationSync } = require('../../utils/notification-sync')
 const { syncPageAppearance } = require('../../utils/appearance')
 const { ensureActionAllowed } = require('../../utils/entitlement-guard')
+const { startVoiceRecordingTicker, stopVoiceRecordingTicker } = require('../../utils/voice-recording')
 const {
   buildTaskCompletionFeedback,
   buildTaskStatusFeedback,
@@ -622,6 +623,7 @@ Page({
     isTaskCompletionVoiceSupported: true,
     isTaskCompletionVoiceRecording: false,
     isTaskCompletionVoiceRecognizing: false,
+    taskCompletionVoiceElapsedText: '',
     taskFeedback: {
       title: '',
       detail: ''
@@ -706,12 +708,14 @@ Page({
 
   onHide() {
     this.stopTaskCompletionVoiceInput({ silent: true })
+    stopVoiceRecordingTicker(this, 'taskCompletionVoiceTimer', 'taskCompletionVoiceElapsedText')
     this.clearTaskFeedbackTimer()
     this.destroyTaskCompletionKeyboard()
   },
 
   onUnload() {
     this.stopTaskCompletionVoiceInput({ silent: true })
+    stopVoiceRecordingTicker(this, 'taskCompletionVoiceTimer', 'taskCompletionVoiceElapsedText')
     this.clearTaskFeedbackTimer()
     this.destroyTaskCompletionKeyboard()
   },
@@ -1569,6 +1573,7 @@ Page({
 
     manager.onStart(() => {
       this.skipTaskCompletionVoiceCommit = false
+      startVoiceRecordingTicker(this, 'taskCompletionVoiceTimer', 'taskCompletionVoiceElapsedText')
       this.setData({
         isTaskCompletionVoiceSupported: true,
         isTaskCompletionVoiceRecording: true,
@@ -1577,6 +1582,8 @@ Page({
     })
 
     manager.onStop(async (result) => {
+      stopVoiceRecordingTicker(this, 'taskCompletionVoiceTimer', 'taskCompletionVoiceElapsedText')
+
       if (this.skipTaskCompletionVoiceCommit) {
         this.skipTaskCompletionVoiceCommit = false
         this.setData({
@@ -1599,6 +1606,7 @@ Page({
     })
 
     manager.onError((error) => {
+      stopVoiceRecordingTicker(this, 'taskCompletionVoiceTimer', 'taskCompletionVoiceElapsedText')
       const errMsg = error && (error.retmsg || error.msg || error.errMsg) ? (error.retmsg || error.msg || error.errMsg) : ''
       this.setData({
         isTaskCompletionVoiceRecording: false,
@@ -1678,6 +1686,7 @@ Page({
     }
 
     this.skipTaskCompletionVoiceCommit = Boolean(options.silent)
+    stopVoiceRecordingTicker(this, 'taskCompletionVoiceTimer', 'taskCompletionVoiceElapsedText')
 
     this.setData({
       isTaskCompletionVoiceRecording: false,
