@@ -679,7 +679,7 @@
         <block wx:else>{{quickEntryFollowUpSubmitText}}</block>
       </view>
     </view>
-    <view wx:else class="quick-entry-success-actions">
+    <view wx:if="{{showQuickEntrySuccessPanel}}" class="quick-entry-success-actions">
       <view class="btn-primary quick-entry-success-primary" bindtap="continueQuickEntryAfterSuccess">{{quickEntrySuccessState.primaryActionText}}</view>
       <view class="inline-actions quick-entry-success-secondary-row">
         <view wx:if="{{quickEntrySuccessState.projectId}}" class="btn-ghost quick-entry-success-secondary" bindtap="openQuickEntrySavedProject">{{quickEntrySuccessState.projectActionText}}</view>
