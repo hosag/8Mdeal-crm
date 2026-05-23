@@ -14,15 +14,23 @@
       </view>
       <view class="brand-lockup">
         <view class="brand-lockup-logo-shell">
-          <image class="brand-lockup-image" src="/assets/brand/logo-home-8mdeal.png" mode="aspectFit" />
+          <image class="brand-lockup-image" src="/assets/brand/logo-home-export-4-transparent-cropped.png" mode="aspectFit" />
         </view>
-        <view class="brand-lockup-slogan">
-          <text class="brand-lockup-slogan-prefix">您的私人</text>
-          <text class="brand-lockup-slogan-core">CRM 引擎</text>
+        <view class="brand-lockup-slogan {{homeSloganFontLoaded ? 'is-custom-title-font' : ''}}">
+          <view class="brand-lockup-slogan-bottom">
+            <text class="brand-lockup-slogan-emphasis {{homeSloganFontLoaded ? 'is-custom-title-font' : ''}}">私人CRM</text>
+            <text class="brand-lockup-slogan-tail">引擎</text>
+          </view>
         </view>
       </view>
-      <view class="hero-title">今天先处理 {{dashboard.taskBoard.summary.openCount || 0}} 条推进动作</view>
-      <view class="hero-subtitle">把项目全局、推进动作和关键动态都收进八面成交，先看动作，再看项目，判断会更快。</view>
+      <view class="hero-heading">
+        <view class="hero-heading-meta">
+          <view class="hero-heading-kicker">今日优先</view>
+          <view class="hero-heading-rule"></view>
+        </view>
+        <view class="hero-title">今天先处理 <text class="hero-title-emphasis">{{dashboard.taskBoard.summary.openCount || 0}} 条</text>推进动作</view>
+        <view class="hero-subtitle">把项目全局、推进动作和关键动态都收进八面成交，先看动作，再看项目，判断会更快。</view>
+      </view>
       <view class="hero-message-strip {{notificationHeadlineToneClass}}" bindtap="openHeadlineNotification">
         <view class="hero-message-copy">
           <view class="hero-message-topline">
@@ -175,23 +183,28 @@
   <view class="sheet-panel quick-entry-sheet {{appearancePageClass}} {{isQuickEntryEditing ? 'is-editing' : ''}}" style="{{quickEntrySheetStyle}}">
     <view class="sheet-handle"></view>
     <view class="sheet-header">
-      <view class="quick-entry-title-wrap">
-        <view class="sheet-title">快速录入</view>
-        <view wx:if="{{quickEntryMode === 'follow_up' && !showQuickEntrySuccessPanel}}" class="quick-entry-ai-badge {{isQuickEntryAiLoading ? 'is-running' : ''}}">
-          <image wx:if="{{!isQuickEntryAiLoading}}" class="quick-entry-ai-badge-icon" src="/assets/icons/ai-agent-dark.svg" mode="aspectFit" />
-          <view wx:else class="ai-agent-loader quick-entry-ai-badge-loader">
-            <view class="ai-agent-loader-antenna is-left"><view class="ai-agent-loader-dot"></view></view>
-            <view class="ai-agent-loader-antenna is-right"><view class="ai-agent-loader-dot"></view></view>
-            <view class="ai-agent-loader-cap"></view>
-            <view class="ai-agent-loader-ear is-left"></view>
-            <view class="ai-agent-loader-ear is-right"></view>
-            <view class="ai-agent-loader-head">
-              <view class="ai-agent-loader-eye is-left"></view>
-              <view class="ai-agent-loader-eye is-right"></view>
-              <view class="ai-agent-loader-mouth"></view>
+      <view class="quick-entry-header-main">
+        <view wx:if="{{!showQuickEntrySuccessPanel}}" class="quick-entry-header-back" bindtap="onQuickEntryHeaderBack">
+          <image class="quick-entry-header-back-icon" src="/assets/icons/arrow-left-dark.svg" mode="aspectFit" />
+        </view>
+        <view class="quick-entry-title-wrap">
+          <view class="sheet-title">快速录入</view>
+          <view wx:if="{{quickEntryMode === 'follow_up' && !showQuickEntrySuccessPanel}}" class="quick-entry-ai-badge {{isQuickEntryAiLoading ? 'is-running' : ''}}">
+            <image wx:if="{{!isQuickEntryAiLoading}}" class="quick-entry-ai-badge-icon" src="/assets/icons/ai-agent-dark.svg" mode="aspectFit" />
+            <view wx:else class="ai-agent-loader quick-entry-ai-badge-loader">
+              <view class="ai-agent-loader-antenna is-left"><view class="ai-agent-loader-dot"></view></view>
+              <view class="ai-agent-loader-antenna is-right"><view class="ai-agent-loader-dot"></view></view>
+              <view class="ai-agent-loader-cap"></view>
+              <view class="ai-agent-loader-ear is-left"></view>
+              <view class="ai-agent-loader-ear is-right"></view>
+              <view class="ai-agent-loader-head">
+                <view class="ai-agent-loader-eye is-left"></view>
+                <view class="ai-agent-loader-eye is-right"></view>
+                <view class="ai-agent-loader-mouth"></view>
+              </view>
             </view>
+            <view class="quick-entry-ai-badge-text">{{isQuickEntryAiLoading ? 'AI整理中' : 'AI辅助'}}</view>
           </view>
-          <view class="quick-entry-ai-badge-text">{{isQuickEntryAiLoading ? 'AI整理中' : 'AI辅助'}}</view>
         </view>
       </view>
       <view class="sheet-close" bindtap="onQuickEntryHeaderClose">{{showQuickEntrySuccessPanel ? '完成' : '关闭'}}</view>
@@ -211,7 +224,7 @@
         bindtap="setQuickEntryMode"
       >{{item.label}}</view>
     </view>
-    <view class="quick-entry-body" style="{{quickEntryBodyStyle}}">
+    <view class="quick-entry-body {{quickEntryMode === 'follow_up' && quickEntryFollowUpStage === 'review' ? 'is-review' : ''}}" style="{{quickEntryBodyStyle}}">
       <block wx:if="{{showQuickEntrySuccessPanel}}">
         <view class="quick-entry-success-card">
           <view class="quick-entry-success-badge">已保存</view>
@@ -284,7 +297,7 @@
             <view wx:if="{{!quickEntryShowFollowUpDetails && quickEntrySelectedProjectMeta}}" class="quick-entry-continue-project">
               <view class="quick-entry-continue-project-label">将继续关联</view>
               <view class="quick-entry-continue-project-name">{{quickEntrySelectedProjectMeta.name}}</view>
-              <view class="quick-entry-continue-project-meta">{{quickEntrySelectedProjectMeta.client}} · {{quickEntrySelectedProjectMeta.stage}}<text wx:if="{{quickEntryMode === 'follow_up' && quickEntryForm.followUpMethod}}"> · 默认{{quickEntryForm.followUpMethod}}</text></view>
+              <view class="quick-entry-continue-project-meta">{{quickEntrySelectedProjectMeta.client}} · {{quickEntrySelectedProjectMeta.stage}}<text wx:if="{{quickEntryMode === 'follow_up' && quickEntryForm.followUpMethod && quickEntryForm.followUpMethod !== '其他'}}"> · 默认{{quickEntryForm.followUpMethod}}</text></view>
             </view>
             <view class="quick-entry-voice-idle-actions">
               <view class="section-link quick-entry-manual-link" bindtap="openQuickEntryManualInput">不方便说？改为手动录入</view>
@@ -293,252 +306,321 @@
           </view>
         </view>
         <block wx:if="{{quickEntryShowFollowUpDetails}}">
-        <view wx:if="{{quickEntryFollowUpStage !== 'capture'}}" class="quick-entry-stage-banner quick-entry-stage-banner-{{quickEntryFollowUpStage}}">
-          <view class="quick-entry-stage-title">{{quickEntryFollowUpStageTitle}}</view>
-          <view wx:if="{{quickEntryFollowUpStageHint}}" class="quick-entry-stage-hint">{{quickEntryFollowUpStageHint}}</view>
-        </view>
-        <view class="field-group quick-entry-field-group">
-          <view class="line-between quick-entry-field-head">
-            <view class="field-label">{{quickEntryManualInputEnabled ? '这次发生了什么？' : '跟进内容'}}</view>
-            <view wx:if="{{quickEntryManualInputEnabled && !isQuickEntryVoiceRecording && !isQuickEntryVoiceRecognizing && !isQuickEntryAiLoading}}" class="section-link quick-entry-ai-link" bindtap="returnQuickEntryToVoiceInput">切回语音录入</view>
-            <view wx:elif="{{quickEntryFollowUpStage !== 'content' && quickEntryForm.followUpContent}}" class="section-link quick-entry-ai-link {{isQuickEntryAiLoading ? 'is-disabled' : ''}}" bindtap="retryQuickEntryAiPipeline">{{isQuickEntryAiLoading ? 'AI整理中...' : '重新AI整理'}}</view>
-          </view>
-          <view wx:if="{{!quickEntryManualInputEnabled}}" class="quick-entry-inline-voice-actions">
-            <view class="quick-entry-voice-btn-shell quick-entry-inline-voice-shell {{isQuickEntryVoiceRecording ? 'is-recording' : ''}}">
-              <view class="btn-secondary quick-entry-voice-btn quick-entry-inline-voice-btn {{isQuickEntryVoiceRecording ? 'is-recording' : ''}} {{(isQuickEntryVoiceRecognizing || isQuickEntryAiLoading) ? 'is-busy' : ''}}" bindtap="startQuickEntryVoiceInput">
-                <view class="voice-button-content">
-                  <view wx:if="{{isQuickEntryVoiceRecording}}" class="voice-receiver">
-                    <view class="voice-receiver-bar is-one"></view>
-                    <view class="voice-receiver-bar is-two"></view>
-                    <view class="voice-receiver-bar is-three"></view>
-                    <view class="voice-receiver-bar is-four"></view>
+        <block wx:if="{{quickEntryFollowUpStage === 'review'}}">
+          <view class="quick-entry-project-card quick-entry-review-overview-card">
+            <view class="quick-entry-review-project-strip">
+              <view class="line-between quick-entry-review-project-headline">
+                <view class="quick-entry-review-card-title">关联项目</view>
+                <view wx:if="{{quickEntrySelectedProjectMeta}}" class="status-badge quick-entry-review-project-badge">{{quickEntrySelectedProjectMeta.stage}}</view>
+              </view>
+              <view class="quick-entry-project-line-copy quick-entry-review-project-line {{quickEntrySelectedProjectMeta ? '' : 'is-placeholder'}}">
+                <block wx:if="{{quickEntrySelectedProjectMeta}}">
+                  <view class="quick-entry-project-line-name quick-entry-review-project-line-name">{{quickEntrySelectedProjectMeta.name}}</view>
+                  <view wx:if="{{quickEntrySelectedProjectMeta.client}}" class="quick-entry-project-line-company quick-entry-review-project-line-company">· {{quickEntrySelectedProjectMeta.client}}</view>
+                </block>
+                <view wx:else class="quick-entry-project-line-placeholder">{{quickEntrySelectedProjectName}}</view>
+              </view>
+            </view>
+            <view class="quick-entry-review-followup-summary">
+              <view class="quick-entry-review-followup-summary-copy">
+                <view class="quick-entry-review-followup-summary-label">跟进信息</view>
+                <view class="quick-entry-review-followup-summary-text">{{quickEntryForm.followUpDate}} {{quickEntryForm.followUpClock}} · {{quickEntryForm.followUpMethod}}</view>
+              </view>
+              <view class="section-link quick-entry-review-followup-summary-link" bindtap="toggleQuickEntryReviewSettings">{{quickEntryShowReviewSettings ? '收起' : '修改'}}</view>
+            </view>
+            <view wx:if="{{quickEntryShowReviewSettings}}" class="quick-entry-review-settings">
+              <view class="quick-entry-review-setting">
+                <view class="quick-entry-review-setting-label">跟进时间</view>
+                <view class="quick-entry-review-time-row">
+                  <view class="quick-entry-review-time-pill">
+                    <picker class="quick-entry-review-time-picker is-date" mode="date" value="{{quickEntryForm.followUpDate}}" data-field="followUpDate" bindchange="onQuickEntryPicker">
+                      <view class="picker-sim">
+                        <view class="picker-value">{{quickEntryForm.followUpDate}}</view>
+                      </view>
+                    </picker>
                   </view>
-                  <text class="voice-button-label">{{isQuickEntryVoiceRecording ? '结束录音' : (isQuickEntryVoiceRecognizing ? '识别中...' : '语音录入')}}</text>
-                  <text wx:if="{{isQuickEntryVoiceRecording && quickEntryVoiceElapsedText}}" class="voice-button-timer">{{quickEntryVoiceElapsedText}}</text>
+                  <view class="quick-entry-review-time-pill">
+                    <picker class="quick-entry-review-time-picker is-clock" mode="time" value="{{quickEntryForm.followUpClock}}" data-field="followUpClock" bindchange="onQuickEntryPicker">
+                      <view class="picker-sim">
+                        <view class="picker-value">{{quickEntryForm.followUpClock}}</view>
+                      </view>
+                    </picker>
+                  </view>
+                </view>
+              </view>
+              <view class="quick-entry-review-setting">
+                <view class="quick-entry-review-setting-label">跟进方式</view>
+                <view class="chips quick-entry-method-wall quick-entry-review-method-wall">
+                  <view
+                    wx:for="{{quickEntryMethods}}"
+                    wx:key="*this"
+                    class="chip quick-entry-method-chip {{quickEntryForm.followUpMethod === item ? 'is-active' : ''}}"
+                    data-method="{{item}}"
+                    bindtap="setQuickEntryMethod"
+                  >{{item}}</view>
                 </view>
               </view>
             </view>
           </view>
-          <textarea
-            class="textarea-sim textarea-native quick-entry-textarea"
-            value="{{quickEntryForm.followUpContent}}"
-            data-field="followUpContent"
-            bindinput="onQuickEntryInput"
-            bindfocus="onQuickEntryFieldFocus"
-            cursor-spacing="{{quickEntryCursorSpacing}}"
-            placeholder="{{quickEntryManualInputEnabled ? '例如：客户说周五看方案，下周二再确认预算' : '把刚刚说的话整理一下，确认后再交给 AI'}}"
-            placeholder-class="input-placeholder"
-            maxlength="-1"
-          ></textarea>
-          <view wx:if="{{quickEntryVoicePreviewText && quickEntryFollowUpStage !== 'capture' && quickEntryVoicePreviewText !== quickEntryForm.followUpContent}}" class="quick-entry-inline-preview">
-            <view class="quick-entry-inline-preview-label">识别原文</view>
-            <view class="quick-entry-inline-preview-text">{{quickEntryVoicePreviewText}}</view>
-          </view>
-          <view wx:if="{{quickEntryVoiceStatusText && (quickEntryVoicePhase !== 'idle' || isQuickEntryVoiceRecording || isQuickEntryVoiceRecognizing || isQuickEntryAiLoading || quickEntryAiError)}}" class="helper-text quick-entry-inline-note">{{quickEntryVoiceStatusText}}</view>
-          <view wx:if="{{quickEntryForm.followUpContent && quickEntryFollowUpStage === 'content'}}" class="helper-text quick-entry-inline-note">确认无误后，再点下方 AI整理。</view>
-        </view>
-        <view wx:if="{{quickEntryAiError}}" class="quick-entry-ai-state-card">
-          <view class="quick-entry-ai-state-title">当前无法完成智能理解</view>
-          <view class="helper-text quick-entry-ai-state-desc">{{quickEntryAiError}}</view>
-        </view>
-        <view wx:if="{{isQuickEntryAiLoading}}" class="quick-entry-ai-state-card">
-          <view class="ai-agent-loader quick-entry-ai-state-loader">
-            <view class="ai-agent-loader-antenna is-left"><view class="ai-agent-loader-dot"></view></view>
-            <view class="ai-agent-loader-antenna is-right"><view class="ai-agent-loader-dot"></view></view>
-            <view class="ai-agent-loader-cap"></view>
-            <view class="ai-agent-loader-ear is-left"></view>
-            <view class="ai-agent-loader-ear is-right"></view>
-            <view class="ai-agent-loader-head">
-              <view class="ai-agent-loader-eye is-left"></view>
-              <view class="ai-agent-loader-eye is-right"></view>
-              <view class="ai-agent-loader-mouth"></view>
+            <view wx:if="{{quickEntryAiError}}" class="quick-entry-ai-state-card">
+              <view class="quick-entry-ai-state-title">当前无法完成智能理解</view>
+              <view class="helper-text quick-entry-ai-state-desc">{{quickEntryAiError}}</view>
             </view>
-          </view>
-          <view class="quick-entry-ai-state-title">正在理解这条闪录</view>
-          <view class="helper-text quick-entry-ai-state-desc">{{quickEntryAiLoadingHint}}</view>
-        </view>
-        <view wx:if="{{quickEntryFollowUpStage === 'project' || quickEntryFollowUpStage === 'review'}}" class="quick-entry-project-card">
-          <view class="line-between quick-entry-project-head">
-            <view class="quick-entry-project-summary">
-              <view class="field-label quick-entry-inline-label">{{quickEntrySelectedProjectMeta ? '关联项目' : '确认项目'}}</view>
-              <view class="quick-entry-selected-project {{quickEntrySelectedProjectMeta ? '' : 'is-placeholder'}}">{{quickEntrySelectedProjectName}}</view>
-            </view>
-            <view class="quick-entry-project-head-actions">
-              <view wx:if="{{quickEntrySelectedProjectMeta}}" class="status-badge quick-entry-project-stage">{{quickEntrySelectedProjectMeta.stage}}</view>
-              <view class="section-link quick-entry-project-link" bindtap="toggleQuickEntryProjectSearch">
-                {{quickEntryShowProjectSearch ? '收起' : '从项目库选择'}}
-              </view>
-            </view>
-          </view>
-          <view wx:if="{{quickEntrySelectedProjectMeta}}" class="helper-text quick-entry-project-meta">{{quickEntrySelectedProjectMeta.client}}<text wx:if="{{quickEntryProjectSelectionMode === 'ai_auto'}}"> · 已自动匹配，如不对可更换</text><text wx:if="{{quickEntryProjectSelectionMode === 'manual'}}"> · 已手动确认</text></view>
-          <view wx:else class="helper-text quick-entry-project-meta">{{quickEntryAiProjectMatch && quickEntryAiProjectMatch.status === 'candidates' ? '未自动确认项目，请从项目库选择。' : '未匹配到项目，请从项目库选择。'}}</view>
-          <view wx:if="{{quickEntrySuggestedProjects.length}}" class="chips quick-entry-project-suggest-wall">
-            <view
-              wx:for="{{quickEntrySuggestedProjects}}"
-              wx:key="id"
-              class="chip quick-entry-project-suggest-chip {{quickEntrySelectedProjectId === item.id ? 'is-active' : ''}} {{(isQuickEntryAiLoading || isQuickEntryVoiceRecognizing) ? 'is-disabled' : ''}}"
-              data-project-id="{{item.id}}"
-              bindtap="selectQuickEntryProject"
-            >{{item.name}}</view>
-          </view>
-          <view wx:if="{{quickEntryAiProjectMatch && quickEntryAiProjectMatch.status === 'candidates' && quickEntryAiProjectCandidateIds.length > quickEntrySuggestedProjects.length && !quickEntryShowProjectSearch}}" class="helper-text quick-entry-project-candidate-more">也可从项目库自行更换</view>
-          <block wx:if="{{quickEntryShowProjectSearch}}">
-            <view class="search-panel quick-entry-project-search">
-              <input
-                class="input-sim input-native projects-search-input"
-                value="{{quickEntryProjectKeyword}}"
-                bindinput="onQuickEntryProjectSearch"
-                bindfocus="onQuickEntryFieldFocus"
-                placeholder="搜索项目 / 客户 / 联系人"
-                placeholder-class="input-placeholder"
-                confirm-type="search"
-                cursor-spacing="{{quickEntryCursorSpacing}}"
-              />
-              <view wx:if="{{quickEntryProjectKeyword}}" class="search-clear" bindtap="clearQuickEntryProjectSearch">清空</view>
-            </view>
-            <view wx:if="{{quickEntryVisibleProjects.length}}" class="quick-entry-project-list">
-              <view
-                wx:for="{{quickEntryVisibleProjects}}"
-                wx:key="id"
-                class="quick-entry-project-option {{quickEntrySelectedProjectId === item.id ? 'is-active' : ''}} {{(isQuickEntryAiLoading || isQuickEntryVoiceRecognizing) ? 'is-disabled' : ''}}"
-                data-project-id="{{item.id}}"
-                bindtap="selectQuickEntryProject"
-              >
-                <view class="quick-entry-project-option-top">
-                  <view class="quick-entry-project-option-name">{{item.name}}</view>
-                  <view class="quick-entry-project-option-badges">
-                    <view class="field-pill quick-entry-project-option-pill">{{item.stage}}</view>
-                  </view>
+            <view wx:if="{{isQuickEntryAiLoading}}" class="quick-entry-ai-state-card">
+              <view class="ai-agent-loader quick-entry-ai-state-loader">
+                <view class="ai-agent-loader-antenna is-left"><view class="ai-agent-loader-dot"></view></view>
+                <view class="ai-agent-loader-antenna is-right"><view class="ai-agent-loader-dot"></view></view>
+                <view class="ai-agent-loader-cap"></view>
+                <view class="ai-agent-loader-ear is-left"></view>
+                <view class="ai-agent-loader-ear is-right"></view>
+                <view class="ai-agent-loader-head">
+                  <view class="ai-agent-loader-eye is-left"></view>
+                  <view class="ai-agent-loader-eye is-right"></view>
+                  <view class="ai-agent-loader-mouth"></view>
                 </view>
-                <view class="helper-text quick-entry-project-option-meta">{{item.client}}<text wx:if="{{item.contactText}}"> · {{item.contactText}}</text></view>
-                <view wx:if="{{item.nextText || item.focusText || item.latestSummary}}" class="quick-entry-project-option-brief">{{item.nextText || item.focusText || item.latestSummary}}</view>
+              </view>
+              <view class="quick-entry-ai-state-title">正在理解这条闪录</view>
+              <view class="helper-text quick-entry-ai-state-desc">{{quickEntryAiLoadingHint}}</view>
+            </view>
+            <view wx:if="{{quickEntryAiSummary}}" class="quick-entry-ai-result-card">
+              <view class="line-between quick-entry-ai-card-head">
+                <view class="quick-entry-ai-card-title">AI摘要</view>
+              </view>
+              <view wx:if="{{!quickEntryEditingAiSummary}}" class="quick-entry-ai-block">
+                <view class="quick-entry-ai-text">{{quickEntryAiSummary.summary}}</view>
+              </view>
+              <view wx:else class="quick-entry-ai-block">
+                <textarea
+                  class="textarea-sim textarea-native quick-entry-textarea is-small"
+                  value="{{quickEntryAiSummaryDraft.summary}}"
+                  bindinput="onQuickEntryAiSummaryDraftInput"
+                  bindfocus="onQuickEntryFieldFocus"
+                  cursor-spacing="{{quickEntryCursorSpacing}}"
+                  placeholder="可按你的判断微调摘要"
+                  placeholder-class="input-placeholder"
+                  maxlength="-1"
+                ></textarea>
+              </view>
+              <view wx:if="{{!quickEntryEditingAiSummary}}" class="quick-entry-inline-edit-actions">
+                <view class="section-link quick-entry-ai-card-link" bindtap="startEditingQuickEntryAiSummary">调整</view>
+              </view>
+              <view wx:else class="quick-entry-inline-edit-actions">
+                <view class="section-link quick-entry-ai-card-link" bindtap="cancelEditingQuickEntryAiSummary">取消</view>
+                <view class="section-link quick-entry-ai-card-link" bindtap="applyQuickEntryAiSummaryDraft">应用修改</view>
               </view>
             </view>
-            <view wx:else class="helper-text quick-entry-empty">没有找到匹配项目，可以先切到“新建项目”。</view>
+            <view wx:if="{{!quickEntryAiNextSuggestion && quickEntryAiNextSuggestionError}}" class="quick-entry-ai-tip-card">
+              <view class="line-between quick-entry-ai-card-head">
+                <view class="quick-entry-ai-tip-title">AI建议的下一步</view>
+                <view class="section-link quick-entry-ai-card-link {{isQuickEntryAiLoading ? 'is-disabled' : ''}}" bindtap="retryQuickEntryNextSuggestion">{{isQuickEntryAiLoading ? '生成中...' : '重试建议'}}</view>
+              </view>
+              <view class="helper-text quick-entry-ai-tip-text">{{quickEntryAiNextSuggestionError}}</view>
+            </view>
+            <view wx:if="{{quickEntryAiNextSuggestion}}" class="quick-entry-ai-result-card">
+              <view class="line-between quick-entry-ai-card-head">
+                <view class="quick-entry-ai-card-title">AI建议的下一步</view>
+              </view>
+              <view wx:if="{{!quickEntryEditingAiNextSuggestion}}" class="quick-entry-ai-block">
+                <view class="quick-entry-ai-text quick-entry-ai-text-full">{{quickEntryAiNextSuggestion.nextAction}}</view>
+              </view>
+              <view wx:else class="quick-entry-ai-block">
+                <textarea
+                  class="textarea-sim textarea-native quick-entry-textarea is-small"
+                  value="{{quickEntryAiNextSuggestionDraft.nextAction}}"
+                  bindinput="onQuickEntryAiNextActionDraftInput"
+                  bindfocus="onQuickEntryFieldFocus"
+                  cursor-spacing="{{quickEntryCursorSpacing}}"
+                  placeholder="可按你的判断调整下一步动作"
+                  placeholder-class="input-placeholder"
+                  maxlength="-1"
+                ></textarea>
+              </view>
+              <view wx:if="{{!quickEntryEditingAiNextSuggestion}}" class="quick-entry-inline-edit-actions">
+                <view class="section-link quick-entry-ai-card-link" bindtap="startEditingQuickEntryAiNextSuggestion">调整</view>
+              </view>
+              <view wx:else class="quick-entry-inline-edit-actions">
+                <view class="section-link quick-entry-ai-card-link" bindtap="cancelEditingQuickEntryAiNextSuggestion">取消</view>
+                <view class="section-link quick-entry-ai-card-link" bindtap="applyQuickEntryAiNextSuggestionDraft">应用修改</view>
+              </view>
+              <view class="quick-entry-task-inline-row">
+                <view class="field-label quick-entry-task-inline-label">任务标题</view>
+                <input
+                  class="input-sim input-native primary-title-input quick-entry-next-task-input quick-entry-task-inline-input"
+                  value="{{quickEntryNextTaskDraft.title}}"
+                  data-field="title"
+                  bindinput="onQuickEntryNextTaskInput"
+                  bindfocus="onQuickEntryFieldFocus"
+                  cursor-spacing="{{quickEntryCursorSpacing}}"
+                  placeholder="确认任务标题"
+                  placeholder-class="input-placeholder"
+                />
+              </view>
+              <view class="quick-entry-task-inline-row is-time">
+                <view class="field-label quick-entry-task-inline-label">建议执行时间</view>
+                <view class="quick-entry-task-inline-time">
+                  <picker class="picker-block quick-entry-next-task-picker is-date" mode="date" value="{{quickEntryNextTaskDraft.dueDate}}" data-field="dueDate" bindchange="onQuickEntryNextTaskPicker">
+                    <view class="picker-sim">
+                      <view class="picker-value">{{quickEntryNextTaskDraft.dueDate}}</view>
+                    </view>
+                  </picker>
+                  <picker class="picker-block quick-entry-next-task-picker is-time" mode="time" value="{{quickEntryNextTaskDraft.dueTime}}" data-field="dueTime" bindchange="onQuickEntryNextTaskPicker">
+                    <view class="picker-sim">
+                      <view class="picker-value">{{quickEntryNextTaskDraft.dueTime}}</view>
+                    </view>
+                  </picker>
+                </view>
+              </view>
+            </view>
+            <view class="quick-entry-ai-result-card quick-entry-source-card">
+              <view class="quick-entry-ai-card-head">
+                <view class="quick-entry-ai-card-title">原始记录</view>
+              </view>
+              <view class="quick-entry-source-preview">{{quickEntryForm.followUpContent}}</view>
+            </view>
           </block>
-        </view>
-        <view wx:if="{{quickEntryFollowUpStage === 'review' && quickEntryAiSummary}}" class="quick-entry-ai-result-card">
-          <view class="line-between quick-entry-ai-card-head">
-            <view class="quick-entry-ai-card-title">摘要</view>
-            <view class="quick-entry-ai-card-actions">
-              <view wx:if="{{!quickEntryEditingAiSummary}}" class="section-link quick-entry-ai-card-link" bindtap="startEditingQuickEntryAiSummary">调整</view>
-              <view wx:else class="section-link quick-entry-ai-card-link" bindtap="applyQuickEntryAiSummaryDraft">应用修改</view>
-              <view wx:if="{{quickEntryAiSummaryOriginal && !quickEntryEditingAiSummary}}" class="section-link quick-entry-ai-card-link" bindtap="restoreQuickEntryAiSummary">恢复AI建议</view>
-            </view>
-          </view>
-          <view wx:if="{{!quickEntryEditingAiSummary}}" class="quick-entry-ai-block">
-            <view class="quick-entry-ai-text">{{quickEntryAiSummary.summary}}</view>
-          </view>
-          <view wx:else class="quick-entry-ai-block">
-            <textarea
-              class="textarea-sim textarea-native quick-entry-textarea is-small"
-              value="{{quickEntryAiSummaryDraft.summary}}"
-              bindinput="onQuickEntryAiSummaryDraftInput"
-              bindfocus="onQuickEntryFieldFocus"
-              cursor-spacing="{{quickEntryCursorSpacing}}"
-              placeholder="可按你的判断微调摘要"
-              placeholder-class="input-placeholder"
-              maxlength="-1"
-            ></textarea>
-            <view class="quick-entry-inline-edit-actions">
-              <view class="section-link quick-entry-ai-card-link" bindtap="cancelEditingQuickEntryAiSummary">取消</view>
-            </view>
-          </view>
-          <view class="quick-entry-inline-followup-settings">
-            <view class="split-row quick-entry-time-row">
-              <picker class="picker-block" mode="date" value="{{quickEntryForm.followUpDate}}" data-field="followUpDate" bindchange="onQuickEntryPicker">
-                <view class="picker-sim">
-                  <view class="picker-value">{{quickEntryForm.followUpDate}}</view>
+          <block wx:else>
+            <view class="field-group quick-entry-field-group">
+              <view wx:if="{{(quickEntryManualInputEnabled && !isQuickEntryVoiceRecording && !isQuickEntryVoiceRecognizing && !isQuickEntryAiLoading) || quickEntryFollowUpStage === 'project'}}" class="quick-entry-field-head-actions quick-entry-field-head-actions-standalone">
+                <view wx:if="{{quickEntryManualInputEnabled && !isQuickEntryVoiceRecording && !isQuickEntryVoiceRecognizing && !isQuickEntryAiLoading}}" class="section-link quick-entry-ai-link" bindtap="returnQuickEntryToVoiceInput">切回语音录入</view>
+                <view wx:if="{{quickEntryFollowUpStage === 'project'}}" class="section-link quick-entry-ai-link" bindtap="returnQuickEntryFollowUpToContent">返回修改</view>
+              </view>
+              <view wx:if="{{!quickEntryManualInputEnabled}}" class="quick-entry-inline-voice-actions">
+                <view class="quick-entry-voice-btn-shell quick-entry-inline-voice-shell {{isQuickEntryVoiceRecording ? 'is-recording' : ''}}">
+                  <view class="btn-secondary quick-entry-voice-btn quick-entry-inline-voice-btn {{isQuickEntryVoiceRecording ? 'is-recording' : ''}} {{(isQuickEntryVoiceRecognizing || isQuickEntryAiLoading) ? 'is-busy' : ''}}" bindtap="startQuickEntryVoiceInput">
+                    <view class="voice-button-content">
+                      <view wx:if="{{isQuickEntryVoiceRecording}}" class="voice-receiver">
+                        <view class="voice-receiver-bar is-one"></view>
+                        <view class="voice-receiver-bar is-two"></view>
+                        <view class="voice-receiver-bar is-three"></view>
+                        <view class="voice-receiver-bar is-four"></view>
+                      </view>
+                      <text class="voice-button-label">{{isQuickEntryVoiceRecording ? '结束录音' : (isQuickEntryVoiceRecognizing ? '识别中...' : '语音录入')}}</text>
+                      <text wx:if="{{isQuickEntryVoiceRecording && quickEntryVoiceElapsedText}}" class="voice-button-timer">{{quickEntryVoiceElapsedText}}</text>
+                    </view>
+                  </view>
                 </view>
-              </picker>
-              <picker class="picker-block" mode="time" value="{{quickEntryForm.followUpClock}}" data-field="followUpClock" bindchange="onQuickEntryPicker">
-                <view class="picker-sim">
-                  <view class="picker-value">{{quickEntryForm.followUpClock}}</view>
-                </view>
-              </picker>
-            </view>
-            <view class="chips quick-entry-method-wall quick-entry-inline-method-wall">
-              <view
-                wx:for="{{quickEntryMethods}}"
-                wx:key="*this"
-                class="chip quick-entry-method-chip {{quickEntryForm.followUpMethod === item ? 'is-active' : ''}}"
-                data-method="{{item}}"
-                bindtap="setQuickEntryMethod"
-              >{{item}}</view>
-            </view>
-          </view>
-        </view>
-        <view wx:if="{{quickEntryFollowUpStage === 'review' && quickEntryAiNextSuggestion}}" class="quick-entry-ai-result-card">
-          <view class="line-between quick-entry-ai-card-head">
-            <view class="quick-entry-ai-card-title">下一步</view>
-            <view class="quick-entry-ai-card-actions">
-              <view wx:if="{{!quickEntryEditingAiNextSuggestion}}" class="section-link quick-entry-ai-card-link" bindtap="startEditingQuickEntryAiNextSuggestion">调整</view>
-              <view wx:else class="section-link quick-entry-ai-card-link" bindtap="applyQuickEntryAiNextSuggestionDraft">应用修改</view>
-              <view wx:if="{{quickEntryAiNextSuggestionOriginal && !quickEntryEditingAiNextSuggestion}}" class="section-link quick-entry-ai-card-link" bindtap="restoreQuickEntryAiNextSuggestion">恢复AI建议</view>
-            </view>
-          </view>
-          <view wx:if="{{!quickEntryEditingAiNextSuggestion}}" class="quick-entry-ai-block">
-            <view class="quick-entry-ai-text">{{quickEntryAiNextSuggestion.nextAction}}</view>
-          </view>
-          <view wx:else class="quick-entry-ai-block">
-            <textarea
-              class="textarea-sim textarea-native quick-entry-textarea is-small"
-              value="{{quickEntryAiNextSuggestionDraft.nextAction}}"
-              bindinput="onQuickEntryAiNextActionDraftInput"
-              bindfocus="onQuickEntryFieldFocus"
-              cursor-spacing="{{quickEntryCursorSpacing}}"
-              placeholder="可按你的判断调整下一步动作"
-              placeholder-class="input-placeholder"
-              maxlength="-1"
-            ></textarea>
-          </view>
-          <view class="quick-entry-ai-grid">
-            <view class="quick-entry-ai-grid-item">
-              <view class="quick-entry-ai-grid-label">对象</view>
-              <view wx:if="{{!quickEntryEditingAiNextSuggestion}}" class="quick-entry-ai-grid-value">{{quickEntryAiNextSuggestion.recommendedTarget}}</view>
-              <input
-                wx:else
-                class="input-sim input-native quick-entry-ai-grid-input"
-                value="{{quickEntryAiNextSuggestionDraft.recommendedTarget}}"
-                data-field="recommendedTarget"
-                bindinput="onQuickEntryAiNextSuggestionDraftInput"
+              </view>
+              <textarea
+                class="textarea-sim textarea-native quick-entry-textarea"
+                value="{{quickEntryForm.followUpContent}}"
+                data-field="followUpContent"
+                bindinput="onQuickEntryInput"
                 bindfocus="onQuickEntryFieldFocus"
                 cursor-spacing="{{quickEntryCursorSpacing}}"
-                placeholder="例如：客户决策人"
+                placeholder="{{quickEntryManualInputEnabled ? '例如：客户说周五看方案，下周二再确认预算' : '把刚刚说的话整理一下，确认后再交给 AI'}}"
                 placeholder-class="input-placeholder"
-              />
-            </view>
-            <view class="quick-entry-ai-grid-item">
-              <view class="quick-entry-ai-grid-label">时间</view>
-              <view wx:if="{{!quickEntryEditingAiNextSuggestion}}" class="quick-entry-ai-grid-value">{{quickEntryAiNextSuggestion.recommendedDate}} {{quickEntryAiNextSuggestion.recommendedTime}}</view>
-              <view wx:else class="quick-entry-ai-grid-edit-row">
-                <input
-                  class="input-sim input-native quick-entry-ai-grid-input"
-                  value="{{quickEntryAiNextSuggestionDraft.recommendedDate}}"
-                  data-field="recommendedDate"
-                  bindinput="onQuickEntryAiNextSuggestionDraftInput"
-                  bindfocus="onQuickEntryFieldFocus"
-                  cursor-spacing="{{quickEntryCursorSpacing}}"
-                  placeholder="YYYY-MM-DD"
-                  placeholder-class="input-placeholder"
-                />
-                <input
-                  class="input-sim input-native quick-entry-ai-grid-input"
-                  value="{{quickEntryAiNextSuggestionDraft.recommendedTime}}"
-                  data-field="recommendedTime"
-                  bindinput="onQuickEntryAiNextSuggestionDraftInput"
-                  bindfocus="onQuickEntryFieldFocus"
-                  cursor-spacing="{{quickEntryCursorSpacing}}"
-                  placeholder="10:00"
-                  placeholder-class="input-placeholder"
-                />
+                maxlength="-1"
+              ></textarea>
+              <view wx:if="{{quickEntryVoicePreviewText && quickEntryFollowUpStage !== 'capture' && quickEntryVoicePreviewText !== quickEntryForm.followUpContent}}" class="quick-entry-inline-preview">
+                <view class="quick-entry-inline-preview-label">识别原文</view>
+                <view class="quick-entry-inline-preview-text">{{quickEntryVoicePreviewText}}</view>
+              </view>
+              <view wx:if="{{quickEntryVoiceStatusText && (quickEntryVoicePhase !== 'idle' || isQuickEntryVoiceRecording || isQuickEntryVoiceRecognizing || isQuickEntryAiLoading || quickEntryAiError)}}" class="helper-text quick-entry-inline-note">{{quickEntryVoiceStatusText}}</view>
+              <view wx:if="{{quickEntryForm.followUpContent && quickEntryFollowUpStage === 'content' && quickEntrySelectedProjectMeta}}" class="quick-entry-project-inline-hint is-hit">
+                <view class="quick-entry-project-inline-text">
+                  可能命中：{{quickEntrySelectedProjectMeta.name}}<text wx:if="{{quickEntrySelectedProjectMeta.client}}"> / {{quickEntrySelectedProjectMeta.client}}</text>
+                </view>
               </view>
             </view>
-          </view>
-          <view wx:if="{{quickEntryEditingAiNextSuggestion}}" class="quick-entry-inline-edit-actions">
-            <view class="section-link quick-entry-ai-card-link" bindtap="cancelEditingQuickEntryAiNextSuggestion">取消</view>
-          </view>
-        </view>
+            <view wx:if="{{quickEntryAiError}}" class="quick-entry-ai-state-card">
+              <view class="quick-entry-ai-state-title">当前无法完成智能理解</view>
+              <view class="helper-text quick-entry-ai-state-desc">{{quickEntryAiError}}</view>
+            </view>
+            <view wx:if="{{isQuickEntryAiLoading}}" class="quick-entry-ai-state-card">
+              <view class="ai-agent-loader quick-entry-ai-state-loader">
+                <view class="ai-agent-loader-antenna is-left"><view class="ai-agent-loader-dot"></view></view>
+                <view class="ai-agent-loader-antenna is-right"><view class="ai-agent-loader-dot"></view></view>
+                <view class="ai-agent-loader-cap"></view>
+                <view class="ai-agent-loader-ear is-left"></view>
+                <view class="ai-agent-loader-ear is-right"></view>
+                <view class="ai-agent-loader-head">
+                  <view class="ai-agent-loader-eye is-left"></view>
+                  <view class="ai-agent-loader-eye is-right"></view>
+                  <view class="ai-agent-loader-mouth"></view>
+                </view>
+              </view>
+              <view class="quick-entry-ai-state-title">正在理解这条闪录</view>
+              <view class="helper-text quick-entry-ai-state-desc">{{quickEntryAiLoadingHint}}</view>
+            </view>
+            <view wx:if="{{quickEntryFollowUpStage === 'project'}}" class="quick-entry-project-card is-confirm">
+              <view class="quick-entry-project-head is-confirm">
+                <view class="quick-entry-project-summary">
+                  <view class="quick-entry-project-main-line">
+                    <view class="quick-entry-project-line-copy {{quickEntrySelectedProjectMeta ? '' : 'is-placeholder'}}">
+                      <block wx:if="{{quickEntrySelectedProjectMeta}}">
+                        <view class="quick-entry-project-line-name">{{quickEntrySelectedProjectMeta.name}}</view>
+                        <view wx:if="{{quickEntrySelectedProjectMeta.client}}" class="quick-entry-project-line-company">· {{quickEntrySelectedProjectMeta.client}}</view>
+                      </block>
+                      <view wx:else class="quick-entry-project-line-placeholder">{{quickEntrySelectedProjectName}}</view>
+                    </view>
+                    <view class="status-badge quick-entry-project-state-badge {{quickEntryProjectSelectionMode === 'manual' ? 'is-manual' : (quickEntrySelectedProjectMeta ? 'is-hit' : 'is-pending')}}">
+                      <block wx:if="{{quickEntryProjectSelectionMode === 'manual'}}">已调整</block>
+                      <block wx:elif="{{quickEntryProjectSelectionMode === 'ai_auto'}}">已匹配</block>
+                      <block wx:elif="{{quickEntrySelectedProjectMeta}}">已命中</block>
+                      <block wx:else>待选择</block>
+                    </view>
+                  </view>
+                </view>
+              </view>
+              <view wx:if="{{!quickEntrySelectedProjectMeta}}" class="helper-text quick-entry-project-meta">{{quickEntryAiProjectMatch && quickEntryAiProjectMatch.status === 'candidates' ? '未自动确认项目，请从项目库选择。' : '未匹配到项目，请从项目库选择。'}}</view>
+              <view wx:if="{{quickEntrySuggestedProjects.length > 1 && !quickEntryShowProjectSearch && quickEntryProjectSelectionMode !== 'manual' && ((quickEntryAiProjectMatch && quickEntryAiProjectMatch.status === 'candidates') || quickEntryProjectSelectionMode === 'auto')}}" class="quick-entry-project-choice-list">
+                <view
+                  wx:for="{{quickEntrySuggestedProjects}}"
+                  wx:key="id"
+                  class="quick-entry-project-choice-item {{quickEntrySelectedProjectId === item.id ? 'is-active' : ''}} {{(isQuickEntryAiLoading || isQuickEntryVoiceRecognizing) ? 'is-disabled' : ''}}"
+                  data-project-id="{{item.id}}"
+                  bindtap="selectQuickEntryProject"
+                >
+                  <view class="quick-entry-project-choice-line">
+                    <view class="quick-entry-project-choice-name">{{item.name}}</view>
+                    <view wx:if="{{item.client}}" class="quick-entry-project-choice-company">· {{item.client}}</view>
+                  </view>
+                </view>
+              </view>
+              <block wx:if="{{quickEntryShowProjectSearch}}">
+                <view class="search-panel quick-entry-project-search">
+                  <view class="input-sim quick-entry-search-shell">
+                    <image class="quick-entry-search-icon" src="/assets/icons/search-light.svg" mode="aspectFit" />
+                    <input
+                      class="input-native projects-search-input"
+                      value="{{quickEntryProjectKeyword}}"
+                      bindinput="onQuickEntryProjectSearch"
+                      bindfocus="onQuickEntryFieldFocus"
+                      placeholder="搜索项目、公司、联系人"
+                      placeholder-class="quick-entry-search-placeholder"
+                      confirm-type="search"
+                      cursor-spacing="{{quickEntryCursorSpacing}}"
+                    />
+                    <view wx:if="{{quickEntryProjectKeyword}}" class="search-clear" bindtap="clearQuickEntryProjectSearch">清空</view>
+                  </view>
+                </view>
+                <view wx:if="{{quickEntryVisibleProjects.length}}" class="quick-entry-project-list">
+                  <view
+                    wx:for="{{quickEntryVisibleProjects}}"
+                    wx:key="id"
+                    class="quick-entry-project-option {{quickEntrySelectedProjectId === item.id ? 'is-active' : ''}} {{(isQuickEntryAiLoading || isQuickEntryVoiceRecognizing) ? 'is-disabled' : ''}}"
+                    data-project-id="{{item.id}}"
+                    bindtap="selectQuickEntryProject"
+                  >
+                    <view class="quick-entry-project-option-top">
+                      <view class="quick-entry-project-option-name">{{item.name}}</view>
+                      <view class="quick-entry-project-option-badges">
+                        <view class="field-pill quick-entry-project-option-pill">{{item.stage}}</view>
+                      </view>
+                    </view>
+                    <view class="helper-text quick-entry-project-option-meta">{{item.client}}<text wx:if="{{item.contactText}}"> · {{item.contactText}}</text></view>
+                    <view wx:if="{{item.nextText || item.focusText || item.latestSummary}}" class="quick-entry-project-option-brief">{{item.nextText || item.focusText || item.latestSummary}}</view>
+                  </view>
+                </view>
+                <view wx:else class="helper-text quick-entry-empty">没有找到匹配项目，可以先切到“新建项目”。</view>
+              </block>
+              <view class="quick-entry-project-footer">
+                <view class="section-link quick-entry-project-footer-link" bindtap="toggleQuickEntryProjectSearch">
+                  {{quickEntryShowProjectSearch ? '收起项目库' : (quickEntrySelectedProjectMeta ? '项目不对，换一个' : '从项目库选择')}}
+                </view>
+              </view>
+            </view>
+          </block>
         </block>
       </block>
 
@@ -595,17 +677,20 @@
           </view>
           <block wx:if="{{quickEntryShowProjectSearch}}">
             <view class="search-panel quick-entry-project-search">
-              <input
-                class="input-sim input-native projects-search-input"
-                value="{{quickEntryProjectKeyword}}"
-                bindinput="onQuickEntryProjectSearch"
-                bindfocus="onQuickEntryFieldFocus"
-                placeholder="搜索项目 / 客户 / 联系人"
-                placeholder-class="input-placeholder"
-                confirm-type="search"
-                cursor-spacing="{{quickEntryCursorSpacing}}"
-              />
-              <view wx:if="{{quickEntryProjectKeyword}}" class="search-clear" bindtap="clearQuickEntryProjectSearch">清空</view>
+              <view class="input-sim quick-entry-search-shell">
+                <image class="quick-entry-search-icon" src="/assets/icons/search-light.svg" mode="aspectFit" />
+                <input
+                  class="input-native projects-search-input"
+                  value="{{quickEntryProjectKeyword}}"
+                  bindinput="onQuickEntryProjectSearch"
+                  bindfocus="onQuickEntryFieldFocus"
+                  placeholder="搜索项目、公司、联系人"
+                  placeholder-class="quick-entry-search-placeholder"
+                  confirm-type="search"
+                  cursor-spacing="{{quickEntryCursorSpacing}}"
+                />
+                <view wx:if="{{quickEntryProjectKeyword}}" class="search-clear" bindtap="clearQuickEntryProjectSearch">清空</view>
+              </view>
             </view>
             <view wx:if="{{quickEntryVisibleProjects.length}}" class="quick-entry-project-list">
               <view
@@ -670,31 +755,68 @@
       </block>
     </view>
     <view wx:if="{{!showQuickEntrySuccessPanel && !(quickEntryMode === 'follow_up' && !quickEntryShowFollowUpDetails)}}" class="inline-actions quick-entry-actions is-fixed {{isQuickEntryEditing ? 'is-editing' : ''}}" style="{{quickEntryActionsStyle}}">
-      <view wx:if="{{quickEntryMode === 'follow_up'}}" class="helper-text quick-entry-actions-hint {{quickEntryFollowUpCanSubmit ? 'is-ready' : ''}}">{{quickEntryFollowUpSubmitHint}}</view>
-      <view class="btn-ghost quick-entry-cancel-btn" bindtap="onQuickEntryCancelTap">{{quickEntryMode === 'follow_up' && quickEntryFollowUpStage === 'content' ? '返回修改' : '取消'}}</view>
-      <view class="btn-primary quick-entry-submit-btn {{quickEntryMode === 'follow_up' && quickEntryFollowUpSubmitIsAiAction ? 'ai-entry ai-entry-button' : ''}} {{quickEntryMode === 'follow_up' && !quickEntryFollowUpCanSubmit ? 'is-disabled' : ''}}" bindtap="submitQuickEntry">
-        <block wx:if="{{quickEntryMode === 'project'}}">{{quickEntryActionId === 'project' ? '创建中...' : '立即创建'}}</block>
-        <block wx:elif="{{quickEntryMode === 'task'}}">{{quickEntryActionId === 'task' ? '保存中...' : '补进清单'}}</block>
-        <block wx:else>
-          <block wx:if="{{quickEntryFollowUpSubmitIsAiAction}}">
-            <image wx:if="{{!isQuickEntryAiLoading}}" class="ai-entry-icon" src="/assets/icons/ai-agent-light.svg" mode="aspectFit" />
-            <view wx:else class="ai-agent-loader is-light">
-              <view class="ai-agent-loader-antenna is-left"><view class="ai-agent-loader-dot"></view></view>
-              <view class="ai-agent-loader-antenna is-right"><view class="ai-agent-loader-dot"></view></view>
-              <view class="ai-agent-loader-cap"></view>
-              <view class="ai-agent-loader-ear is-left"></view>
-              <view class="ai-agent-loader-ear is-right"></view>
-              <view class="ai-agent-loader-head">
-                <view class="ai-agent-loader-eye is-left"></view>
-                <view class="ai-agent-loader-eye is-right"></view>
-                <view class="ai-agent-loader-mouth"></view>
+      <block wx:if="{{quickEntryMode === 'follow_up'}}">
+        <block wx:if="{{quickEntryFollowUpStage === 'project' && quickEntrySelectedProjectId}}">
+          <view class="quick-entry-dual-submit-row">
+            <view class="btn-ghost quick-entry-dual-submit-btn {{quickEntryActionId === 'follow_up' || isQuickEntryVoiceRecognizing || isQuickEntryAiLoading ? 'is-disabled' : ''}}" bindtap="submitQuickFollowUpOnly">{{quickEntryActionId === 'follow_up' && quickEntryFollowUpPendingAction === 'save_only' ? '保存中...' : '直接保存'}}</view>
+            <view class="btn-primary quick-entry-submit-btn is-single ai-entry ai-entry-button {{!quickEntryFollowUpCanSubmit ? 'is-disabled' : ''}}" bindtap="submitQuickEntry">
+              <image wx:if="{{!isQuickEntryAiLoading}}" class="ai-entry-icon" src="/assets/icons/ai-agent-light.svg" mode="aspectFit" />
+              <view wx:else class="ai-agent-loader is-light">
+                <view class="ai-agent-loader-antenna is-left"><view class="ai-agent-loader-dot"></view></view>
+                <view class="ai-agent-loader-antenna is-right"><view class="ai-agent-loader-dot"></view></view>
+                <view class="ai-agent-loader-cap"></view>
+                <view class="ai-agent-loader-ear is-left"></view>
+                <view class="ai-agent-loader-ear is-right"></view>
+                <view class="ai-agent-loader-head">
+                  <view class="ai-agent-loader-eye is-left"></view>
+                  <view class="ai-agent-loader-eye is-right"></view>
+                  <view class="ai-agent-loader-mouth"></view>
+                </view>
+              </view>
+              <view class="ai-entry-text">{{quickEntryFollowUpSubmitText}}</view>
+            </view>
+          </view>
+        </block>
+        <block wx:elif="{{quickEntryAiNextSuggestion && quickEntryFollowUpStage === 'review'}}">
+          <view class="quick-entry-dual-submit-row">
+            <view class="btn-ghost quick-entry-dual-submit-btn {{quickEntryActionId === 'follow_up' ? 'is-disabled' : ''}}" bindtap="submitQuickFollowUpOnly">{{quickEntryActionId === 'follow_up' && quickEntryFollowUpPendingAction === 'save_only' ? '保存中...' : '仅保存跟进'}}</view>
+            <view class="btn-primary quick-entry-submit-btn quick-entry-dual-submit-main {{(quickEntryActionId === 'follow_up' || !quickEntryTaskDraftCanCreate) ? 'is-disabled' : ''}}" bindtap="submitQuickFollowUpWithTask">
+              <view class="quick-entry-dual-submit-copy">
+                <view class="quick-entry-dual-submit-title">{{quickEntryActionId === 'follow_up' && quickEntryFollowUpPendingAction === 'save_with_task' ? '创建中...' : '保存并创建任务'}}</view>
+                <view class="quick-entry-dual-submit-meta">{{quickEntryActionId === 'follow_up' && quickEntryFollowUpPendingAction === 'save_with_task' ? '正在写入跟进与任务' : (quickEntryNextTaskSelectedTimeLabel ? quickEntryNextTaskSelectedTimeLabel : '请先确认任务时间')}}</view>
               </view>
             </view>
-            <view class="ai-entry-text">{{quickEntryFollowUpSubmitText}}</view>
-          </block>
-          <block wx:else>{{quickEntryFollowUpSubmitText}}</block>
+          </view>
         </block>
-      </view>
+        <block wx:else>
+          <view class="btn-primary quick-entry-submit-btn is-single {{quickEntryFollowUpSubmitIsAiAction ? 'ai-entry ai-entry-button' : ''}} {{!quickEntryFollowUpCanSubmit ? 'is-disabled' : ''}}" bindtap="submitQuickEntry">
+            <block wx:if="{{quickEntryFollowUpSubmitIsAiAction}}">
+              <image wx:if="{{!isQuickEntryAiLoading}}" class="ai-entry-icon" src="/assets/icons/ai-agent-light.svg" mode="aspectFit" />
+              <view wx:else class="ai-agent-loader is-light">
+                <view class="ai-agent-loader-antenna is-left"><view class="ai-agent-loader-dot"></view></view>
+                <view class="ai-agent-loader-antenna is-right"><view class="ai-agent-loader-dot"></view></view>
+                <view class="ai-agent-loader-cap"></view>
+                <view class="ai-agent-loader-ear is-left"></view>
+                <view class="ai-agent-loader-ear is-right"></view>
+                <view class="ai-agent-loader-head">
+                  <view class="ai-agent-loader-eye is-left"></view>
+                  <view class="ai-agent-loader-eye is-right"></view>
+                  <view class="ai-agent-loader-mouth"></view>
+                </view>
+              </view>
+              <view class="ai-entry-text">{{quickEntryFollowUpSubmitText}}</view>
+            </block>
+            <block wx:else>{{quickEntryFollowUpSubmitText}}</block>
+          </view>
+        </block>
+      </block>
+      <block wx:else>
+        <view class="btn-ghost quick-entry-cancel-btn" bindtap="onQuickEntryCancelTap">取消</view>
+        <view class="btn-primary quick-entry-submit-btn" bindtap="submitQuickEntry">
+          <block wx:if="{{quickEntryMode === 'project'}}">{{quickEntryActionId === 'project' ? '创建中...' : '立即创建'}}</block>
+          <block wx:else>{{quickEntryActionId === 'task' ? '保存中...' : '补进清单'}}</block>
+        </view>
+      </block>
     </view>
     <view wx:if="{{showQuickEntrySuccessPanel}}" class="quick-entry-success-actions">
       <view class="btn-primary quick-entry-success-primary" bindtap="continueQuickEntryAfterSuccess">{{quickEntrySuccessState.primaryActionText}}</view>

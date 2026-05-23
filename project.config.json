@@ -43,6 +43,86 @@
       {
         "value": "八面成交CRM.rar",
         "type": "file"
+      },
+      {
+        "value": "admin-web",
+        "type": "folder"
+      },
+      {
+        "value": "admin-web-bridge",
+        "type": "folder"
+      },
+      {
+        "value": "cloudfunctions",
+        "type": "folder"
+      },
+      {
+        "value": "docs",
+        "type": "folder"
+      },
+      {
+        "value": "assets/brand/logo-home-export-3.svg",
+        "type": "file"
+      },
+      {
+        "value": "assets/brand/logo-home-export-3-raw.png",
+        "type": "file"
+      },
+      {
+        "value": "assets/brand/logo-home-8mdeal.png",
+        "type": "file"
+      },
+      {
+        "value": "assets/brand/logo-home-export-3-transparent.png",
+        "type": "file"
+      },
+      {
+        "value": "assets/brand/logo-home-export-4-raw.png",
+        "type": "file"
+      },
+      {
+        "value": "assets/brand/logo-home-export-4.b64",
+        "type": "file"
+      },
+      {
+        "value": "assets/brand/logo-home-export-4-compact.png",
+        "type": "file"
+      },
+      {
+        "value": "assets/brand/logo-home-export-4-compact-matte-fixed.png",
+        "type": "file"
+      },
+      {
+        "value": "assets/brand/logo-home-export-3-transparent-compact.png",
+        "type": "file"
+      },
+      {
+        "value": "assets/brand/logo-home-export-6-cutout-v2.png",
+        "type": "file"
+      },
+      {
+        "value": "assets/brand/logo-home-export-6-embedded.png",
+        "type": "file"
+      },
+      {
+        "value": "assets/brand/logo-home-export-6-transparent-256.png",
+        "type": "file"
+      },
+      {
+        "value": "assets/brand/logo-home-export-6.svg",
+        "type": "file"
+      },
+      {
+        "value": "assets/brand/slogan-title-subset.ttf",
+        "type": "file"
+      },
+      {
+        "value": "assets/brand/slogan-title-subset.LICENSE.txt",
+        "type": "file"
+      },
+      {
+        "value": "assets/brand/robot.png",
+        "type": "file"
       }
     ],
     "include": []

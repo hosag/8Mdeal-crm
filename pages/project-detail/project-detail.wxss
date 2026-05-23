@@ -1214,6 +1214,10 @@
   padding-bottom: calc(28rpx + env(safe-area-inset-bottom));
 }
 
+.transfer-mode-mask {
+  backdrop-filter: blur(10rpx);
+}
+
 .transfer-mode-caption {
   margin-top: 6rpx;
   max-width: 520rpx;

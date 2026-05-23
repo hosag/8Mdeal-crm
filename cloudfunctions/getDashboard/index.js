@@ -4,6 +4,44 @@ cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 
 const db = cloud.database()
 
+function extractErrorMessage(error) {
+  if (!error) {
+    return ''
+  }
+
+  if (typeof error === 'string') {
+    return error.trim()
+  }
+
+  return String(error.errMsg || error.message || '').trim()
+}
+
+function isMissingCollectionError(error) {
+  const message = extractErrorMessage(error)
+  return /collection/i.test(message) && /not exist|not exists|does not exist|不存在/i.test(message)
+}
+
+async function safeGetOpenidList(collectionName, openid, options = {}) {
+  try {
+    let request = db.collection(collectionName).where({
+      _openid: openid
+    })
+
+    if (options.orderByField && options.orderByDirection) {
+      request = request.orderBy(options.orderByField, options.orderByDirection)
+    }
+
+    const result = await request.get()
+    return Array.isArray(result.data) ? result.data : []
+  } catch (error) {
+    if (isMissingCollectionError(error)) {
+      return []
+    }
+
+    throw error
+  }
+}
+
 function startOfDay(date = new Date()) {
   const value = new Date(date)
   value.setHours(0, 0, 0, 0)
@@ -347,19 +385,18 @@ function pushTimelineEvent(events, dateValue, time, title, desc, projectId) {
 
 exports.main = async () => {
   const wxContext = cloud.getWXContext()
+  const openid = String(wxContext.OPENID || '').trim()
   const now = new Date()
   const monthStart = startOfMonth(now)
   const prevMonthStart = startOfPrevMonth(now)
   const prevMonthEnd = endOfPrevMonth(now)
 
-  const projectsResult = await db.collection('projects')
-    .where({
-      _openid: wxContext.OPENID
-    })
-    .orderBy('updatedAt', 'desc')
-    .get()
+  const projectItems = await safeGetOpenidList('projects', openid, {
+    orderByField: 'updatedAt',
+    orderByDirection: 'desc'
+  })
 
-  const visibleProjects = (projectsResult.data || []).filter((item) => !(item.handoverStatus === 'handed_over' && !item.isSharedProject))
+  const visibleProjects = projectItems.filter((item) => !(item.handoverStatus === 'handed_over' && !item.isSharedProject))
   const activeProjects = visibleProjects.filter((item) => !isClosedProject(item))
   const projectIds = visibleProjects.map((item) => item._id)
   const projectMap = {}
@@ -369,39 +406,25 @@ exports.main = async () => {
 
   let followUps = []
   if (projectIds.length) {
-    const followResult = await db.collection('followUps')
-      .where({
-        _openid: wxContext.OPENID
-      })
-      .orderBy('followUpTime', 'desc')
-      .get()
-
-    followUps = (followResult.data || []).filter((item) => projectMap[item.projectId])
+    followUps = (await safeGetOpenidList('followUps', openid, {
+      orderByField: 'followUpTime',
+      orderByDirection: 'desc'
+    })).filter((item) => projectMap[item.projectId])
   }
 
   const taskMap = {}
   if (projectIds.length) {
-    try {
-      const taskResult = await db.collection('tasks')
-        .where({
-          _openid: wxContext.OPENID
-        })
-        .get()
+    ;(await safeGetOpenidList('tasks', openid)).forEach((task) => {
+      if (!task || !task.projectId || !projectMap[task.projectId]) {
+        return
+      }
 
-      ;(taskResult.data || []).forEach((task) => {
-        if (!task || !task.projectId || !projectMap[task.projectId]) {
-          return
-        }
+      if (!taskMap[task.projectId]) {
+        taskMap[task.projectId] = []
+      }
 
-        if (!taskMap[task.projectId]) {
-          taskMap[task.projectId] = []
-        }
-
-        taskMap[task.projectId].push(task)
-      })
-    } catch (error) {
-      // Allow the dashboard to keep working before the tasks collection is created.
-    }
+      taskMap[task.projectId].push(task)
+    })
   }
 
   const latestFollowMap = {}
@@ -415,14 +438,10 @@ exports.main = async () => {
 
   let deals = []
   if (projectIds.length) {
-    const dealsResult = await db.collection('deals')
-      .where({
-        _openid: wxContext.OPENID
-      })
-      .orderBy('contractDate', 'desc')
-      .get()
-
-    deals = (dealsResult.data || []).filter((item) => projectMap[item.projectId])
+    deals = (await safeGetOpenidList('deals', openid, {
+      orderByField: 'contractDate',
+      orderByDirection: 'desc'
+    })).filter((item) => projectMap[item.projectId])
   }
 
   const currentMonthNewCount = visibleProjects.filter((item) => {

@@ -393,6 +393,20 @@ exports.main = async (event) => {
       aiRecommendedStage: normalizeText(event.aiRecommendedStage),
       aiStageChangeReason: normalizeText(event.aiStageChangeReason),
       aiMissingInfo: normalizeStringArray(event.aiMissingInfo),
+      aiNextAction: normalizeText(event.aiNextAction),
+      aiNextRecommendedTarget: normalizeText(event.aiNextRecommendedTarget),
+      aiNextRecommendedMethod: normalizeText(event.aiNextRecommendedMethod),
+      aiNextRecommendedTimeWindow: normalizeText(event.aiNextRecommendedTimeWindow),
+      aiNextRecommendedDate: normalizeText(event.aiNextRecommendedDate),
+      aiNextRecommendedTime: normalizeText(event.aiNextRecommendedTime),
+      aiNextTalkTrack: normalizeText(event.aiNextTalkTrack),
+      aiNextReason: normalizeText(event.aiNextReason),
+      aiNextMissingInfo: normalizeStringArray(event.aiNextMissingInfo),
+      aiSuggestedTaskTitle: normalizeText(event.aiSuggestedTaskTitle),
+      aiSuggestedTaskType: normalizeText(event.aiSuggestedTaskType),
+      aiSuggestedTaskDueDate: normalizeText(event.aiSuggestedTaskDueDate),
+      aiSuggestedTaskDueTime: normalizeText(event.aiSuggestedTaskDueTime),
+      aiSuggestedTaskDescription: normalizeText(event.aiSuggestedTaskDescription),
       createdAt: now
     }
   })

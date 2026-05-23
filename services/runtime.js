@@ -150,9 +150,17 @@ function extractErrorMessage(error) {
 
 function normalizeCloudError(error) {
   const rawMessage = extractErrorMessage(error)
+  const functionName = String(
+    error && (
+      error.functionName
+      || error.cloudFunctionName
+      || (error.options && error.options.name)
+    ) || ''
+  ).trim()
+  const functionLabel = functionName ? `云函数 ${functionName}` : '云端请求'
 
   if (!rawMessage) {
-    return new Error('云端请求失败，请稍后重试')
+    return new Error(`${functionLabel} 失败，请稍后重试`)
   }
 
   if (rawMessage.includes('CloudBase unavailable')) {
@@ -167,7 +175,7 @@ function normalizeCloudError(error) {
   }
 
   if (/timeout|timed out|超时/i.test(rawMessage)) {
-    return new Error('云端请求超时，请稍后重试')
+    return new Error(`${functionLabel} 超时，请稍后重试`)
   }
 
   const businessMappings = [
@@ -307,6 +315,9 @@ async function callCloudFunction(name, data = {}) {
 
     return result.result
   } catch (error) {
+    if (error && typeof error === 'object' && !error.functionName) {
+      error.functionName = name
+    }
     throw normalizeCloudError(error)
   }
 }

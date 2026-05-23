@@ -21,8 +21,19 @@ const { getNotificationPrimaryActionLabel } = require('../../utils/notification-
 const { getNotificationSyncVersion, touchNotificationSync } = require('../../utils/notification-sync')
 const { syncPageAppearance } = require('../../utils/appearance')
 const { ensureActionAllowed, getEntitlementSnapshot, buildEntitlementPagePrompt, buildEntitlementOverview } = require('../../utils/entitlement-guard')
+const {
+  normalizeFollowUpMethod,
+  isSpecificFollowUpMethod,
+  detectFollowUpMethodFromContent,
+  normalizeFollowUpOccurredMeta,
+  buildDefaultFollowUpOccurredMeta,
+  extractFollowUpOccurredMetaFromContent,
+  resolvePreferredFollowUpMethod,
+  resolvePreferredFollowUpOccurredMeta
+} = require('../../utils/follow-up-meta')
 const { formatAiQuotaValue } = require('../../utils/quota-format')
 const { startVoiceRecordingTicker, stopVoiceRecordingTicker } = require('../../utils/voice-recording')
+const { loadHomeSloganFontFace } = require('../../utils/home-slogan-font')
 
 function getAppInstance() {
   return typeof getApp === 'function' ? getApp() : null
@@ -984,6 +995,7 @@ function normalizeQuickEntryAiSourceMeta(value) {
 
 function normalizeQuickEntryAiSummary(value) {
   const payload = value && typeof value === 'object' ? value : {}
+  const normalizedOccurredMeta = normalizeFollowUpOccurredMeta(payload)
   return {
     ...payload,
     ...normalizeQuickEntryAiSourceMeta(payload),
@@ -991,6 +1003,10 @@ function normalizeQuickEntryAiSummary(value) {
     highlights: Array.isArray(payload.highlights) ? payload.highlights.map((item) => normalizeText(item)).filter(Boolean) : [],
     risks: Array.isArray(payload.risks) ? payload.risks.map((item) => normalizeText(item)).filter(Boolean) : [],
     missingInfo: Array.isArray(payload.missingInfo) ? payload.missingInfo.map((item) => normalizeText(item)).filter(Boolean) : [],
+    followUpMethod: normalizeFollowUpMethod(payload.followUpMethod, ''),
+    followUpOccurredDate: normalizedOccurredMeta ? normalizedOccurredMeta.followUpOccurredDate : '',
+    followUpOccurredTime: normalizedOccurredMeta ? normalizedOccurredMeta.followUpOccurredTime : '',
+    followUpOccurredTimePrecision: normalizedOccurredMeta ? normalizedOccurredMeta.followUpOccurredTimePrecision : '',
     recommendedStage: normalizeText(payload.recommendedStage),
     stageChangeReason: normalizeText(payload.stageChangeReason),
     currentStage: normalizeText(payload.currentStage),
@@ -1013,6 +1029,44 @@ function cloneQuickEntryAiSummary(value) {
     risks: Array.isArray(value.risks) ? value.risks.slice() : [],
     missingInfo: Array.isArray(value.missingInfo) ? value.missingInfo.slice() : []
   })
+}
+
+function buildDetectedQuickEntryFollowUpMeta(content, now = new Date()) {
+  return {
+    detectedMethod: detectFollowUpMethodFromContent(content, { now }),
+    detectedOccurredMeta: extractFollowUpOccurredMetaFromContent(content, { now }),
+    referenceNowMeta: buildDefaultFollowUpOccurredMeta({ now })
+  }
+}
+
+function buildQuickEntryFollowUpMetaPatch(options = {}) {
+  const patch = {}
+  const resolvedMethod = resolvePreferredFollowUpMethod({
+    aiMethod: options.aiSummary && options.aiSummary.followUpMethod,
+    detectedMethod: options.detectedMethod,
+    fallbackMethod: options.fallbackMethod || '其他'
+  })
+  const resolvedOccurredMeta = resolvePreferredFollowUpOccurredMeta(
+    options.aiSummary,
+    options.detectedOccurredMeta,
+    { now: options.now }
+  )
+
+  if (!options.methodTouched && (options.allowMethodDefault || isSpecificFollowUpMethod(resolvedMethod))) {
+    patch['quickEntryForm.followUpMethod'] = resolvedMethod
+  }
+
+  const shouldApplyOccurredMeta = options.allowOccurredDefault || resolvedOccurredMeta.followUpOccurredTimePrecision !== 'default_now'
+  if (shouldApplyOccurredMeta) {
+    if (!options.dateTouched) {
+      patch['quickEntryForm.followUpDate'] = resolvedOccurredMeta.followUpOccurredDate
+    }
+    if (!options.clockTouched) {
+      patch['quickEntryForm.followUpClock'] = resolvedOccurredMeta.followUpOccurredTime
+    }
+  }
+
+  return patch
 }
 
 function getTaskTypeLabel(type) {
@@ -1114,12 +1168,17 @@ function normalizeQuickEntryProjectMatch(value, projects = []) {
 function buildQuickEntryRestoredVoiceStatusText(options = {}) {
   const hasContent = !!normalizeText(options.followUpContent)
   const hasError = !!normalizeText(options.aiError)
+  const hasNextSuggestionError = !!normalizeText(options.aiNextSuggestionError)
   const hasSummary = !!(options.aiSummary && normalizeText(options.aiSummary.summary))
   const hasProjectMatch = !!options.aiProjectMatch
   const hasSelectedProject = !!normalizeText(options.selectedProjectId)
 
   if (hasError) {
     return '已恢复上次暂存内容，可手动修改、重试理解或重新确认项目'
+  }
+
+  if (hasNextSuggestionError && hasSummary && hasSelectedProject) {
+    return '已恢复上次暂存内容，可直接保存或重试下一步建议'
   }
 
   if (hasSummary || hasProjectMatch) {
@@ -1135,6 +1194,12 @@ function buildQuickEntryRestoredVoiceStatusText(options = {}) {
   return ''
 }
 
+function normalizeQuickEntryFollowUpStage(value = '') {
+  const current = normalizeText(value)
+  const allowed = ['capture', 'content', 'project', 'review']
+  return allowed.includes(current) ? current : ''
+}
+
 function buildQuickEntryFollowUpDisplayState(options = {}) {
   const hasContent = !!normalizeText(options.followUpContent)
   const hasVoicePreview = !!normalizeText(options.voicePreviewText)
@@ -1144,6 +1209,7 @@ function buildQuickEntryFollowUpDisplayState(options = {}) {
   const manualInputEnabled = !!options.manualInputEnabled
   const showDetails = manualInputEnabled || hasContent || hasVoicePreview || hasAiError || hasAiResult
   const selectedProjectId = normalizeText(options.selectedProjectId)
+  const requestedStage = normalizeQuickEntryFollowUpStage(options.flowStage || options.stage)
   let stage = 'capture'
 
   if (showDetails) {
@@ -1154,7 +1220,17 @@ function buildQuickEntryFollowUpDisplayState(options = {}) {
     } else if (!selectedProjectId) {
       stage = options.aiProjectMatch ? 'project' : 'content'
     } else {
-      stage = 'review'
+      stage = options.aiSummary || options.aiNextSuggestion ? 'review' : 'project'
+    }
+  }
+
+  if (requestedStage) {
+    if (!hasContent) {
+      stage = 'capture'
+    } else if (requestedStage === 'review' && !selectedProjectId) {
+      stage = 'project'
+    } else {
+      stage = requestedStage
     }
   }
 
@@ -1173,7 +1249,7 @@ function buildQuickEntryFollowUpDisplayState(options = {}) {
     },
     review: {
       title: '保存前确认',
-      hint: '确认摘要和下一步后保存'
+      hint: '项目已确认，可直接保存，也可补充 AI 摘要和下一步任务'
     }
   }[stage] || {
     title: '闪录',
@@ -1197,20 +1273,23 @@ function buildQuickEntryFollowUpSubmitState(options = {}) {
   const isAiLoading = !!options.isAiLoading
   const aiError = normalizeText(options.aiError)
   const actionId = normalizeText(options.actionId)
+  const createNextTask = !!options.createNextTask
+  const hasAiSummary = !!(options.aiSummary && normalizeText(options.aiSummary.summary))
+  const hasAiNextSuggestion = !!options.aiNextSuggestion
   const stage = normalizeText(options.stage)
     || (
       !content
         ? 'capture'
         : (selectedProjectId
-            ? 'review'
+            ? ((hasAiSummary || hasAiNextSuggestion) ? 'review' : 'project')
             : (options.aiProjectMatch ? 'project' : 'content'))
     )
 
   if (actionId === 'follow_up') {
     return {
       quickEntryFollowUpCanSubmit: false,
-      quickEntryFollowUpSubmitText: '提交中...',
-      quickEntryFollowUpSubmitHint: '正在保存这条闪录，请稍候。',
+      quickEntryFollowUpSubmitText: createNextTask ? '保存中...' : '提交中...',
+      quickEntryFollowUpSubmitHint: createNextTask ? '正在保存跟进并创建下一步任务。' : '正在保存这条闪录，请稍候。',
       quickEntryFollowUpSubmitIsAiAction: false
     }
   }
@@ -1227,8 +1306,8 @@ function buildQuickEntryFollowUpSubmitState(options = {}) {
   if (isVoiceRecognizing || isAiLoading) {
     return {
       quickEntryFollowUpCanSubmit: false,
-      quickEntryFollowUpSubmitText: '智能处理中...',
-      quickEntryFollowUpSubmitHint: '系统正在处理中，请稍候。',
+      quickEntryFollowUpSubmitText: stage === 'project' || stage === 'review' ? 'AI整理中...' : '智能处理中...',
+      quickEntryFollowUpSubmitHint: '',
       quickEntryFollowUpSubmitIsAiAction: isAiLoading
     }
   }
@@ -1237,7 +1316,7 @@ function buildQuickEntryFollowUpSubmitState(options = {}) {
     return {
       quickEntryFollowUpCanSubmit: false,
       quickEntryFollowUpSubmitText: '先录入内容',
-      quickEntryFollowUpSubmitHint: '先把这次情况记下来。',
+      quickEntryFollowUpSubmitHint: '',
       quickEntryFollowUpSubmitIsAiAction: false
     }
   }
@@ -1245,8 +1324,26 @@ function buildQuickEntryFollowUpSubmitState(options = {}) {
   if (stage === 'content') {
     return {
       quickEntryFollowUpCanSubmit: true,
-      quickEntryFollowUpSubmitText: aiError ? '重新AI整理' : 'AI整理',
-      quickEntryFollowUpSubmitHint: aiError ? '修改内容后可重新发起 AI 整理。' : '确认内容后再发起 AI 整理。',
+      quickEntryFollowUpSubmitText: '下一步',
+      quickEntryFollowUpSubmitHint: '',
+      quickEntryFollowUpSubmitIsAiAction: false
+    }
+  }
+
+  if (stage === 'project') {
+    if (!selectedProjectId) {
+      return {
+        quickEntryFollowUpCanSubmit: false,
+        quickEntryFollowUpSubmitText: '先确认项目',
+        quickEntryFollowUpSubmitHint: '',
+        quickEntryFollowUpSubmitIsAiAction: false
+      }
+    }
+
+    return {
+      quickEntryFollowUpCanSubmit: true,
+      quickEntryFollowUpSubmitText: 'AI整理',
+      quickEntryFollowUpSubmitHint: '',
       quickEntryFollowUpSubmitIsAiAction: true
     }
   }
@@ -1255,7 +1352,7 @@ function buildQuickEntryFollowUpSubmitState(options = {}) {
     return {
       quickEntryFollowUpCanSubmit: false,
       quickEntryFollowUpSubmitText: '先确认项目',
-      quickEntryFollowUpSubmitHint: '先点一个项目，再继续保存。',
+      quickEntryFollowUpSubmitHint: '',
       quickEntryFollowUpSubmitIsAiAction: false
     }
   }
@@ -1264,15 +1361,15 @@ function buildQuickEntryFollowUpSubmitState(options = {}) {
     return {
       quickEntryFollowUpCanSubmit: true,
       quickEntryFollowUpSubmitText: '直接保存',
-      quickEntryFollowUpSubmitHint: '智能理解失败，但你仍可先保存原始跟进内容。',
+      quickEntryFollowUpSubmitHint: '',
       quickEntryFollowUpSubmitIsAiAction: false
     }
   }
 
   return {
     quickEntryFollowUpCanSubmit: true,
-    quickEntryFollowUpSubmitText: '保存本次闪录',
-    quickEntryFollowUpSubmitHint: '系统已经补好下一步，确认后会写入跟进。',
+    quickEntryFollowUpSubmitText: createNextTask ? '保存并建任务' : '保存本次闪录',
+    quickEntryFollowUpSubmitHint: '',
     quickEntryFollowUpSubmitIsAiAction: false
   }
 }
@@ -1356,6 +1453,185 @@ function buildDefaultNextTaskDraft() {
   }
 }
 
+function parseQuickEntryDateTime(dateValue = '', timeValue = '') {
+  const dueDate = normalizeText(dateValue)
+  const dueTime = normalizeText(timeValue)
+
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dueDate) || !/^\d{2}:\d{2}$/.test(dueTime)) {
+    return null
+  }
+
+  const parsed = new Date(`${dueDate}T${dueTime}:00`)
+  return Number.isNaN(parsed.getTime()) ? null : parsed
+}
+
+function formatQuickEntryTaskTimeLabel(dueDate = '', dueTime = '') {
+  const parsed = parseQuickEntryDateTime(dueDate, dueTime)
+  if (parsed) {
+    return formatAiGeneratedTime(parsed)
+  }
+
+  return [normalizeText(dueDate), normalizeText(dueTime)].filter(Boolean).join(' ')
+}
+
+function buildQuickEntryTaskTimeOption(date) {
+  if (!(date instanceof Date) || Number.isNaN(date.getTime())) {
+    return null
+  }
+
+  const dueDate = formatDateInput(date)
+  const dueTime = formatTimeInput(date)
+  return {
+    id: `${dueDate} ${dueTime}`,
+    dueDate,
+    dueTime,
+    label: formatQuickEntryTaskTimeLabel(dueDate, dueTime)
+  }
+}
+
+function buildQuickEntryNextTaskDraft(partial = {}) {
+  const fallback = buildDefaultNextTaskDraft()
+  const type = normalizeText(partial.type) || 'other'
+  return {
+    title: normalizeText(partial.title),
+    type,
+    typeLabel: getTaskTypeLabel(type),
+    priority: normalizeText(partial.priority) || 'normal',
+    dueDate: normalizeText(partial.dueDate) || fallback.dueDate,
+    dueTime: normalizeText(partial.dueTime) || fallback.dueTime,
+    description: normalizeText(partial.description)
+  }
+}
+
+function buildQuickEntryTaskTimeOptions(suggestion = null) {
+  const suggestionDraft = buildQuickEntrySuggestedTaskDraft(suggestion)
+  const defaultDraft = buildDefaultNextTaskDraft()
+  const baseDate = parseQuickEntryDateTime(suggestionDraft.dueDate, suggestionDraft.dueTime)
+  const seed = baseDate || parseQuickEntryDateTime(defaultDraft.dueDate, defaultDraft.dueTime)
+  const options = []
+  const seen = new Set()
+
+  const pushOption = (date) => {
+    const option = buildQuickEntryTaskTimeOption(date)
+    if (!option || seen.has(option.id)) {
+      return
+    }
+    seen.add(option.id)
+    options.push(option)
+  }
+
+  if (seed) {
+    pushOption(seed)
+
+    const sameDayMorning = new Date(seed)
+    sameDayMorning.setHours(10, 0, 0, 0)
+    pushOption(sameDayMorning)
+
+    const sameDayAfternoon = new Date(seed)
+    sameDayAfternoon.setHours(15, 30, 0, 0)
+    pushOption(sameDayAfternoon)
+
+    const nextDayMorning = new Date(seed)
+    nextDayMorning.setDate(nextDayMorning.getDate() + 1)
+    nextDayMorning.setHours(9, 30, 0, 0)
+    pushOption(nextDayMorning)
+
+    const nextDayAfternoon = new Date(seed)
+    nextDayAfternoon.setDate(nextDayAfternoon.getDate() + 1)
+    nextDayAfternoon.setHours(15, 30, 0, 0)
+    pushOption(nextDayAfternoon)
+
+    const thirdDayMorning = new Date(seed)
+    thirdDayMorning.setDate(thirdDayMorning.getDate() + 2)
+    thirdDayMorning.setHours(10, 0, 0, 0)
+    pushOption(thirdDayMorning)
+  }
+
+  return options.slice(0, 3)
+}
+
+function buildQuickEntrySuggestedTaskDraft(suggestion = null) {
+  const currentSuggestion = suggestion && typeof suggestion === 'object' ? suggestion : null
+  const sourceTask = currentSuggestion && Array.isArray(currentSuggestion.taskDrafts) && currentSuggestion.taskDrafts.length
+    ? currentSuggestion.taskDrafts[0]
+    : null
+  return buildQuickEntryNextTaskDraft({
+    title: normalizeText(sourceTask && sourceTask.title) || normalizeText(currentSuggestion && currentSuggestion.nextAction),
+    type: normalizeText(sourceTask && sourceTask.type) || 'other',
+    priority: normalizeText(sourceTask && sourceTask.priority) || 'normal',
+    dueDate: normalizeText(currentSuggestion && currentSuggestion.recommendedDate) || normalizeText(sourceTask && sourceTask.dueDate),
+    dueTime: normalizeText(currentSuggestion && currentSuggestion.recommendedTime) || normalizeText(sourceTask && sourceTask.dueTime),
+    description: ''
+  })
+}
+
+function cloneQuickEntryNextTaskDraft(value) {
+  if (!value || typeof value !== 'object') {
+    return buildQuickEntryNextTaskDraft()
+  }
+
+  return buildQuickEntryNextTaskDraft({
+    title: value.title,
+    type: value.type,
+    priority: value.priority,
+    dueDate: value.dueDate,
+    dueTime: value.dueTime,
+    description: value.description
+  })
+}
+
+function buildQuickEntryTaskDraftState(options = {}) {
+  const nextSuggestion = options.nextSuggestion && typeof options.nextSuggestion === 'object'
+    ? options.nextSuggestion
+    : null
+  const titleTouched = !!options.titleTouched
+  const timeTouched = !!options.timeTouched
+  const selectedTimeSelection = normalizeText(options.selectedTimeSelection)
+  const suggestedTaskDraft = nextSuggestion
+    ? buildQuickEntrySuggestedTaskDraft(nextSuggestion)
+    : buildQuickEntryNextTaskDraft()
+  const sourceTaskDraft = cloneQuickEntryNextTaskDraft(
+    options.nextTaskDraft || (
+      nextSuggestion
+        ? suggestedTaskDraft
+        : buildQuickEntryNextTaskDraft()
+    )
+  )
+  const nextTaskDraft = buildQuickEntryNextTaskDraft({
+    ...sourceTaskDraft,
+    title: titleTouched ? sourceTaskDraft.title : suggestedTaskDraft.title,
+    dueDate: timeTouched ? sourceTaskDraft.dueDate : suggestedTaskDraft.dueDate,
+    dueTime: timeTouched ? sourceTaskDraft.dueTime : suggestedTaskDraft.dueTime,
+    description: ''
+  })
+  const timeOptions = nextSuggestion ? buildQuickEntryTaskTimeOptions(nextSuggestion) : []
+  const selectedOption = timeOptions.find((item) => item.dueDate === nextTaskDraft.dueDate && item.dueTime === nextTaskDraft.dueTime)
+  const useCustomSelection = !!nextSuggestion && (
+    selectedTimeSelection === 'custom'
+    || !selectedOption
+  )
+
+  return {
+    quickEntryNextTaskDraft: nextTaskDraft,
+    quickEntryNextTaskTitleTouched: titleTouched,
+    quickEntryNextTaskTimeTouched: timeTouched,
+    quickEntryNextTaskTimeOptions: timeOptions,
+    quickEntryNextTaskTimeSelection: nextSuggestion
+      ? (useCustomSelection ? 'custom' : selectedOption.id)
+      : '',
+    quickEntryNextTaskUseCustomTime: useCustomSelection,
+    quickEntryNextTaskSelectedTimeLabel: nextTaskDraft.dueDate && nextTaskDraft.dueTime
+      ? formatQuickEntryTaskTimeLabel(nextTaskDraft.dueDate, nextTaskDraft.dueTime)
+      : '',
+    quickEntryTaskDraftCanCreate: !!(
+      nextSuggestion
+      && normalizeText(nextTaskDraft.title)
+      && normalizeText(nextTaskDraft.dueDate)
+      && normalizeText(nextTaskDraft.dueTime)
+    )
+  }
+}
+
 function buildQuickEntryForm() {
   const now = new Date()
   const next = new Date(now)
@@ -1369,7 +1645,7 @@ function buildQuickEntryForm() {
     followUpContent: '',
     followUpDate: formatDateInput(now),
     followUpClock: formatTimeInput(now),
-    followUpMethod: '面谈',
+    followUpMethod: '其他',
     taskContext: '',
     taskTitle: '',
     taskType: 'callback',
@@ -1396,8 +1672,10 @@ function buildQuickEntryEmptyState(mode, projects = []) {
     followUpContent: form.followUpContent
   })
   const followUpSubmitState = buildQuickEntryFollowUpSubmitState({
-    followUpContent: form.followUpContent
+    followUpContent: form.followUpContent,
+    createNextTask: false
   })
+  const taskDraftState = buildQuickEntryTaskDraftState()
   return {
     quickEntryMode: mode,
     quickEntryModeTitle: getQuickEntryModeMeta(mode).label,
@@ -1425,18 +1703,23 @@ function buildQuickEntryEmptyState(mode, projects = []) {
     quickEntryAiProjectCandidateIds: [],
     quickEntryAiSummary: null,
     quickEntryAiSummaryDraft: null,
-    quickEntryAiSummaryOriginal: null,
     quickEntryAiNextSuggestion: null,
     quickEntryAiNextSuggestionDraft: null,
-    quickEntryAiNextSuggestionOriginal: null,
+    quickEntryAiNextSuggestionError: '',
     quickEntryAiHasExtendedDetails: false,
     quickEntryAiShowFullResult: false,
     quickEntryEditingAiSummary: false,
     quickEntryEditingAiNextSuggestion: false,
     quickEntryShowReviewSettings: false,
+    quickEntryFollowUpMethodTouched: false,
+    quickEntryFollowUpDateTouched: false,
+    quickEntryFollowUpClockTouched: false,
+    quickEntryCreateNextTask: false,
+    quickEntryFollowUpPendingAction: '',
     quickEntryFollowUpStage: 'capture',
     quickEntryFollowUpStageTitle: '闪录',
     quickEntryFollowUpStageHint: '先把这次情况记下来',
+    ...taskDraftState,
     ...followUpDisplayState,
     ...followUpSubmitState
   }
@@ -1446,15 +1729,12 @@ function buildQuickEntrySuccessState(payload = {}) {
   const mode = normalizeText(payload.mode) || 'follow_up'
   const projectId = normalizeText(payload.projectId)
   const continueProjectId = normalizeText(payload.continueProjectId)
-  const continueFollowUpMethod = normalizeText(payload.continueFollowUpMethod)
   let primaryActionText = normalizeText(payload.primaryActionText)
   let projectActionText = normalizeText(payload.projectActionText)
   let continueHint = normalizeText(payload.continueHint)
 
   if (!primaryActionText) {
-    if (mode === 'follow_up' && continueProjectId) {
-      primaryActionText = '继续录同项目'
-    } else if (mode === 'project') {
+    if (mode === 'project') {
       primaryActionText = '继续录跟进'
     } else if (mode === 'task' && continueProjectId) {
       primaryActionText = '继续补同项目'
@@ -1468,9 +1748,7 @@ function buildQuickEntrySuccessState(payload = {}) {
   }
 
   if (!continueHint) {
-    if (mode === 'follow_up' && continueProjectId) {
-      continueHint = '下一条将默认关联同一项目'
-    } else if (mode === 'task' && continueProjectId) {
+    if (mode === 'task' && continueProjectId) {
       continueHint = '下一条仍可继续补到这个项目'
     }
   }
@@ -1483,8 +1761,6 @@ function buildQuickEntrySuccessState(payload = {}) {
     projectId,
     projectName: normalizeText(payload.projectName),
     continueProjectId,
-    continueProjectName: normalizeText(payload.continueProjectName),
-    continueFollowUpMethod,
     primaryActionText,
     projectActionText,
     continueHint
@@ -2618,6 +2894,7 @@ function buildHomeEntitlementHeadline(snapshot = {}) {
 Page({
   data: {
     appearancePageClass: '',
+    homeSloganFontLoaded: false,
     dashboard: {
       metrics: [],
       taskBoard: {
@@ -2680,8 +2957,21 @@ Page({
     quickEntryAiProjectCandidateIds: [],
     quickEntryAiSummary: null,
     quickEntryAiNextSuggestion: null,
+    quickEntryAiNextSuggestionError: '',
     quickEntryAiHasExtendedDetails: false,
     quickEntryAiShowFullResult: false,
+    quickEntryFollowUpMethodTouched: false,
+    quickEntryFollowUpDateTouched: false,
+    quickEntryFollowUpClockTouched: false,
+    quickEntryCreateNextTask: false,
+    quickEntryNextTaskDraft: buildQuickEntryNextTaskDraft(),
+    quickEntryNextTaskTitleTouched: false,
+    quickEntryNextTaskTimeTouched: false,
+    quickEntryNextTaskTimeOptions: [],
+    quickEntryNextTaskTimeSelection: '',
+    quickEntryNextTaskUseCustomTime: false,
+    quickEntryNextTaskSelectedTimeLabel: '',
+    quickEntryTaskDraftCanCreate: false,
     quickEntryFollowUpCanSubmit: false,
     quickEntryFollowUpSubmitText: '先录入内容',
     quickEntryFollowUpSubmitIsAiAction: false,
@@ -2689,6 +2979,7 @@ Page({
     quickEntryManualInputEnabled: false,
     quickEntryShowFollowUpDetails: false,
     quickEntryActionId: '',
+    quickEntryFollowUpPendingAction: '',
     quickEntryKeyboardHeight: 0,
     quickEntryCursorSpacing: 120,
     quickEntrySheetStyle: '',
@@ -2754,16 +3045,15 @@ Page({
     this.quickEntryProjectCloudAliasMemory = {}
     this.loadQuickEntryProjectAliases()
     syncPageAppearance(this)
+    this.applyHomeSloganFont()
     this.initTaskCompletionKeyboard()
     this.pendingQuickEntryOpen = String(options && options.openQuickEntry || '').trim() === '1'
     this.setData({
       notificationSyncVersion: getNotificationSyncVersion()
     })
     await this.consumePendingQuickEntryOpen()
-    await Promise.all([
-      this.fetchDashboard(),
-      this.refreshEntitlementPrompt({ refresh: true })
-    ])
+    await this.fetchDashboard()
+    this.refreshEntitlementPrompt({ refresh: true })
     await this.consumePendingQuickEntryOpen()
   },
 
@@ -2771,6 +3061,7 @@ Page({
     this.isPageActive = true
     this.loadQuickEntryProjectAliases()
     syncPageAppearance(this)
+    this.applyHomeSloganFont()
     this.initTaskCompletionKeyboard()
     const currentSyncVersion = getNotificationSyncVersion()
     if (currentSyncVersion !== this.data.notificationSyncVersion) {
@@ -2778,10 +3069,10 @@ Page({
         notificationSyncVersion: currentSyncVersion
       })
     }
-    await this.refreshEntitlementPrompt({ refresh: true })
     if (!this.data.isLoading) {
       await this.fetchDashboard()
     }
+    this.refreshEntitlementPrompt({ refresh: true })
     await this.consumePendingQuickEntryOpen()
   },
 
@@ -2809,6 +3100,21 @@ Page({
     this.clearTaskFeedbackTimer()
     this.clearQuickEntryDraftTimer()
     this.destroyTaskCompletionKeyboard()
+  },
+
+  async applyHomeSloganFont() {
+    if (this.data.homeSloganFontLoaded) {
+      return
+    }
+
+    const loaded = await loadHomeSloganFontFace()
+    if (!this.isPageActive || !loaded) {
+      return
+    }
+
+    this.setData({
+      homeSloganFontLoaded: true
+    })
   },
 
   clearTaskFeedbackTimer() {
@@ -2967,74 +3273,14 @@ Page({
 
     try {
       const dashboardResult = await loadHomeData()
-      let notificationStats = {
-        unreadCount: 0,
-        pendingCount: 0
-      }
-
-      try {
-        const notificationResult = await loadNotificationsData({
-          statusFilter: 'unread',
-          limit: 6
-        })
-        if (notificationResult && notificationResult.stats) {
-          notificationStats = {
-            unreadCount: Number(notificationResult.stats.unreadCount || 0),
-            pendingCount: Number(notificationResult.stats.pendingCount || 0)
-          }
-        }
-
-        const headline = buildNotificationHeadline(
-          notificationResult && notificationResult.notifications,
-          notificationResult && notificationResult.stats
-        )
-        notificationStats = {
-          ...notificationStats,
-          headlineId: headline.id,
-          headlineType: headline.type,
-          headlineTitle: headline.title,
-          headlineDesc: headline.desc,
-          headlineProjectName: headline.projectName,
-          headlineActionText: headline.actionText,
-          headlineUrl: headline.actionUrl,
-          headlineAutoResolve: headline.autoResolve,
-          headlineToneClass: headline.toneClass,
-          headlineBadgeText: headline.badgeText
-        }
-      } catch (error) {
-        notificationStats = {
-          unreadCount: 0,
-          pendingCount: 0,
-          headlineId: '',
-          headlineType: '',
-          headlineTitle: '站内提醒',
-          headlineDesc: '当前无法同步提醒摘要，点击可进入消息中心查看。',
-          headlineActionText: '打开消息',
-          headlineUrl: '',
-          headlineAutoResolve: false,
-          headlineToneClass: 'is-neutral',
-          headlineBadgeText: '待处理'
-        }
-      }
 
       this.setData({
         dashboard: decorateDashboard(dashboardResult.data),
-        notificationUnreadCount: notificationStats.unreadCount,
-        notificationPendingCount: notificationStats.pendingCount,
-        notificationHeadlineId: notificationStats.headlineId || '',
-        notificationHeadlineType: notificationStats.headlineType || '',
-        notificationHeadlineTitle: notificationStats.headlineTitle || '站内提醒',
-        notificationHeadlineDesc: notificationStats.headlineDesc || '当前提醒都已收口，可以继续按首页任务和跟进节奏推进。',
-        notificationHeadlineProjectName: notificationStats.headlineProjectName || '',
-        notificationHeadlineActionText: notificationStats.headlineActionText || '打开消息',
-        notificationHeadlineUrl: notificationStats.headlineUrl || '',
-        notificationHeadlineAutoResolve: !!notificationStats.headlineAutoResolve,
-        notificationHeadlineToneClass: notificationStats.headlineToneClass || 'is-success',
-        notificationHeadlineBadgeText: notificationStats.headlineBadgeText || '已收口',
         isLoading: false,
         dataSource: dashboardResult.source
       })
       this.applyDefaultHeadlineFromEntitlements()
+      this.refreshNotificationHeadline()
     } catch (error) {
       const message = error && error.message ? error.message : '当前无法同步云端数据，请稍后重试'
       this.setData({
@@ -3072,6 +3318,70 @@ Page({
       wx.showToast({
         title: '当前无法同步首页数据',
         icon: 'none'
+      })
+    }
+  },
+
+  async refreshNotificationHeadline() {
+    try {
+      const notificationResult = await loadNotificationsData({
+        statusFilter: 'unread',
+        limit: 6,
+        skipGenerate: true
+      })
+      if (!this.isPageActive) {
+        return
+      }
+
+      let notificationStats = {
+        unreadCount: 0,
+        pendingCount: 0
+      }
+
+      if (notificationResult && notificationResult.stats) {
+        notificationStats = {
+          unreadCount: Number(notificationResult.stats.unreadCount || 0),
+          pendingCount: Number(notificationResult.stats.pendingCount || 0)
+        }
+      }
+
+      const headline = buildNotificationHeadline(
+        notificationResult && notificationResult.notifications,
+        notificationResult && notificationResult.stats
+      )
+
+      this.setData({
+        notificationUnreadCount: notificationStats.unreadCount,
+        notificationPendingCount: notificationStats.pendingCount,
+        notificationHeadlineId: headline.id || '',
+        notificationHeadlineType: headline.type || '',
+        notificationHeadlineTitle: headline.title || '站内提醒',
+        notificationHeadlineDesc: headline.desc || '当前提醒都已收口，可以继续按首页任务和跟进节奏推进。',
+        notificationHeadlineProjectName: headline.projectName || '',
+        notificationHeadlineActionText: headline.actionText || '打开消息',
+        notificationHeadlineUrl: headline.actionUrl || '',
+        notificationHeadlineAutoResolve: !!headline.autoResolve,
+        notificationHeadlineToneClass: headline.toneClass || 'is-success',
+        notificationHeadlineBadgeText: headline.badgeText || '已收口'
+      })
+    } catch (error) {
+      if (!this.isPageActive) {
+        return
+      }
+
+      this.setData({
+        notificationUnreadCount: 0,
+        notificationPendingCount: 0,
+        notificationHeadlineId: '',
+        notificationHeadlineType: '',
+        notificationHeadlineTitle: '站内提醒',
+        notificationHeadlineDesc: '当前无法同步提醒摘要，点击可进入消息中心查看。',
+        notificationHeadlineProjectName: '',
+        notificationHeadlineActionText: '打开消息',
+        notificationHeadlineUrl: '',
+        notificationHeadlineAutoResolve: false,
+        notificationHeadlineToneClass: 'is-neutral',
+        notificationHeadlineBadgeText: '待处理'
       })
     }
   },
@@ -4145,34 +4455,46 @@ Page({
       aiProjectMatch: draft.aiProjectMatch,
       aiNextSuggestion: draft.aiNextSuggestion,
       manualInputEnabled: !!draft.manualInputEnabled,
-      selectedProjectId: selectedProjectMeta ? selectedProjectMeta.id : ''
-    })
-    const followUpSubmitState = buildQuickEntryFollowUpSubmitState({
-      followUpContent: form.followUpContent,
       selectedProjectId: selectedProjectMeta ? selectedProjectMeta.id : '',
-      aiError: draft.aiError
+      flowStage: draft.followUpStage
     })
+    const restoredNextSuggestionError = normalizeText(draft.aiNextSuggestionError)
     const normalizedProjectMatch = normalizeQuickEntryProjectMatch(draft.aiProjectMatch, projects)
     const normalizedSummary = draft.aiSummary ? normalizeQuickEntryAiSummary(draft.aiSummary) : null
     const normalizedSummaryDraft = draft.aiSummaryDraft ? normalizeQuickEntryAiSummary(draft.aiSummaryDraft) : null
-    const normalizedSummaryOriginal = draft.aiSummaryOriginal ? normalizeQuickEntryAiSummary(draft.aiSummaryOriginal) : null
     const normalizedNextSuggestion = draft.aiNextSuggestion
       ? normalizeQuickEntryAiNextSuggestion(draft.aiNextSuggestion)
       : null
     const normalizedNextSuggestionDraft = draft.aiNextSuggestionDraft
       ? normalizeQuickEntryAiNextSuggestion(draft.aiNextSuggestionDraft)
       : null
-    const normalizedNextSuggestionOriginal = draft.aiNextSuggestionOriginal
-      ? normalizeQuickEntryAiNextSuggestion(draft.aiNextSuggestionOriginal)
-      : null
     const restoredVoicePreviewText = normalizeText(draft.voicePreviewText)
     const restoredAiError = normalizeText(draft.aiError)
+    const restoredNextTaskDraft = cloneQuickEntryNextTaskDraft(
+      draft.nextTaskDraft || buildQuickEntrySuggestedTaskDraft(normalizedNextSuggestion)
+    )
+    const taskDraftState = buildQuickEntryTaskDraftState({
+      nextSuggestion: normalizedNextSuggestion,
+      nextTaskDraft: restoredNextTaskDraft,
+      selectedTimeSelection: draft.nextTaskTimeSelection,
+      titleTouched: !!draft.nextTaskTitleTouched,
+      timeTouched: !!draft.nextTaskTimeTouched
+    })
+    const followUpSubmitState = buildQuickEntryFollowUpSubmitState({
+      followUpContent: form.followUpContent,
+      selectedProjectId: selectedProjectMeta ? selectedProjectMeta.id : '',
+      aiError: draft.aiError,
+      aiSummary: normalizedSummary,
+      aiNextSuggestion: normalizedNextSuggestion,
+      stage: followUpDisplayState.quickEntryFollowUpStage,
+      createNextTask: false
+    })
 
     return {
       quickEntryMode: mode,
       quickEntryModeTitle: getQuickEntryModeMeta(mode).label,
       quickEntryModeDesc: getQuickEntryModeMeta(mode).desc,
-      quickEntryShowProjectSearch: !!draft.showProjectSearch,
+      quickEntryShowProjectSearch: followUpDisplayState.quickEntryFollowUpStage === 'review' ? false : !!draft.showProjectSearch,
       quickEntryProjectKeyword: keyword,
       quickEntrySuggestedProjects: projectViews.suggestedProjects,
       quickEntryVisibleProjects: projectViews.visibleProjects,
@@ -4187,6 +4509,7 @@ Page({
       quickEntryVoiceStatusText: buildQuickEntryRestoredVoiceStatusText({
         followUpContent: form.followUpContent,
         aiError: restoredAiError,
+        aiNextSuggestionError: restoredNextSuggestionError,
         aiSummary: normalizedSummary,
         aiProjectMatch: normalizedProjectMatch,
         selectedProjectId: selectedProjectMeta ? selectedProjectMeta.id : ''
@@ -4199,15 +4522,20 @@ Page({
       quickEntryAiProjectCandidateIds: candidateIds,
       quickEntryAiSummary: normalizedSummary,
       quickEntryAiSummaryDraft: normalizedSummaryDraft || cloneQuickEntryAiSummary(normalizedSummary),
-      quickEntryAiSummaryOriginal: normalizedSummaryOriginal || cloneQuickEntryAiSummary(normalizedSummary),
       quickEntryAiNextSuggestion: normalizedNextSuggestion,
       quickEntryAiNextSuggestionDraft: normalizedNextSuggestionDraft || cloneQuickEntryAiNextSuggestion(normalizedNextSuggestion),
-      quickEntryAiNextSuggestionOriginal: normalizedNextSuggestionOriginal || cloneQuickEntryAiNextSuggestion(normalizedNextSuggestion),
+      quickEntryAiNextSuggestionError: restoredNextSuggestionError,
       quickEntryAiHasExtendedDetails: getQuickEntryAiHasExtendedDetails(normalizedSummary, normalizedNextSuggestion),
       quickEntryAiShowFullResult: false,
       quickEntryEditingAiSummary: !!draft.editingAiSummary,
       quickEntryEditingAiNextSuggestion: !!draft.editingAiNextSuggestion,
       quickEntryShowReviewSettings: followUpDisplayState.quickEntryFollowUpStage === 'review' && !!draft.showReviewSettings,
+      quickEntryFollowUpMethodTouched: !!draft.followUpMethodTouched,
+      quickEntryFollowUpDateTouched: !!draft.followUpDateTouched,
+      quickEntryFollowUpClockTouched: !!draft.followUpClockTouched,
+      quickEntryCreateNextTask: false,
+      quickEntryFollowUpPendingAction: '',
+      ...taskDraftState,
       ...followUpDisplayState,
       ...followUpSubmitState
     }
@@ -4220,7 +4548,8 @@ Page({
 
     this.setData({
       quickEntryEditingAiSummary: true,
-      quickEntryAiSummaryDraft: cloneQuickEntryAiSummary(this.data.quickEntryAiSummary)
+      quickEntryAiSummaryDraft: cloneQuickEntryAiSummary(this.data.quickEntryAiSummary),
+      quickEntryShowReviewSettings: false
     }, () => {
       this.scheduleQuickEntryDraftPersist()
     })
@@ -4235,21 +4564,6 @@ Page({
     })
   },
 
-  restoreQuickEntryAiSummary() {
-    const restoredSummary = cloneQuickEntryAiSummary(this.data.quickEntryAiSummaryOriginal)
-    if (!restoredSummary) {
-      return
-    }
-
-    this.setData({
-      quickEntryAiSummary: restoredSummary,
-      quickEntryAiSummaryDraft: cloneQuickEntryAiSummary(restoredSummary),
-      quickEntryEditingAiSummary: false
-    }, () => {
-      this.scheduleQuickEntryDraftPersist()
-    })
-  },
-
   startEditingQuickEntryAiNextSuggestion() {
     if (!this.data.quickEntryAiNextSuggestion) {
       return
@@ -4257,7 +4571,8 @@ Page({
 
     this.setData({
       quickEntryEditingAiNextSuggestion: true,
-      quickEntryAiNextSuggestionDraft: cloneQuickEntryAiNextSuggestion(this.data.quickEntryAiNextSuggestion)
+      quickEntryAiNextSuggestionDraft: cloneQuickEntryAiNextSuggestion(this.data.quickEntryAiNextSuggestion),
+      quickEntryShowReviewSettings: false
     }, () => {
       this.scheduleQuickEntryDraftPersist()
     })
@@ -4267,21 +4582,6 @@ Page({
     this.setData({
       quickEntryEditingAiNextSuggestion: false,
       quickEntryAiNextSuggestionDraft: cloneQuickEntryAiNextSuggestion(this.data.quickEntryAiNextSuggestion)
-    }, () => {
-      this.scheduleQuickEntryDraftPersist()
-    })
-  },
-
-  restoreQuickEntryAiNextSuggestion() {
-    const restoredSuggestion = cloneQuickEntryAiNextSuggestion(this.data.quickEntryAiNextSuggestionOriginal)
-    if (!restoredSuggestion) {
-      return
-    }
-
-    this.setData({
-      quickEntryAiNextSuggestion: restoredSuggestion,
-      quickEntryAiNextSuggestionDraft: cloneQuickEntryAiNextSuggestion(restoredSuggestion),
-      quickEntryEditingAiNextSuggestion: false
     }, () => {
       this.scheduleQuickEntryDraftPersist()
     })
@@ -4300,19 +4600,6 @@ Page({
     const value = String(event.detail.value || '')
     this.setData({
       'quickEntryAiNextSuggestionDraft.nextAction': value
-    }, () => {
-      this.scheduleQuickEntryDraftPersist()
-    })
-  },
-
-  onQuickEntryAiNextSuggestionDraftInput(event) {
-    const { field } = event.currentTarget.dataset
-    if (!field) {
-      return
-    }
-
-    this.setData({
-      [`quickEntryAiNextSuggestionDraft.${field}`]: String(event.detail.value || '')
     }, () => {
       this.scheduleQuickEntryDraftPersist()
     })
@@ -4339,10 +4626,95 @@ Page({
       return
     }
 
-    this.setData({
+    const nextPatch = {
       quickEntryAiNextSuggestion: draft,
       quickEntryAiNextSuggestionDraft: cloneQuickEntryAiNextSuggestion(draft),
       quickEntryEditingAiNextSuggestion: false
+    }
+
+    Object.assign(nextPatch, buildQuickEntryTaskDraftState({
+      nextSuggestion: draft,
+      nextTaskDraft: this.data.quickEntryNextTaskDraft,
+      selectedTimeSelection: this.data.quickEntryNextTaskTimeSelection,
+      titleTouched: this.data.quickEntryNextTaskTitleTouched,
+      timeTouched: this.data.quickEntryNextTaskTimeTouched
+    }))
+
+    this.setData(nextPatch, () => {
+      this.scheduleQuickEntryDraftPersist()
+    })
+  },
+
+  onQuickEntryNextTaskInput(event) {
+    const { field } = event.currentTarget.dataset
+    if (!field) {
+      return
+    }
+
+    const nextTaskDraft = cloneQuickEntryNextTaskDraft(this.data.quickEntryNextTaskDraft)
+    nextTaskDraft[field] = String(event.detail.value || '')
+
+    this.setData({
+      ...buildQuickEntryTaskDraftState({
+        nextSuggestion: this.data.quickEntryAiNextSuggestion,
+        nextTaskDraft,
+        selectedTimeSelection: this.data.quickEntryNextTaskTimeSelection,
+        titleTouched: field === 'title' ? true : this.data.quickEntryNextTaskTitleTouched,
+        timeTouched: this.data.quickEntryNextTaskTimeTouched
+      })
+    }, () => {
+      this.scheduleQuickEntryDraftPersist()
+    })
+  },
+
+  onQuickEntryNextTaskPicker(event) {
+    const { field } = event.currentTarget.dataset
+    if (!field) {
+      return
+    }
+
+    const nextTaskDraft = cloneQuickEntryNextTaskDraft(this.data.quickEntryNextTaskDraft)
+    nextTaskDraft[field] = String(event.detail.value || '')
+
+    this.setData({
+      ...buildQuickEntryTaskDraftState({
+        nextSuggestion: this.data.quickEntryAiNextSuggestion,
+        nextTaskDraft,
+        selectedTimeSelection: this.data.quickEntryNextTaskTimeSelection,
+        titleTouched: this.data.quickEntryNextTaskTitleTouched,
+        timeTouched: true
+      })
+    }, () => {
+      this.scheduleQuickEntryDraftPersist()
+    })
+  },
+
+  selectQuickEntryNextTaskTimeOption(event) {
+    const { optionId } = event.currentTarget.dataset
+    if (!optionId || !this.data.quickEntryAiNextSuggestion) {
+      return
+    }
+
+    const nextTaskDraft = cloneQuickEntryNextTaskDraft(this.data.quickEntryNextTaskDraft)
+    if (optionId !== 'custom') {
+      const matchedOption = (this.data.quickEntryNextTaskTimeOptions || []).find((item) => item.id === optionId)
+      if (!matchedOption) {
+        return
+      }
+      nextTaskDraft.dueDate = matchedOption.dueDate
+      nextTaskDraft.dueTime = matchedOption.dueTime
+    }
+
+    this.setData({
+      ...buildQuickEntryTaskDraftState({
+        nextSuggestion: this.data.quickEntryAiNextSuggestion,
+        nextTaskDraft,
+        selectedTimeSelection: optionId,
+        titleTouched: this.data.quickEntryNextTaskTitleTouched,
+        timeTouched: true
+      }),
+      quickEntryNextTaskTimeSelection: optionId === 'custom' ? 'custom' : optionId,
+      quickEntryNextTaskUseCustomTime: optionId === 'custom'
     }, () => {
       this.scheduleQuickEntryDraftPersist()
     })
@@ -4377,19 +4749,27 @@ Page({
       projectKeyword: this.data.quickEntryProjectKeyword || '',
       showProjectSearch: !!this.data.quickEntryShowProjectSearch,
       showReviewSettings: !!this.data.quickEntryShowReviewSettings,
+      followUpStage: this.data.quickEntryFollowUpStage || '',
+      followUpMethodTouched: !!this.data.quickEntryFollowUpMethodTouched,
+      followUpDateTouched: !!this.data.quickEntryFollowUpDateTouched,
+      followUpClockTouched: !!this.data.quickEntryFollowUpClockTouched,
       manualInputEnabled: !!this.data.quickEntryManualInputEnabled,
       voicePreviewText: this.data.quickEntryVoicePreviewText || '',
       aiError: this.data.quickEntryAiError || '',
+      aiNextSuggestionError: this.data.quickEntryAiNextSuggestionError || '',
       aiProjectMatch: this.data.quickEntryAiProjectMatch || null,
       aiProjectCandidateIds: Array.isArray(this.data.quickEntryAiProjectCandidateIds)
         ? this.data.quickEntryAiProjectCandidateIds.slice(0, 5)
         : [],
       aiSummary: this.data.quickEntryAiSummary || null,
       aiSummaryDraft: this.data.quickEntryAiSummaryDraft || null,
-      aiSummaryOriginal: this.data.quickEntryAiSummaryOriginal || null,
       aiNextSuggestion: this.data.quickEntryAiNextSuggestion || null,
       aiNextSuggestionDraft: this.data.quickEntryAiNextSuggestionDraft || null,
-      aiNextSuggestionOriginal: this.data.quickEntryAiNextSuggestionOriginal || null,
+      createNextTask: !!this.data.quickEntryCreateNextTask,
+      nextTaskTimeSelection: this.data.quickEntryNextTaskTimeSelection || '',
+      nextTaskTitleTouched: !!this.data.quickEntryNextTaskTitleTouched,
+      nextTaskTimeTouched: !!this.data.quickEntryNextTaskTimeTouched,
+      nextTaskDraft: cloneQuickEntryNextTaskDraft(this.data.quickEntryNextTaskDraft),
       editingAiSummary: !!this.data.quickEntryEditingAiSummary,
       editingAiNextSuggestion: !!this.data.quickEntryEditingAiNextSuggestion
     })
@@ -4441,7 +4821,8 @@ Page({
       isVoiceRecognizing: this.data.isQuickEntryVoiceRecognizing,
       isAiLoading: this.data.isQuickEntryAiLoading,
       manualInputEnabled: true,
-      selectedProjectId: this.data.quickEntrySelectedProjectId
+      selectedProjectId: this.data.quickEntrySelectedProjectId,
+      flowStage: this.data.quickEntryFollowUpStage
     })
     const submitState = buildQuickEntryFollowUpSubmitState({
       followUpContent: this.data.quickEntryForm.followUpContent,
@@ -4452,7 +4833,8 @@ Page({
       aiError: this.data.quickEntryAiError,
       aiProjectMatch: this.data.quickEntryAiProjectMatch,
       stage: displayState.quickEntryFollowUpStage,
-      actionId: this.data.quickEntryActionId
+      actionId: this.data.quickEntryActionId,
+      createNextTask: this.data.quickEntryCreateNextTask
     })
 
     this.setData({
@@ -4476,14 +4858,16 @@ Page({
       aiProjectMatch: this.data.quickEntryAiProjectMatch,
       aiNextSuggestion: this.data.quickEntryAiNextSuggestion,
       manualInputEnabled: false,
-      selectedProjectId: this.data.quickEntrySelectedProjectId
+      selectedProjectId: this.data.quickEntrySelectedProjectId,
+      flowStage: this.data.quickEntryFollowUpStage
     })
     const submitState = buildQuickEntryFollowUpSubmitState({
       followUpContent: this.data.quickEntryForm.followUpContent,
       selectedProjectId: this.data.quickEntrySelectedProjectId,
       aiError: this.data.quickEntryAiError,
       aiProjectMatch: this.data.quickEntryAiProjectMatch,
-      stage: displayState.quickEntryFollowUpStage
+      stage: displayState.quickEntryFollowUpStage,
+      createNextTask: this.data.quickEntryCreateNextTask
     })
 
     this.setData({
@@ -4494,13 +4878,85 @@ Page({
     })
   },
 
-  toggleQuickEntryAiFullResult() {
-    if (!this.data.quickEntryAiHasExtendedDetails) {
+  openQuickEntryProjectConfirm(options = {}) {
+    if (this.data.isQuickEntryVoiceRecording || this.data.isQuickEntryVoiceRecognizing || this.data.isQuickEntryAiLoading) {
       return
     }
 
+    const content = normalizeText(this.data.quickEntryForm.followUpContent)
+    if (!content) {
+      return
+    }
+
+    const selectedProjectId = normalizeText(this.data.quickEntrySelectedProjectId)
+    const displayState = buildQuickEntryFollowUpDisplayState({
+      followUpContent: this.data.quickEntryForm.followUpContent,
+      voicePreviewText: this.data.quickEntryVoicePreviewText,
+      aiError: this.data.quickEntryAiError,
+      aiSummary: this.data.quickEntryAiSummary,
+      aiProjectMatch: this.data.quickEntryAiProjectMatch,
+      aiNextSuggestion: this.data.quickEntryAiNextSuggestion,
+      manualInputEnabled: this.data.quickEntryManualInputEnabled,
+      selectedProjectId,
+      flowStage: 'project'
+    })
+    const submitState = buildQuickEntryFollowUpSubmitState({
+      followUpContent: this.data.quickEntryForm.followUpContent,
+      selectedProjectId,
+      aiError: this.data.quickEntryAiError,
+      aiProjectMatch: this.data.quickEntryAiProjectMatch,
+      stage: 'project',
+      createNextTask: false
+    })
+
+    if (typeof wx !== 'undefined' && typeof wx.hideKeyboard === 'function') {
+      wx.hideKeyboard()
+    }
+
+    const forceShowSearch = !!(options && options.showSearch)
+
     this.setData({
-      quickEntryAiShowFullResult: !this.data.quickEntryAiShowFullResult
+      quickEntryShowProjectSearch: forceShowSearch || !selectedProjectId,
+      quickEntryShowReviewSettings: false,
+      ...displayState,
+      ...submitState
+    }, () => {
+      this.syncQuickEntryLayout(0, false)
+      this.scheduleQuickEntryDraftPersist()
+    })
+  },
+
+  returnQuickEntryFollowUpToContent() {
+    if (this.data.isQuickEntryVoiceRecording || this.data.isQuickEntryVoiceRecognizing || this.data.isQuickEntryAiLoading) {
+      return
+    }
+
+    const displayState = buildQuickEntryFollowUpDisplayState({
+      followUpContent: this.data.quickEntryForm.followUpContent,
+      voicePreviewText: this.data.quickEntryVoicePreviewText,
+      aiError: this.data.quickEntryAiError,
+      aiSummary: null,
+      aiProjectMatch: this.data.quickEntryAiProjectMatch,
+      aiNextSuggestion: null,
+      manualInputEnabled: this.data.quickEntryManualInputEnabled,
+      selectedProjectId: this.data.quickEntrySelectedProjectId,
+      flowStage: normalizeText(this.data.quickEntryForm.followUpContent) ? 'content' : 'capture'
+    })
+    const submitState = buildQuickEntryFollowUpSubmitState({
+      followUpContent: this.data.quickEntryForm.followUpContent,
+      selectedProjectId: this.data.quickEntrySelectedProjectId,
+      aiError: '',
+      aiProjectMatch: this.data.quickEntryAiProjectMatch,
+      stage: displayState.quickEntryFollowUpStage,
+      createNextTask: false
+    })
+
+    this.setData({
+      quickEntryShowProjectSearch: false,
+      ...displayState,
+      ...submitState
+    }, () => {
+      this.scheduleQuickEntryDraftPersist()
     })
   },
 
@@ -4708,6 +5164,10 @@ Page({
     this.openQuickEntryCloseActionSheet()
   },
 
+  onQuickEntryHeaderBack() {
+    this.onQuickEntryHeaderClose()
+  },
+
   onQuickEntryCancelTap() {
     this.openQuickEntryCloseActionSheet()
   },
@@ -4832,6 +5292,17 @@ Page({
   },
 
   showQuickEntrySuccess(payload = {}) {
+    const mode = normalizeText(payload.mode)
+    if (mode === 'follow_up') {
+      this.clearQuickEntryDraft('follow_up')
+      this.closeQuickEntrySheet({
+        force: true,
+        discard: true,
+        toastTitle: normalizeText(payload.toastTitle) || normalizeText(payload.title) || '已保存跟进记录'
+      })
+      return
+    }
+
     const successState = buildQuickEntrySuccessState({
       visible: true,
       ...payload
@@ -4860,7 +5331,7 @@ Page({
     const resetState = buildQuickEntryEmptyState(mode, this.data.quickEntryProjects)
     const continueProjectMeta = findQuickEntryProject(this.data.quickEntryProjects, successState.continueProjectId)
 
-    if (continueProjectMeta && mode !== 'project') {
+    if (continueProjectMeta && mode === 'task') {
       const projectViews = buildQuickEntryProjectViews(
         this.data.quickEntryProjects,
         '',
@@ -4874,13 +5345,6 @@ Page({
       resetState.quickEntrySelectedProjectId = continueProjectMeta.id
       resetState.quickEntrySelectedProjectName = getQuickEntryProjectLabel(continueProjectMeta)
       resetState.quickEntrySelectedProjectMeta = continueProjectMeta
-      if (mode === 'follow_up' && successState.continueFollowUpMethod) {
-        resetState.quickEntryForm.followUpMethod = successState.continueFollowUpMethod
-      }
-      Object.assign(resetState, buildQuickEntryFollowUpSubmitState({
-        followUpContent: resetState.quickEntryForm.followUpContent,
-        selectedProjectId: continueProjectMeta.id
-      }))
     }
 
     this.setData({
@@ -5011,7 +5475,8 @@ Page({
         isVoiceRecording: true,
         isVoiceRecognizing: false,
         isAiLoading: false,
-        manualInputEnabled: this.data.quickEntryManualInputEnabled
+        manualInputEnabled: this.data.quickEntryManualInputEnabled,
+        flowStage: 'capture'
       })
       this.setData({
         isQuickEntryVoiceSupported: true,
@@ -5349,18 +5814,21 @@ Page({
         quickEntryVoiceStatusText: `已识别 ${recognizedText.length} 个字，正在理解项目内容...`,
         quickEntryAiLoadingHint: getQuickEntryAiLoadingHint('matching'),
         quickEntryAiError: '',
+        quickEntryAiNextSuggestionError: '',
         quickEntryAiProjectMatch: null,
         quickEntryAiProjectCandidateIds: [],
         quickEntryAiSummary: null,
         quickEntryAiSummaryDraft: null,
-        quickEntryAiSummaryOriginal: null,
         quickEntryAiNextSuggestion: null,
         quickEntryAiNextSuggestionDraft: null,
-        quickEntryAiNextSuggestionOriginal: null,
         quickEntryAiHasExtendedDetails: false,
         quickEntryAiShowFullResult: false,
         quickEntryEditingAiSummary: false,
         quickEntryEditingAiNextSuggestion: false,
+        quickEntryShowReviewSettings: false,
+        quickEntryCreateNextTask: false,
+        quickEntryFollowUpPendingAction: '',
+        ...buildQuickEntryTaskDraftState(),
         ...buildQuickEntryFollowUpDisplayState({
           followUpContent: recognizedText,
           voicePreviewText: recognizedText,
@@ -5368,12 +5836,14 @@ Page({
           isVoiceRecognizing: false,
           isAiLoading: false,
           manualInputEnabled: this.data.quickEntryManualInputEnabled,
-          selectedProjectId: this.data.quickEntrySelectedProjectId
+          selectedProjectId: this.data.quickEntrySelectedProjectId,
+          flowStage: 'content'
         }),
         ...buildQuickEntryFollowUpSubmitState({
           followUpContent: recognizedText,
           selectedProjectId: this.data.quickEntrySelectedProjectId,
-          stage: 'content'
+          stage: 'content',
+          createNextTask: false
         })
       })
 
@@ -5427,27 +5897,36 @@ Page({
       return
     }
 
+    const currentStage = normalizeQuickEntryFollowUpStage(this.data.quickEntryFollowUpStage) || 'project'
+    const requestNow = new Date()
+    const detectedFollowUpMeta = buildDetectedQuickEntryFollowUpMeta(content, requestNow)
+
     const decision = await ensureActionAllowed('ai', { guide: true })
     if (!decision.allowed) {
       this.setData({
         isQuickEntryAiLoading: false,
         quickEntryVoicePhase: 'error',
         quickEntryAiError: decision.message || '当前无法继续智能理解',
+        quickEntryAiNextSuggestionError: '',
         quickEntryAiLoadingHint: getQuickEntryAiLoadingHint(),
         ...buildQuickEntryFollowUpDisplayState({
           followUpContent: content,
           voicePreviewText: this.data.quickEntryVoicePreviewText,
           aiError: decision.message || '当前无法继续智能理解',
           manualInputEnabled: this.data.quickEntryManualInputEnabled,
-          selectedProjectId: this.data.quickEntrySelectedProjectId
+          selectedProjectId: this.data.quickEntrySelectedProjectId,
+          flowStage: currentStage
         }),
         quickEntryVoiceStatusText: '内容已转成文字，可手动修改或稍后再试智能理解',
         ...buildQuickEntryFollowUpSubmitState({
           followUpContent: content,
           selectedProjectId: this.data.quickEntrySelectedProjectId,
           aiProjectMatch: this.data.quickEntryAiProjectMatch,
-          stage: this.data.quickEntryFollowUpStage,
-          aiError: decision.message || '当前无法继续智能理解'
+          aiSummary: this.data.quickEntryAiSummary,
+          aiNextSuggestion: this.data.quickEntryAiNextSuggestion,
+          stage: currentStage,
+          aiError: decision.message || '当前无法继续智能理解',
+          createNextTask: false
         })
       }, () => {
         this.scheduleQuickEntryDraftPersist()
@@ -5466,40 +5945,54 @@ Page({
       ? this.data.quickEntryAiProjectCandidateIds.slice(0, 5)
       : []
 
-    if (!(targetSelectionMode === 'manual' && targetProjectId)) {
+    if (currentStage === 'project' || currentStage === 'review') {
+      targetProjectId = normalizeText(this.data.quickEntrySelectedProjectId)
+      targetProjectMeta = this.data.quickEntrySelectedProjectMeta || null
+    } else if (!(targetSelectionMode === 'manual' && targetProjectId)) {
       targetProjectId = ''
       targetProjectMeta = null
     }
 
-      this.setData({
+    this.setData({
         isQuickEntryAiLoading: true,
         quickEntryVoicePhase: 'understanding',
-      quickEntryAiError: '',
-      quickEntryAiSummary: null,
-      quickEntryAiNextSuggestion: null,
-      quickEntryAiHasExtendedDetails: false,
-      quickEntryAiShowFullResult: false,
-      quickEntryAiLoadingHint: getQuickEntryAiLoadingHint('matching'),
-      ...buildQuickEntryFollowUpDisplayState({
-        followUpContent: content,
-        voicePreviewText: this.data.quickEntryVoicePreviewText,
-        isVoiceRecording: this.data.isQuickEntryVoiceRecording,
-        isVoiceRecognizing: this.data.isQuickEntryVoiceRecognizing,
-        isAiLoading: true,
-        manualInputEnabled: this.data.quickEntryManualInputEnabled,
-        selectedProjectId: targetProjectId
-      }),
-      quickEntryVoiceStatusText: options.triggerSource === 'voice'
-        ? '已转成文字，正在生成整理结果...'
-        : this.data.quickEntryVoiceStatusText,
-      ...buildQuickEntryFollowUpSubmitState({
-        followUpContent: content,
-        selectedProjectId: targetProjectId,
-        aiProjectMatch: projectMatch,
-        stage: targetProjectId ? 'review' : 'project',
-        isAiLoading: true
+        quickEntryAiError: '',
+        quickEntryAiNextSuggestionError: '',
+        quickEntryAiSummary: null,
+        quickEntryAiSummaryDraft: null,
+        quickEntryAiNextSuggestion: null,
+        quickEntryAiNextSuggestionDraft: null,
+        quickEntryAiHasExtendedDetails: false,
+        quickEntryAiShowFullResult: false,
+        quickEntryEditingAiSummary: false,
+        quickEntryEditingAiNextSuggestion: false,
+        quickEntryShowReviewSettings: false,
+        quickEntryCreateNextTask: false,
+        quickEntryFollowUpPendingAction: '',
+        ...buildQuickEntryTaskDraftState(),
+        quickEntryAiLoadingHint: getQuickEntryAiLoadingHint('matching'),
+        ...buildQuickEntryFollowUpDisplayState({
+          followUpContent: content,
+          voicePreviewText: this.data.quickEntryVoicePreviewText,
+          isVoiceRecording: this.data.isQuickEntryVoiceRecording,
+          isVoiceRecognizing: this.data.isQuickEntryVoiceRecognizing,
+          isAiLoading: true,
+          manualInputEnabled: this.data.quickEntryManualInputEnabled,
+          selectedProjectId: targetProjectId,
+          flowStage: 'project'
+        }),
+        quickEntryVoiceStatusText: options.triggerSource === 'voice'
+          ? '已转成文字，正在生成整理结果...'
+          : this.data.quickEntryVoiceStatusText,
+        ...buildQuickEntryFollowUpSubmitState({
+          followUpContent: content,
+          selectedProjectId: targetProjectId,
+          aiProjectMatch: projectMatch,
+          stage: 'project',
+          isAiLoading: true,
+          createNextTask: false
+        })
       })
-    })
 
     try {
       if (!targetProjectId) {
@@ -5569,7 +6062,7 @@ Page({
           followUpContent: content,
           selectedProjectId: targetProjectId,
           aiProjectMatch: projectMatch,
-          stage: targetProjectId ? 'review' : 'project',
+          stage: 'project',
           isAiLoading: true
         })
       })
@@ -5588,10 +6081,17 @@ Page({
 
       const summaryPayload = {
         projectId: targetProjectId,
-        method: this.data.quickEntryForm.followUpMethod || '其他',
+        method: this.data.quickEntryFollowUpMethodTouched ? this.data.quickEntryForm.followUpMethod : '',
         content,
         stageChange: ''
       }
+
+      summaryPayload.referenceNowDate = detectedFollowUpMeta.referenceNowMeta.followUpOccurredDate
+      summaryPayload.referenceNowTime = detectedFollowUpMeta.referenceNowMeta.followUpOccurredTime
+      summaryPayload.detectedFollowUpMethod = detectedFollowUpMeta.detectedMethod
+      summaryPayload.detectedFollowUpOccurredDate = detectedFollowUpMeta.detectedOccurredMeta.followUpOccurredDate
+      summaryPayload.detectedFollowUpOccurredTime = detectedFollowUpMeta.detectedOccurredMeta.followUpOccurredTime
+      summaryPayload.detectedFollowUpOccurredTimePrecision = detectedFollowUpMeta.detectedOccurredMeta.followUpOccurredTimePrecision
 
       if (targetProjectId && targetProjectMeta) {
         summaryPayload.projectContext = this.buildQuickEntryFollowUpProjectContext(targetProjectMeta)
@@ -5610,36 +6110,66 @@ Page({
       })
 
       let nextSuggestion = null
+      let nextSuggestionError = ''
       if (targetProjectId) {
         this.setData({
           quickEntryAiLoadingHint: getQuickEntryAiLoadingHint('planning')
         })
-        const nextResult = await requestNextFollowUpSuggestion({
-          projectId: targetProjectId,
-          currentSummary: normalizedSummary.summary
-        })
+        try {
+          const nextResult = await requestNextFollowUpSuggestion({
+            projectId: targetProjectId,
+            currentSummary: normalizedSummary.summary
+          })
 
-        if (!nextResult || !nextResult.ok) {
-          throw new Error(nextResult && nextResult.message ? nextResult.message : '当前无法生成下一步建议')
+          if (!nextResult || !nextResult.ok) {
+            throw new Error(nextResult && nextResult.message ? nextResult.message : '当前无法生成下一步建议')
+          }
+
+          nextSuggestion = normalizeQuickEntryAiNextSuggestion({
+            ...nextResult,
+            generatedAt: nextResult.generatedAt || new Date().toISOString()
+          })
+        } catch (nextError) {
+          nextSuggestionError = nextError && nextError.message
+            ? nextError.message
+            : '当前无法生成下一步建议，请稍后再试'
         }
-
-        nextSuggestion = normalizeQuickEntryAiNextSuggestion({
-          ...nextResult,
-          generatedAt: nextResult.generatedAt || new Date().toISOString()
-        })
       }
 
       this.setData({
         quickEntryAiSummary: normalizedSummary,
         quickEntryAiSummaryDraft: cloneQuickEntryAiSummary(normalizedSummary),
-        quickEntryAiSummaryOriginal: cloneQuickEntryAiSummary(normalizedSummary),
         quickEntryAiNextSuggestion: nextSuggestion,
         quickEntryAiNextSuggestionDraft: cloneQuickEntryAiNextSuggestion(nextSuggestion),
-        quickEntryAiNextSuggestionOriginal: cloneQuickEntryAiNextSuggestion(nextSuggestion),
+        quickEntryAiNextSuggestionError: nextSuggestionError,
         quickEntryAiHasExtendedDetails: getQuickEntryAiHasExtendedDetails(normalizedSummary, nextSuggestion),
         quickEntryAiShowFullResult: false,
         quickEntryEditingAiSummary: false,
         quickEntryEditingAiNextSuggestion: false,
+        quickEntryShowProjectSearch: false,
+        quickEntryShowReviewSettings: false,
+        quickEntryCreateNextTask: false,
+        quickEntryFollowUpPendingAction: '',
+        ...buildQuickEntryTaskDraftState({
+          nextSuggestion,
+          nextTaskDraft: nextSuggestion
+            ? buildQuickEntrySuggestedTaskDraft(nextSuggestion)
+            : buildQuickEntryNextTaskDraft(),
+          titleTouched: false,
+          timeTouched: false
+        }),
+        ...buildQuickEntryFollowUpMetaPatch({
+          aiSummary: normalizedSummary,
+          detectedMethod: detectedFollowUpMeta.detectedMethod,
+          detectedOccurredMeta: detectedFollowUpMeta.detectedOccurredMeta,
+          fallbackMethod: this.data.quickEntryForm.followUpMethod || '其他',
+          methodTouched: this.data.quickEntryFollowUpMethodTouched,
+          dateTouched: this.data.quickEntryFollowUpDateTouched,
+          clockTouched: this.data.quickEntryFollowUpClockTouched,
+          allowMethodDefault: true,
+          allowOccurredDefault: true,
+          now: requestNow
+        }),
         quickEntryVoicePhase: 'done',
         quickEntryAiLoadingHint: targetProjectId
           ? getQuickEntryAiLoadingHint('planning')
@@ -5654,21 +6184,49 @@ Page({
           isVoiceRecognizing: false,
           isAiLoading: false,
           manualInputEnabled: this.data.quickEntryManualInputEnabled,
-          selectedProjectId: targetProjectId
+          selectedProjectId: targetProjectId,
+          flowStage: 'review'
         }),
-        quickEntryVoiceStatusText: '',
+        quickEntryVoiceStatusText: nextSuggestionError ? '摘要已生成，可直接保存或重试下一步建议' : '',
         ...buildQuickEntryFollowUpSubmitState({
           followUpContent: content,
           selectedProjectId: targetProjectId,
           aiProjectMatch: projectMatch,
-          stage: targetProjectId ? 'review' : 'project'
+          aiSummary: normalizedSummary,
+          aiNextSuggestion: nextSuggestion,
+          stage: 'review',
+          createNextTask: false
         })
       })
       this.scheduleQuickEntryDraftPersist()
+      if (nextSuggestionError) {
+        wx.showToast({
+          title: '下一步建议暂未生成',
+          icon: 'none'
+        })
+      }
     } catch (error) {
       this.setData({
         quickEntryVoicePhase: 'error',
         quickEntryAiError: error.message || '当前无法理解这条闪录内容，请稍后再试',
+        quickEntryAiNextSuggestionError: '',
+        quickEntryAiSummaryDraft: null,
+        quickEntryAiNextSuggestionDraft: null,
+        quickEntryShowReviewSettings: false,
+        quickEntryCreateNextTask: false,
+        quickEntryFollowUpPendingAction: '',
+        ...buildQuickEntryTaskDraftState(),
+        ...buildQuickEntryFollowUpMetaPatch({
+          detectedMethod: detectedFollowUpMeta.detectedMethod,
+          detectedOccurredMeta: detectedFollowUpMeta.detectedOccurredMeta,
+          fallbackMethod: this.data.quickEntryForm.followUpMethod || '其他',
+          methodTouched: this.data.quickEntryFollowUpMethodTouched,
+          dateTouched: this.data.quickEntryFollowUpDateTouched,
+          clockTouched: this.data.quickEntryFollowUpClockTouched,
+          allowMethodDefault: false,
+          allowOccurredDefault: false,
+          now: requestNow
+        }),
         quickEntryAiLoadingHint: getQuickEntryAiLoadingHint(),
         ...buildQuickEntryFollowUpDisplayState({
           followUpContent: content,
@@ -5678,15 +6236,17 @@ Page({
           isVoiceRecognizing: false,
           isAiLoading: false,
           manualInputEnabled: this.data.quickEntryManualInputEnabled,
-          selectedProjectId: targetProjectId
+          selectedProjectId: targetProjectId,
+          flowStage: targetProjectId ? 'project' : 'content'
         }),
         quickEntryVoiceStatusText: '内容已保留，可修改后重新发起 AI 整理',
         ...buildQuickEntryFollowUpSubmitState({
           followUpContent: content,
           selectedProjectId: targetProjectId,
           aiProjectMatch: projectMatch,
-          stage: targetProjectId ? 'review' : 'content',
-          aiError: error.message || '当前无法理解这条闪录内容，请稍后再试'
+          stage: targetProjectId ? 'project' : 'content',
+          aiError: error.message || '当前无法理解这条闪录内容，请稍后再试',
+          createNextTask: false
         })
       })
       this.scheduleQuickEntryDraftPersist()
@@ -5714,11 +6274,146 @@ Page({
       return
     }
 
+    if (this.data.quickEntryFollowUpStage === 'project' && !normalizeText(this.data.quickEntrySelectedProjectId)) {
+      wx.showToast({
+        title: '请先确认项目',
+        icon: 'none'
+      })
+      return
+    }
+
     this.refreshQuickEntryProjectRecommendation()
     this.runQuickEntryAiPipeline({
       content: this.data.quickEntryForm.followUpContent,
       triggerSource: 'manual'
     })
+  },
+
+  async retryQuickEntryNextSuggestion() {
+    if (this.data.isQuickEntryAiLoading || this.data.isQuickEntryVoiceRecognizing || this.data.isQuickEntryVoiceRecording) {
+      return
+    }
+
+    const projectId = normalizeText(this.data.quickEntrySelectedProjectId)
+    const summary = this.data.quickEntryAiSummary
+    const currentSummary = normalizeText(summary && summary.summary)
+
+    if (!projectId || !currentSummary) {
+      wx.showToast({
+        title: '请先完成摘要和项目确认',
+        icon: 'none'
+      })
+      return
+    }
+
+    const decision = await ensureActionAllowed('ai', { guide: true })
+    if (!decision.allowed) {
+      return
+    }
+
+    this.setData({
+      isQuickEntryAiLoading: true,
+      quickEntryAiNextSuggestionError: '',
+      quickEntryCreateNextTask: false,
+      quickEntryFollowUpPendingAction: '',
+      quickEntryAiLoadingHint: getQuickEntryAiLoadingHint('planning'),
+      quickEntryVoiceStatusText: '摘要已生成，正在补下一步建议...',
+      ...buildQuickEntryFollowUpSubmitState({
+        followUpContent: this.data.quickEntryForm.followUpContent,
+        selectedProjectId: projectId,
+        aiProjectMatch: this.data.quickEntryAiProjectMatch,
+        stage: 'review',
+        isAiLoading: true,
+        createNextTask: false
+      })
+    })
+
+    try {
+      const nextResult = await requestNextFollowUpSuggestion({
+        projectId,
+        currentSummary
+      })
+
+      if (!nextResult || !nextResult.ok) {
+        throw new Error(nextResult && nextResult.message ? nextResult.message : '当前无法生成下一步建议')
+      }
+
+      const nextSuggestion = normalizeQuickEntryAiNextSuggestion({
+        ...nextResult,
+        generatedAt: nextResult.generatedAt || new Date().toISOString()
+      })
+
+      this.setData({
+        quickEntryAiNextSuggestion: nextSuggestion,
+        quickEntryAiNextSuggestionDraft: cloneQuickEntryAiNextSuggestion(nextSuggestion),
+        quickEntryAiNextSuggestionError: '',
+        quickEntryAiHasExtendedDetails: getQuickEntryAiHasExtendedDetails(this.data.quickEntryAiSummary, nextSuggestion),
+        quickEntryShowReviewSettings: false,
+        quickEntryFollowUpPendingAction: '',
+        ...buildQuickEntryTaskDraftState({
+          nextSuggestion,
+          nextTaskDraft: this.data.quickEntryNextTaskDraft,
+          selectedTimeSelection: this.data.quickEntryNextTaskTimeSelection,
+          titleTouched: this.data.quickEntryNextTaskTitleTouched,
+          timeTouched: this.data.quickEntryNextTaskTimeTouched
+        }),
+        quickEntryAiLoadingHint: getQuickEntryAiLoadingHint('planning'),
+        quickEntryVoiceStatusText: '',
+        ...buildQuickEntryFollowUpDisplayState({
+          followUpContent: this.data.quickEntryForm.followUpContent,
+          voicePreviewText: this.data.quickEntryVoicePreviewText,
+          aiSummary: this.data.quickEntryAiSummary,
+          aiProjectMatch: this.data.quickEntryAiProjectMatch,
+          aiNextSuggestion: nextSuggestion,
+          manualInputEnabled: this.data.quickEntryManualInputEnabled,
+          selectedProjectId: projectId
+        }),
+        ...buildQuickEntryFollowUpSubmitState({
+          followUpContent: this.data.quickEntryForm.followUpContent,
+          selectedProjectId: projectId,
+          aiProjectMatch: this.data.quickEntryAiProjectMatch,
+          stage: 'review',
+          createNextTask: false
+        })
+      })
+      this.scheduleQuickEntryDraftPersist()
+    } catch (error) {
+      const errorMessage = error && error.message ? error.message : '当前无法生成下一步建议，请稍后再试'
+      this.setData({
+        quickEntryAiNextSuggestion: null,
+        quickEntryAiNextSuggestionDraft: null,
+        quickEntryAiNextSuggestionError: errorMessage,
+        quickEntryAiHasExtendedDetails: getQuickEntryAiHasExtendedDetails(this.data.quickEntryAiSummary, null),
+        quickEntryFollowUpPendingAction: '',
+        ...buildQuickEntryTaskDraftState(),
+        quickEntryAiLoadingHint: getQuickEntryAiLoadingHint(),
+        quickEntryVoiceStatusText: '摘要已生成，可直接保存或重试下一步建议',
+        ...buildQuickEntryFollowUpDisplayState({
+          followUpContent: this.data.quickEntryForm.followUpContent,
+          voicePreviewText: this.data.quickEntryVoicePreviewText,
+          aiSummary: this.data.quickEntryAiSummary,
+          aiProjectMatch: this.data.quickEntryAiProjectMatch,
+          manualInputEnabled: this.data.quickEntryManualInputEnabled,
+          selectedProjectId: projectId
+        }),
+        ...buildQuickEntryFollowUpSubmitState({
+          followUpContent: this.data.quickEntryForm.followUpContent,
+          selectedProjectId: projectId,
+          aiProjectMatch: this.data.quickEntryAiProjectMatch,
+          stage: 'review',
+          createNextTask: false
+        })
+      })
+      this.scheduleQuickEntryDraftPersist()
+      wx.showToast({
+        title: '下一步建议暂未生成',
+        icon: 'none'
+      })
+    } finally {
+      this.setData({
+        isQuickEntryAiLoading: false
+      })
+    }
   },
 
   onQuickEntryProjectSearch(event) {
@@ -5759,6 +6454,10 @@ Page({
       return
     }
 
+    if (this.data.quickEntryMode === 'follow_up' && normalizeQuickEntryFollowUpStage(this.data.quickEntryFollowUpStage) === 'review') {
+      return
+    }
+
     const { projectId } = event.currentTarget.dataset
     if (!projectId) {
       return
@@ -5791,14 +6490,18 @@ Page({
         isVoiceRecognizing: this.data.isQuickEntryVoiceRecognizing,
         isAiLoading: this.data.isQuickEntryAiLoading,
         manualInputEnabled: this.data.quickEntryManualInputEnabled,
-        selectedProjectId: projectId
+        selectedProjectId: projectId,
+        flowStage: this.data.quickEntryFollowUpStage
       }),
       ...buildQuickEntryFollowUpSubmitState({
         followUpContent: this.data.quickEntryForm.followUpContent,
         selectedProjectId: projectId,
         aiProjectMatch: this.data.quickEntryAiProjectMatch,
-        stage: projectId ? 'review' : 'project',
-        aiError: this.data.quickEntryAiError
+        aiSummary: this.data.quickEntryAiSummary,
+        aiNextSuggestion: this.data.quickEntryAiNextSuggestion,
+        stage: this.data.quickEntryFollowUpStage === 'review' ? 'review' : 'project',
+        aiError: this.data.quickEntryAiError,
+        createNextTask: this.data.quickEntryCreateNextTask
       })
     }, () => {
       if (this.data.quickEntryMode === 'follow_up') {
@@ -5838,6 +6541,10 @@ Page({
   },
 
   toggleQuickEntryProjectSearch() {
+    if (this.data.quickEntryMode === 'follow_up' && normalizeQuickEntryFollowUpStage(this.data.quickEntryFollowUpStage) === 'review') {
+      return
+    }
+
     const nextVisible = !this.data.quickEntryShowProjectSearch
     const keyword = nextVisible ? this.data.quickEntryProjectKeyword : ''
     const projectViews = buildQuickEntryProjectViews(
@@ -5859,6 +6566,7 @@ Page({
   refreshQuickEntryProjectRecommendation(formPatch = null) {
     const projects = Array.isArray(this.data.quickEntryProjects) ? this.data.quickEntryProjects : []
     const nextForm = formPatch ? Object.assign({}, this.data.quickEntryForm, formPatch) : this.data.quickEntryForm
+    const followUpContent = normalizeText(nextForm.followUpContent)
     const selectionMode = this.data.quickEntryProjectSelectionMode
     const currentSelectionId = normalizeText(this.data.quickEntrySelectedProjectId)
     const recommendationText = getQuickEntryRecommendationText(this.data.quickEntryMode, nextForm)
@@ -5888,14 +6596,44 @@ Page({
       this.data.quickEntryAiProjectCandidateIds,
       recommendationText
     )
-    this.setData({
+    const patch = {
       quickEntrySuggestedProjects: projectViews.suggestedProjects,
       quickEntryVisibleProjects: projectViews.visibleProjects,
       quickEntryProjectSelectionMode: nextSelectionMode,
       quickEntrySelectedProjectId: targetProjectId,
       quickEntrySelectedProjectName: getQuickEntryProjectLabel(targetProject),
       quickEntrySelectedProjectMeta: targetProject || null
-    })
+    }
+
+    if (this.data.quickEntryMode === 'follow_up') {
+      Object.assign(patch, buildQuickEntryFollowUpDisplayState({
+        followUpContent,
+        voicePreviewText: this.data.quickEntryVoicePreviewText,
+        aiError: this.data.quickEntryAiError,
+        aiSummary: this.data.quickEntryAiSummary,
+        aiProjectMatch: this.data.quickEntryAiProjectMatch,
+        aiNextSuggestion: this.data.quickEntryAiNextSuggestion,
+        isVoiceRecording: this.data.isQuickEntryVoiceRecording,
+        isVoiceRecognizing: this.data.isQuickEntryVoiceRecognizing,
+        isAiLoading: this.data.isQuickEntryAiLoading,
+        manualInputEnabled: this.data.quickEntryManualInputEnabled,
+        selectedProjectId: targetProjectId,
+        flowStage: this.data.quickEntryFollowUpStage
+      }))
+      Object.assign(patch, buildQuickEntryFollowUpSubmitState({
+        followUpContent,
+        selectedProjectId: targetProjectId,
+        aiProjectMatch: this.data.quickEntryAiProjectMatch,
+        aiSummary: this.data.quickEntryAiSummary,
+        aiNextSuggestion: this.data.quickEntryAiNextSuggestion,
+        stage: this.data.quickEntryFollowUpStage,
+        aiError: this.data.quickEntryAiError,
+        actionId: this.data.quickEntryActionId,
+        createNextTask: this.data.quickEntryCreateNextTask
+      }))
+    }
+
+    this.setData(patch)
   },
 
   setQuickEntryStage(event) {
@@ -5952,28 +6690,34 @@ Page({
     if (field === 'followUpContent') {
       patch.quickEntryVoicePhase = 'idle'
       patch.quickEntryAiError = ''
+      patch.quickEntryAiNextSuggestionError = ''
       patch.quickEntryAiProjectMatch = null
       patch.quickEntryAiProjectCandidateIds = []
       patch.quickEntryAiSummary = null
       patch.quickEntryAiSummaryDraft = null
-      patch.quickEntryAiSummaryOriginal = null
       patch.quickEntryAiNextSuggestion = null
       patch.quickEntryAiNextSuggestionDraft = null
-      patch.quickEntryAiNextSuggestionOriginal = null
       patch.quickEntryAiHasExtendedDetails = false
       patch.quickEntryAiShowFullResult = false
       patch.quickEntryEditingAiSummary = false
       patch.quickEntryEditingAiNextSuggestion = false
+      patch.quickEntryShowProjectSearch = false
+      patch.quickEntryShowReviewSettings = false
+      patch.quickEntryCreateNextTask = false
+      patch.quickEntryFollowUpPendingAction = ''
+      Object.assign(patch, buildQuickEntryTaskDraftState())
       Object.assign(patch, buildQuickEntryFollowUpDisplayState({
         followUpContent: nextValue,
         voicePreviewText: this.data.quickEntryVoicePreviewText,
         manualInputEnabled: this.data.quickEntryManualInputEnabled || !!nextValue,
-        selectedProjectId: this.data.quickEntrySelectedProjectId
+        selectedProjectId: this.data.quickEntrySelectedProjectId,
+        flowStage: nextValue ? 'content' : 'capture'
       }))
       Object.assign(patch, buildQuickEntryFollowUpSubmitState({
         followUpContent: nextValue,
         selectedProjectId: this.data.quickEntrySelectedProjectId,
-        stage: nextValue ? 'content' : 'capture'
+        stage: nextValue ? 'content' : 'capture',
+        createNextTask: false
       }))
     }
 
@@ -5993,9 +6737,16 @@ Page({
       return
     }
 
-    this.setData({
+    const nextPatch = {
       [`quickEntryForm.${field}`]: String(event.detail.value || '')
-    }, () => {
+    }
+    if (field === 'followUpDate') {
+      nextPatch.quickEntryFollowUpDateTouched = true
+    } else if (field === 'followUpClock') {
+      nextPatch.quickEntryFollowUpClockTouched = true
+    }
+
+    this.setData(nextPatch, () => {
       this.scheduleQuickEntryDraftPersist()
     })
   },
@@ -6007,7 +6758,8 @@ Page({
     }
 
     this.setData({
-      'quickEntryForm.followUpMethod': method
+      'quickEntryForm.followUpMethod': method,
+      quickEntryFollowUpMethodTouched: true
     }, () => {
       this.scheduleQuickEntryDraftPersist()
     })
@@ -6026,8 +6778,85 @@ Page({
     })
   },
 
+  buildQuickEntrySelectedTaskPayload(options = {}) {
+    const shouldCreateTask = typeof options.createTask === 'boolean'
+      ? options.createTask
+      : !!this.data.quickEntryCreateNextTask
+
+    if (!shouldCreateTask) {
+      return {
+        ok: true,
+        tasks: [],
+        taskTitle: ''
+      }
+    }
+
+    const draft = cloneQuickEntryNextTaskDraft(this.data.quickEntryNextTaskDraft)
+    const title = normalizeText(draft.title)
+    const dueDate = normalizeText(draft.dueDate)
+    const dueTime = normalizeText(draft.dueTime)
+
+    if (!title) {
+      return {
+        ok: false,
+        message: '请先确认下一步任务标题'
+      }
+    }
+
+    if (!dueDate || !dueTime) {
+      return {
+        ok: false,
+        message: '请先确认下一步任务时间'
+      }
+    }
+
+    return {
+      ok: true,
+      taskTitle: title,
+      tasks: [
+        {
+          title,
+          type: normalizeText(draft.type) || 'other',
+          priority: normalizeText(draft.priority) || 'normal',
+          dueDate,
+          dueTime,
+          description: ''
+        }
+      ]
+    }
+  },
+
+  async submitQuickFollowUpOnly() {
+    if (this.data.quickEntryActionId || this.data.isQuickEntryVoiceRecognizing || this.data.isQuickEntryAiLoading) {
+      return
+    }
+
+    await this.submitQuickFollowUp({
+      createTask: false
+    })
+  },
+
+  async submitQuickFollowUpWithTask() {
+    if (this.data.quickEntryActionId || this.data.isQuickEntryVoiceRecognizing || this.data.isQuickEntryAiLoading) {
+      return
+    }
+
+    if (!this.data.quickEntryTaskDraftCanCreate) {
+      wx.showToast({
+        title: '请先确认任务标题和时间',
+        icon: 'none'
+      })
+      return
+    }
+
+    await this.submitQuickFollowUp({
+      createTask: true
+    })
+  },
+
   async submitQuickEntry() {
     const mode = this.data.quickEntryMode
+    const followUpStage = normalizeQuickEntryFollowUpStage(this.data.quickEntryFollowUpStage)
     if (this.data.quickEntryActionId || this.data.isQuickEntryVoiceRecognizing || this.data.isQuickEntryAiLoading) {
       return
     }
@@ -6046,7 +6875,12 @@ Page({
       return
     }
 
-    if (mode === 'follow_up' && this.data.quickEntryFollowUpStage === 'content') {
+    if (mode === 'follow_up' && followUpStage === 'content') {
+      this.openQuickEntryProjectConfirm()
+      return
+    }
+
+    if (mode === 'follow_up' && followUpStage === 'project') {
       this.runQuickEntryAiPipeline({
         content: this.data.quickEntryForm.followUpContent,
         triggerSource: 'manual'
@@ -6130,11 +6964,15 @@ Page({
     }
   },
 
-  async submitQuickFollowUp() {
+  async submitQuickFollowUp(options = {}) {
+    const shouldCreateTask = !!options.createTask
     const projectId = normalizeText(this.data.quickEntrySelectedProjectId)
     const content = normalizeText(this.data.quickEntryForm.followUpContent)
     const aiSummary = this.data.quickEntryAiSummary ? cloneQuickEntryAiSummary(this.data.quickEntryAiSummary) : null
     const aiNextSuggestion = this.data.quickEntryAiNextSuggestion ? cloneQuickEntryAiNextSuggestion(this.data.quickEntryAiNextSuggestion) : null
+    const nextTaskPayload = this.buildQuickEntrySelectedTaskPayload({
+      createTask: shouldCreateTask
+    })
 
     if (!content) {
       wx.showToast({
@@ -6152,6 +6990,14 @@ Page({
       return
     }
 
+    if (!nextTaskPayload.ok) {
+      wx.showToast({
+        title: nextTaskPayload.message,
+        icon: 'none'
+      })
+      return
+    }
+
     const decision = await ensureActionAllowed('save_follow_up', { refresh: true, guide: true })
     if (!decision.allowed) {
       return
@@ -6159,14 +7005,17 @@ Page({
 
     this.setData({
       quickEntryActionId: 'follow_up',
+      quickEntryFollowUpPendingAction: shouldCreateTask ? 'save_with_task' : 'save_only',
       ...buildQuickEntryFollowUpSubmitState({
         followUpContent: content,
         selectedProjectId: projectId,
-        actionId: 'follow_up'
+        actionId: 'follow_up',
+        createNextTask: shouldCreateTask
       })
     })
 
     try {
+      const nextTaskDraft = cloneQuickEntryNextTaskDraft(this.data.quickEntryNextTaskDraft)
       const result = await saveFollowUpData({
         projectId,
         method: this.data.quickEntryForm.followUpMethod,
@@ -6181,16 +7030,21 @@ Page({
         aiRecommendedStage: aiSummary ? aiSummary.recommendedStage : '',
         aiStageChangeReason: aiSummary ? aiSummary.stageChangeReason : '',
         aiMissingInfo: aiSummary ? aiSummary.missingInfo : [],
-        tasks: aiNextSuggestion && Array.isArray(aiNextSuggestion.taskDrafts)
-          ? aiNextSuggestion.taskDrafts.map((item) => ({
-              title: item.title,
-              type: item.type || 'other',
-              priority: 'normal',
-              dueDate: item.dueDate,
-              dueTime: item.dueTime,
-              description: item.description || ''
-            }))
-          : []
+        aiNextAction: aiNextSuggestion ? aiNextSuggestion.nextAction : '',
+        aiNextRecommendedTarget: aiNextSuggestion ? aiNextSuggestion.recommendedTarget : '',
+        aiNextRecommendedMethod: aiNextSuggestion ? aiNextSuggestion.recommendedMethod : '',
+        aiNextRecommendedTimeWindow: aiNextSuggestion ? aiNextSuggestion.recommendedTimeWindow : '',
+        aiNextRecommendedDate: aiNextSuggestion ? aiNextSuggestion.recommendedDate : '',
+        aiNextRecommendedTime: aiNextSuggestion ? aiNextSuggestion.recommendedTime : '',
+        aiNextTalkTrack: aiNextSuggestion ? aiNextSuggestion.talkTrack : '',
+        aiNextReason: aiNextSuggestion ? aiNextSuggestion.reason : '',
+        aiNextMissingInfo: aiNextSuggestion ? aiNextSuggestion.missingInfo : [],
+        aiSuggestedTaskTitle: aiNextSuggestion ? normalizeText(nextTaskDraft.title) : '',
+        aiSuggestedTaskType: aiNextSuggestion ? normalizeText(nextTaskDraft.type) : '',
+        aiSuggestedTaskDueDate: aiNextSuggestion ? normalizeText(nextTaskDraft.dueDate) : '',
+        aiSuggestedTaskDueTime: aiNextSuggestion ? normalizeText(nextTaskDraft.dueTime) : '',
+        aiSuggestedTaskDescription: '',
+        tasks: nextTaskPayload.tasks
       })
 
       if (!result || !result.ok) {
@@ -6206,15 +7060,10 @@ Page({
       touchNotificationSync('quick_follow_up_saved')
       this.clearQuickEntryDraft('follow_up')
       await this.fetchDashboard()
-      this.showQuickEntrySuccess({
-        mode: 'follow_up',
-        title: '跟进已提交',
-        detail: '已写入项目跟进，可继续闪录下一条。',
-        projectId: result.projectId || projectId,
-        projectName: this.data.quickEntrySelectedProjectName,
-        continueProjectId: projectId,
-        continueProjectName: this.data.quickEntrySelectedProjectName,
-        continueFollowUpMethod: this.data.quickEntryForm.followUpMethod
+      this.closeQuickEntrySheet({
+        force: true,
+        discard: true,
+        toastTitle: nextTaskPayload.tasks.length ? '已保存，并已创建任务' : '已保存跟进记录'
       })
     } catch (error) {
       await reportSystemFailureData({
@@ -6233,10 +7082,12 @@ Page({
     } finally {
       this.setData({
         quickEntryActionId: '',
+        quickEntryFollowUpPendingAction: '',
         ...buildQuickEntryFollowUpSubmitState({
           followUpContent: this.data.quickEntryForm.followUpContent,
           selectedProjectId: this.data.quickEntrySelectedProjectId,
-          aiError: this.data.quickEntryAiError
+          aiError: this.data.quickEntryAiError,
+          createNextTask: false
         })
       })
     }
@@ -6335,8 +7186,7 @@ Page({
         detail: '已加入推进清单，可继续补下一条。',
         projectId: result.projectId || projectId,
         projectName: this.data.quickEntrySelectedProjectName,
-        continueProjectId: projectId,
-        continueProjectName: this.data.quickEntrySelectedProjectName
+        continueProjectId: projectId
       })
     } catch (error) {
       await reportSystemFailureData({

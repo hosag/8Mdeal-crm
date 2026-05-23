@@ -48,7 +48,9 @@ App({
 
     this.captureReferralCode(options)
     this.bootstrapSessionState()
-    this.bootstrapAppearancePreferences()
+    setTimeout(() => {
+      this.bootstrapAppearancePreferences()
+    }, 240)
   },
 
   onShow(options) {
@@ -57,31 +59,44 @@ App({
   },
 
   async bootstrapSessionState() {
-    try {
-      const accountResult = await resolveAccountData()
-      if (accountResult && accountResult.data) {
-        this.applyAccountState(accountResult.data)
-      }
-      await this.consumePendingReferralBinding()
-
-      const entitlementsResult = await getEntitlementsData()
-      if (entitlementsResult && entitlementsResult.data) {
-        this.applyEntitlementsState(entitlementsResult.data)
-      }
-    } catch (error) {
-      // Keep the app usable even when account bootstrap is not ready yet.
+    if (this.bootstrapSessionStatePromise) {
+      return this.bootstrapSessionStatePromise
     }
+
+    this.bootstrapSessionStatePromise = (async () => {
+      try {
+        await this.refreshAccount()
+        await this.consumePendingReferralBinding()
+        await this.refreshEntitlements()
+      } catch (error) {
+        // Keep the app usable even when account bootstrap is not ready yet.
+      } finally {
+        this.bootstrapSessionStatePromise = null
+      }
+    })()
+
+    return this.bootstrapSessionStatePromise
   },
 
   async bootstrapAppearancePreferences() {
-    try {
-      const result = await loadUserPreferencesData()
-      applyAppearanceSettingsToApp(result && result.appearanceSettings)
-      const pages = getCurrentPages()
-      pages.forEach((page) => syncPageAppearance(page))
-    } catch (error) {
-      // Keep default appearance when cloud preferences are unavailable.
+    if (this.bootstrapAppearancePreferencesPromise) {
+      return this.bootstrapAppearancePreferencesPromise
     }
+
+    this.bootstrapAppearancePreferencesPromise = (async () => {
+      try {
+        const result = await loadUserPreferencesData()
+        applyAppearanceSettingsToApp(result && result.appearanceSettings)
+        const pages = getCurrentPages()
+        pages.forEach((page) => syncPageAppearance(page))
+      } catch (error) {
+        // Keep default appearance when cloud preferences are unavailable.
+      } finally {
+        this.bootstrapAppearancePreferencesPromise = null
+      }
+    })()
+
+    return this.bootstrapAppearancePreferencesPromise
   },
 
   applyAppearanceSettings(nextSettings) {
@@ -101,11 +116,23 @@ App({
   },
 
   async refreshAccount() {
-    const result = await resolveAccountData()
-    if (result && result.data) {
-      this.applyAccountState(result.data)
+    if (this.refreshAccountPromise) {
+      return this.refreshAccountPromise
     }
-    return this.globalData.account
+
+    this.refreshAccountPromise = (async () => {
+      const result = await resolveAccountData()
+      if (result && result.data) {
+        this.applyAccountState(result.data)
+      }
+      return this.globalData.account
+    })()
+
+    try {
+      return await this.refreshAccountPromise
+    } finally {
+      this.refreshAccountPromise = null
+    }
   },
 
   applyEntitlementsState(nextState) {
@@ -119,11 +146,24 @@ App({
   },
 
   async refreshEntitlements() {
-    const result = await getEntitlementsData()
-    if (result && result.data) {
-      this.applyEntitlementsState(result.data)
+    if (this.refreshEntitlementsPromise) {
+      return this.refreshEntitlementsPromise
     }
-    return this.globalData.entitlements
+
+    this.refreshEntitlementsPromise = (async () => {
+      await this.refreshAccount()
+      const result = await getEntitlementsData()
+      if (result && result.data) {
+        this.applyEntitlementsState(result.data)
+      }
+      return this.globalData.entitlements
+    })()
+
+    try {
+      return await this.refreshEntitlementsPromise
+    } finally {
+      this.refreshEntitlementsPromise = null
+    }
   },
 
   extractReferralCode(options = {}) {

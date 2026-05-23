@@ -707,6 +707,7 @@ Page({
   },
 
   onHide() {
+    this.releaseCopyProjectLock()
     this.stopTaskCompletionVoiceInput({ silent: true })
     stopVoiceRecordingTicker(this, 'taskCompletionVoiceTimer', 'taskCompletionVoiceElapsedText')
     this.clearTaskFeedbackTimer()
@@ -714,6 +715,7 @@ Page({
   },
 
   onUnload() {
+    this.releaseCopyProjectLock()
     this.stopTaskCompletionVoiceInput({ silent: true })
     stopVoiceRecordingTicker(this, 'taskCompletionVoiceTimer', 'taskCompletionVoiceElapsedText')
     this.clearTaskFeedbackTimer()
@@ -761,6 +763,15 @@ Page({
         detail: ''
       }
     })
+  },
+
+  releaseCopyProjectLock() {
+    this.copyProjectPending = false
+    if (this.data.isCopyingProject) {
+      this.setData({
+        isCopyingProject: false
+      })
+    }
   },
 
   async fetchProjectDetail() {
@@ -2078,23 +2089,26 @@ Page({
   },
 
   async copyProject() {
-    if (!this.data.projectId || this.data.isCopyingProject) {
+    if (!this.data.projectId || this.copyProjectPending) {
       return
     }
 
-    const decision = await ensureActionAllowed('create_project', {
-      refresh: true,
-      guide: true
-    })
-    if (!decision.allowed) {
-      return
-    }
-
+    this.copyProjectPending = true
     this.setData({
       isCopyingProject: true
     })
 
+    let keepCopyProjectLock = false
+
     try {
+      const decision = await ensureActionAllowed('create_project', {
+        refresh: true,
+        guide: true
+      })
+      if (!decision.allowed) {
+        return
+      }
+
       const result = await flowProjectData({
         projectId: this.data.projectId,
         flowMode: 'clone_static'
@@ -2107,8 +2121,13 @@ Page({
         title: '已复制为新项目',
         icon: 'success'
       })
-      wx.navigateTo({
-        url: `/pages/project-form/project-form?projectId=${result.projectId}&mode=edit&source=clone`
+      keepCopyProjectLock = true
+      await new Promise((resolve, reject) => {
+        wx.navigateTo({
+          url: `/pages/project-form/project-form?projectId=${result.projectId}&mode=edit&source=clone`,
+          success: resolve,
+          fail: reject
+        })
       })
     } catch (error) {
       wx.showToast({
@@ -2116,9 +2135,9 @@ Page({
         icon: 'none'
       })
     } finally {
-      this.setData({
-        isCopyingProject: false
-      })
+      if (!keepCopyProjectLock) {
+        this.releaseCopyProjectLock()
+      }
     }
   },
 

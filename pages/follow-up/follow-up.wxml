@@ -230,76 +230,20 @@
           <view class="card-help-row">
             <view class="result-label">下一步建议</view>
           </view>
-          <view wx:if="{{aiNextSuggestion}}" class="result-status-badge {{aiNextSuggestion.isAdopted ? 'is-adopted' : 'is-pending'}}">{{aiNextSuggestion.isAdopted ? '已采用' : '待采用'}}</view>
+          <view wx:if="{{aiNextSuggestion && aiNextSuggestion.isAdopted}}" class="result-status-badge is-adopted">已采用</view>
         </view>
 
         <view wx:if="{{aiNextError}}" class="helper-text result-helper-text is-danger">{{aiNextError}}</view>
 
         <block wx:if="{{aiNextSuggestion}}">
-          <view class="ai-origin-row ai-origin-row-inline">
-            <view class="ai-origin-text">{{aiNextSuggestion.sourceMetaText}}</view>
-          </view>
-
           <view class="result-subpanel">
             <view class="result-sublabel">最优先动作</view>
             <view class="result-text">{{aiNextSuggestion.nextAction}}</view>
           </view>
 
-          <view class="detail-grid result-detail-grid">
-            <view class="detail-box">
-              <view class="detail-box-label">建议对象</view>
-              <view class="detail-box-value shared-detail-value">{{aiNextSuggestion.recommendedTarget || '待确认'}}</view>
-            </view>
-            <view class="detail-box">
-              <view class="detail-box-label">建议方式</view>
-              <view class="detail-box-value shared-detail-value">{{aiNextSuggestion.recommendedMethod || '待确认'}}</view>
-            </view>
-            <view class="detail-box">
-              <view class="detail-box-label">建议时间</view>
-              <view class="detail-box-value shared-detail-value">{{aiNextSuggestion.recommendedTimeWindow || '尽快'}}</view>
-            </view>
-            <view class="detail-box">
-              <view class="detail-box-label">回填时间</view>
-              <view class="detail-box-value shared-detail-value">{{aiNextSuggestion.recommendedDate}} {{aiNextSuggestion.recommendedTime}}</view>
-            </view>
-          </view>
-
-          <view class="result-subpanel" wx:if="{{aiNextSuggestion.talkTrack}}">
-            <view class="result-sublabel">建议话术</view>
-            <view class="result-text">{{aiNextSuggestion.talkTrack}}</view>
-          </view>
-
-          <view class="result-subpanel" wx:if="{{aiNextSuggestion.reason}}">
-            <view class="result-sublabel">建议理由</view>
-            <view class="result-text">{{aiNextSuggestion.reason}}</view>
-          </view>
-
-          <view class="result-subpanel" wx:if="{{aiNextSuggestion.taskDrafts && aiNextSuggestion.taskDrafts.length}}">
-            <view class="result-sublabel">建议动作草稿</view>
-            <view class="task-draft-list result-task-list">
-              <view class="task-draft-card result-task-card" wx:for="{{aiNextSuggestion.taskDrafts}}" wx:key="title">
-                <view class="line-between task-draft-head">
-                  <view class="soft-badge">{{item.typeLabel}}</view>
-                  <view class="helper-text">{{item.dueDate}} {{item.dueTime}}</view>
-                </view>
-                <view class="task-draft-title">{{item.title}}</view>
-                <view wx:if="{{item.description}}" class="helper-text result-task-desc">{{item.description}}</view>
-              </view>
-            </view>
-          </view>
-
-          <view class="result-subpanel" wx:if="{{aiNextSuggestion.missingInfo && aiNextSuggestion.missingInfo.length}}">
-            <view class="result-sublabel">仍缺少的信息</view>
-            <view class="checklist result-checklist">
-              <view class="check-item" wx:for="{{aiNextSuggestion.missingInfo}}" wx:key="*this">{{item}}</view>
-            </view>
-          </view>
-
           <view class="inline-actions follow-result-actions is-follow-up">
             <view class="btn-primary result-action-btn" bindtap="applyAiNextSuggestion">{{aiNextSuggestion.isAdopted ? '已采用动作' : '采用动作'}}</view>
-            <view wx:if="{{aiNextSuggestionBackup}}" class="btn-ghost result-action-btn" bindtap="restoreAiNextSuggestionVersion">恢复上一版</view>
           </view>
-          <view wx:if="{{aiNextSuggestion.isAdopted}}" class="helper-text result-adopted-text">下次跟进时间和推进动作已采用。</view>
         </block>
       </view>
     </view>

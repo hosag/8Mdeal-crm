@@ -745,6 +745,164 @@ function normalizeFollowUpMethod(value) {
   return FOLLOW_UP_METHODS.includes(method) ? method : '其他'
 }
 
+function padNumber(value) {
+  return `${value}`.padStart(2, '0')
+}
+
+function formatDateText(value) {
+  const date = value instanceof Date ? value : new Date(value)
+  if (!Number.isFinite(date.getTime())) {
+    return ''
+  }
+
+  return `${date.getFullYear()}-${padNumber(date.getMonth() + 1)}-${padNumber(date.getDate())}`
+}
+
+function formatTimeText(value) {
+  const date = value instanceof Date ? value : new Date(value)
+  if (!Number.isFinite(date.getTime())) {
+    return ''
+  }
+
+  return `${padNumber(date.getHours())}:${padNumber(date.getMinutes())}`
+}
+
+function isValidDateText(value) {
+  const current = safeText(value, '')
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(current)) {
+    return false
+  }
+
+  return formatDateText(`${current}T00:00:00`) === current
+}
+
+function isValidTimeText(value) {
+  const current = safeText(value, '')
+  if (!/^\d{2}:\d{2}$/.test(current)) {
+    return false
+  }
+
+  const hour = Number(current.slice(0, 2))
+  const minute = Number(current.slice(3, 5))
+  return hour >= 0 && hour <= 23 && minute >= 0 && minute <= 59
+}
+
+function normalizeFollowUpOccurredTimePrecision(value) {
+  const current = safeText(value, '')
+  return ['exact', 'coarse', 'default_now'].includes(current) ? current : 'default_now'
+}
+
+function buildDefaultOccurredMeta(context = {}) {
+  const now = new Date()
+  const referenceDate = safeText(context.referenceNowDate, '')
+  const referenceTime = safeText(context.referenceNowTime, '')
+  return {
+    followUpOccurredDate: isValidDateText(referenceDate) ? referenceDate : formatDateText(now),
+    followUpOccurredTime: isValidTimeText(referenceTime) ? referenceTime : formatTimeText(now),
+    followUpOccurredTimePrecision: 'default_now'
+  }
+}
+
+function parseOccurredMetaDateTime(value) {
+  if (!value || typeof value !== 'object') {
+    return null
+  }
+
+  const dateText = safeText(value.followUpOccurredDate, '')
+  const timeText = safeText(value.followUpOccurredTime, '')
+  if (!isValidDateText(dateText) || !isValidTimeText(timeText)) {
+    return null
+  }
+
+  const parsed = new Date(`${dateText}T${timeText}:00`)
+  return Number.isNaN(parsed.getTime()) ? null : parsed
+}
+
+function shouldPreferDetectedOccurredMeta(value, context = {}) {
+  if (!value || typeof value !== 'object') {
+    return false
+  }
+
+  const precision = normalizeFollowUpOccurredTimePrecision(value.followUpOccurredTimePrecision)
+  if (precision === 'default_now') {
+    return false
+  }
+
+  const referenceDate = safeText(context.referenceNowDate, '')
+  const referenceTime = safeText(context.referenceNowTime, '')
+  const referenceNow = isValidDateText(referenceDate) && isValidTimeText(referenceTime)
+    ? new Date(`${referenceDate}T${referenceTime}:00`)
+    : new Date()
+  const detectedAt = parseOccurredMetaDateTime(value)
+
+  if (!detectedAt || Number.isNaN(referenceNow.getTime()) || detectedAt.getTime() > referenceNow.getTime()) {
+    return false
+  }
+
+  const todayStart = new Date(referenceNow)
+  todayStart.setHours(0, 0, 0, 0)
+
+  if (detectedAt.getTime() < todayStart.getTime()) {
+    return true
+  }
+
+  return precision === 'exact'
+}
+
+function resolveFollowUpMethodFromPayload(value, context = {}) {
+  const detectedMethod = normalizeFollowUpMethod(context.detectedFollowUpMethod)
+  const aiMethod = normalizeFollowUpMethod(value && value.followUpMethod)
+
+  if (detectedMethod && detectedMethod !== '其他') {
+    return detectedMethod
+  }
+
+  if (aiMethod && aiMethod !== '其他') {
+    return aiMethod
+  }
+
+  return aiMethod || detectedMethod || '其他'
+}
+
+function resolveOccurredMeta(value, context = {}) {
+  const fallbackMeta = buildDefaultOccurredMeta(context)
+  const aiDate = safeText(value && value.followUpOccurredDate, '')
+  const aiTime = safeText(value && value.followUpOccurredTime, '')
+  const aiPrecision = normalizeFollowUpOccurredTimePrecision(value && value.followUpOccurredTimePrecision)
+  const detectedDate = safeText(context.detectedFollowUpOccurredDate, '')
+  const detectedTime = safeText(context.detectedFollowUpOccurredTime, '')
+  const detectedPrecision = normalizeFollowUpOccurredTimePrecision(context.detectedFollowUpOccurredTimePrecision)
+
+  const aiMeta = isValidDateText(aiDate) && isValidTimeText(aiTime)
+    ? {
+        followUpOccurredDate: aiDate,
+        followUpOccurredTime: aiTime,
+        followUpOccurredTimePrecision: aiPrecision
+      }
+    : null
+  const detectedMeta = isValidDateText(detectedDate) && isValidTimeText(detectedTime) && detectedPrecision !== 'default_now'
+    ? {
+        followUpOccurredDate: detectedDate,
+        followUpOccurredTime: detectedTime,
+        followUpOccurredTimePrecision: detectedPrecision
+      }
+    : null
+
+  if (aiMeta && aiMeta.followUpOccurredTimePrecision !== 'default_now') {
+    return aiMeta
+  }
+
+  if (shouldPreferDetectedOccurredMeta(detectedMeta, context)) {
+    return detectedMeta
+  }
+
+  if (aiMeta) {
+    return aiMeta
+  }
+
+  return fallbackMeta
+}
+
 function isProjectIrrelevantItem(value) {
   const text = String(value || '').trim()
   if (!text) {
@@ -795,6 +953,7 @@ function validateSummaryPayload(value, context = {}) {
   const stageChangeReason = recommendedStage === '不变更'
     ? safeText(value.stageChangeReason, '基于当前记录，暂不建议调整项目阶段。')
     : safeText(value.stageChangeReason, '当前记录已出现足够信号，建议同步调整项目阶段。')
+  const occurredMeta = resolveOccurredMeta(value, context)
 
   return {
     summary: normalizeCompactText(value.summary, 120) || '本次跟进已记录，建议结合原始内容确认。',
@@ -812,7 +971,10 @@ function validateSummaryPayload(value, context = {}) {
       .map((item) => normalizeCompactText(item, 36))
       .filter((item) => item && !isLowSignalItem(item))
       .slice(0, 3),
-    followUpMethod: normalizeFollowUpMethod(value.followUpMethod),
+    followUpMethod: resolveFollowUpMethodFromPayload(value, context),
+    followUpOccurredDate: occurredMeta.followUpOccurredDate,
+    followUpOccurredTime: occurredMeta.followUpOccurredTime,
+    followUpOccurredTimePrecision: occurredMeta.followUpOccurredTimePrecision,
     currentStage: safeText(context.stage, '线索')
   }
 }
@@ -913,7 +1075,10 @@ function buildPrompt(context) {
 ${recentFollowUps}
 未完成推进任务：
 ${openTasks}
-跟进方式：${context.method}
+当前参考时间：${context.referenceNowDate} ${context.referenceNowTime}
+页面手动选择的跟进方式：${context.method || '未指定'}
+本地规则命中的跟进方式提示：${context.detectedFollowUpMethod || '未命中'}
+本地规则命中的跟进时间提示：${context.detectedOccurredHint || '未命中'}
 本次原始记录：${context.content}
 用户手动选择的阶段变更：${context.stageChange}
 
@@ -932,8 +1097,16 @@ ${openTasks}
 12. 文风要像正式系统里的跟进摘要，避免“综合来看”“整体来看”“建议继续保持沟通”这类套话
 13. summary 与 highlights 不要重复同一事实，优先保留新增信息和当前关注点
 14. followUpMethod 根据本次原始记录判断跟进方式，只能返回：电话、微信、邮件、面谈、其他；无法判断时返回“其他”
-15. 如果“跟进方式”为空，必须完全根据本次原始记录判断 followUpMethod，不要臆测
-16. 只返回合法 JSON，不要输出 markdown 代码块
+15. 如果页面未手动指定跟进方式，可以参考“本地规则命中的跟进方式提示”，但只有当原始记录本身能支持时才采用；不要臆测
+16. followUpOccurredDate 只返回 YYYY-MM-DD，表示“本次跟进实际发生时间”的日期部分
+17. followUpOccurredTime 只返回 HH:mm，表示“本次跟进实际发生时间”的时间部分
+18. followUpOccurredTimePrecision 只能返回：exact、coarse、default_now
+19. 如果原始记录明确提到精确时间，例如“昨晚 8:30”“昨天 14:00”，就返回对应精确时间，并将 followUpOccurredTimePrecision 设为 exact
+20. 如果原始记录只提到模糊时段，例如“今早”“今天下午”“昨晚”，请转换成稳定的精确时间：凌晨 02:00、早上 09:30、上午 10:00、中午 12:00、下午 15:00、傍晚 18:30、晚上 20:00，并将 followUpOccurredTimePrecision 设为 coarse
+21. 如果原始记录只提到日期但没提具体时间或时段，例如“昨天”“前天”“5月3日”，请保留该日期，并使用“当前参考时间”的时分作为时间，followUpOccurredTimePrecision 返回 coarse
+22. 如果原始记录没有提到本次跟进发生时间，请直接使用“当前参考时间”，followUpOccurredTimePrecision 返回 default_now
+23. 必须识别“本次跟进已经发生的时间”，不要误把“明天发报价”“下周再联系”这类未来计划时间当作 followUpOccurredDate / followUpOccurredTime
+24. 只返回合法 JSON，不要输出 markdown 代码块
 
 返回 JSON，字段必须包含：
 summary
@@ -943,6 +1116,9 @@ recommendedStage
 stageChangeReason
 missingInfo
 followUpMethod
+followUpOccurredDate
+followUpOccurredTime
+followUpOccurredTimePrecision
 `.trim()
 }
 
@@ -989,6 +1165,17 @@ exports.main = async (event) => {
     )
     const projectContext = await getProjectContext(event.projectId, wxContext.OPENID)
     const fallbackContext = event.projectContext || {}
+    const referenceNowDate = safeText(event.referenceNowDate, '')
+    const referenceNowTime = safeText(event.referenceNowTime, '')
+    const detectedFollowUpMethod = normalizeFollowUpMethod(event.detectedFollowUpMethod)
+    const detectedFollowUpOccurredDate = safeText(event.detectedFollowUpOccurredDate, '')
+    const detectedFollowUpOccurredTime = safeText(event.detectedFollowUpOccurredTime, '')
+    const detectedFollowUpOccurredTimePrecision = normalizeFollowUpOccurredTimePrecision(event.detectedFollowUpOccurredTimePrecision)
+    const detectedOccurredHint = isValidDateText(detectedFollowUpOccurredDate)
+      && isValidTimeText(detectedFollowUpOccurredTime)
+      && detectedFollowUpOccurredTimePrecision !== 'default_now'
+      ? `${detectedFollowUpOccurredDate} ${detectedFollowUpOccurredTime}（${detectedFollowUpOccurredTimePrecision}）`
+      : ''
     const context = {
       projectName: projectContext ? projectContext.projectName : safeText(fallbackContext.projectName),
       clientName: projectContext ? projectContext.clientName : safeText(fallbackContext.clientName),
@@ -997,7 +1184,14 @@ exports.main = async (event) => {
       contacts: projectContext ? projectContext.contacts : [],
       recentFollowUps: projectContext ? projectContext.recentFollowUps : [],
       openTasks: projectContext ? projectContext.openTasks : [],
-      method: safeText(event.method, '其他'),
+      method: safeText(event.method, ''),
+      referenceNowDate: isValidDateText(referenceNowDate) ? referenceNowDate : formatDateText(occurredAt),
+      referenceNowTime: isValidTimeText(referenceNowTime) ? referenceNowTime : formatTimeText(occurredAt),
+      detectedFollowUpMethod: detectedFollowUpMethod !== '其他' ? detectedFollowUpMethod : '',
+      detectedFollowUpOccurredDate,
+      detectedFollowUpOccurredTime,
+      detectedFollowUpOccurredTimePrecision,
+      detectedOccurredHint,
       content: safeText(event.content),
       stageChange: safeText(event.stageChange, '未选择')
     }
@@ -1085,6 +1279,9 @@ exports.main = async (event) => {
       stageChangeReason: parsed.stageChangeReason,
       missingInfo: parsed.missingInfo,
       followUpMethod: parsed.followUpMethod,
+      followUpOccurredDate: parsed.followUpOccurredDate,
+      followUpOccurredTime: parsed.followUpOccurredTime,
+      followUpOccurredTimePrecision: parsed.followUpOccurredTimePrecision,
       usage: result.usage || null,
       billedTokens: usageRecord.billedTokens || 0,
       usageRecorded: usageRecord.skipped !== true,

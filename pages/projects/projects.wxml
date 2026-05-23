@@ -153,7 +153,11 @@
 
         <view class="project-card-icon-actions">
           <view class="project-card-icon-action project-copy-entry {{copyProjectId === item.id ? 'is-busy' : ''}}" data-project-id="{{item.id}}" catchtap="copyProject">
-            <view class="project-copy-entry-icon">
+            <block wx:if="{{copyProjectId === item.id}}">
+              <view class="project-copy-entry-busy-indicator"></view>
+              <view class="project-copy-entry-busy-text">复制中</view>
+            </block>
+            <view wx:else class="project-copy-entry-icon">
               <view class="project-copy-entry-back"></view>
               <view class="project-copy-entry-front"></view>
             </view>

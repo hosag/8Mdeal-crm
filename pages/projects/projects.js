@@ -929,6 +929,8 @@ Page({
 
   async onLoad(options) {
     this.isPageActive = true
+    this.skipNextShowRefresh = true
+    this.copyProjectPending = false
     syncPageAppearance(this)
     const quickFilter = normalizeQuickFilter(options && options.quickFilter)
     const sortMode = normalizeSortMode(options && options.sortMode)
@@ -960,6 +962,10 @@ Page({
     this.isPageActive = true
     syncPageAppearance(this)
     this.initTaskCompletionKeyboard()
+    if (this.skipNextShowRefresh) {
+      this.skipNextShowRefresh = false
+      return
+    }
     await this.refreshEntitlementPrompt({ refresh: true })
     if (!this.data.isLoading) {
       await this.fetchProjects()
@@ -968,6 +974,7 @@ Page({
 
   onHide() {
     this.isPageActive = false
+    this.releaseCopyProjectLock()
     this.stopTaskCompletionVoiceInput({ silent: true })
     stopVoiceRecordingTicker(this, 'taskCompletionVoiceTimer', 'taskCompletionVoiceElapsedText')
     this.clearTaskFeedbackTimer()
@@ -976,6 +983,7 @@ Page({
 
   onUnload() {
     this.isPageActive = false
+    this.releaseCopyProjectLock()
     this.stopTaskCompletionVoiceInput({ silent: true })
     stopVoiceRecordingTicker(this, 'taskCompletionVoiceTimer', 'taskCompletionVoiceElapsedText')
     this.clearTaskFeedbackTimer()
@@ -1090,6 +1098,15 @@ Page({
 
   retryFetch() {
     this.fetchProjects()
+  },
+
+  releaseCopyProjectLock() {
+    this.copyProjectPending = false
+    if (this.data.copyProjectId) {
+      this.setData({
+        copyProjectId: ''
+      })
+    }
   },
 
   onSearchInput(event) {
@@ -1893,23 +1910,26 @@ Page({
 
   async copyProject(event) {
     const projectId = String(event.currentTarget.dataset.projectId || '').trim()
-    if (!projectId || this.data.copyProjectId) {
+    if (!projectId || this.copyProjectPending) {
       return
     }
 
-    const decision = await ensureActionAllowed('create_project', {
-      refresh: true,
-      guide: true
-    })
-    if (!decision.allowed) {
-      return
-    }
-
+    this.copyProjectPending = true
     this.setData({
       copyProjectId: projectId
     })
 
+    let keepCopyProjectLock = false
+
     try {
+      const decision = await ensureActionAllowed('create_project', {
+        refresh: true,
+        guide: true
+      })
+      if (!decision.allowed) {
+        return
+      }
+
       const result = await flowProjectData({
         projectId,
         flowMode: 'clone_static'
@@ -1922,8 +1942,13 @@ Page({
         title: '已复制为新项目',
         icon: 'success'
       })
-      wx.navigateTo({
-        url: `/pages/project-form/project-form?projectId=${result.projectId}&mode=edit&source=clone`
+      keepCopyProjectLock = true
+      await new Promise((resolve, reject) => {
+        wx.navigateTo({
+          url: `/pages/project-form/project-form?projectId=${result.projectId}&mode=edit&source=clone`,
+          success: resolve,
+          fail: reject
+        })
       })
     } catch (error) {
       wx.showToast({
@@ -1931,9 +1956,9 @@ Page({
         icon: 'none'
       })
     } finally {
-      this.setData({
-        copyProjectId: ''
-      })
+      if (!keepCopyProjectLock) {
+        this.releaseCopyProjectLock()
+      }
     }
   },
 

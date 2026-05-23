@@ -4,6 +4,44 @@ cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 
 const db = cloud.database()
 
+function extractErrorMessage(error) {
+  if (!error) {
+    return ''
+  }
+
+  if (typeof error === 'string') {
+    return error.trim()
+  }
+
+  return String(error.errMsg || error.message || '').trim()
+}
+
+function isMissingCollectionError(error) {
+  const message = extractErrorMessage(error)
+  return /collection/i.test(message) && /not exist|not exists|does not exist|不存在/i.test(message)
+}
+
+async function safeGetOpenidList(collectionName, openid, options = {}) {
+  try {
+    let request = db.collection(collectionName).where({
+      _openid: openid
+    })
+
+    if (options.orderByField && options.orderByDirection) {
+      request = request.orderBy(options.orderByField, options.orderByDirection)
+    }
+
+    const result = await request.get()
+    return Array.isArray(result.data) ? result.data : []
+  } catch (error) {
+    if (isMissingCollectionError(error)) {
+      return []
+    }
+
+    throw error
+  }
+}
+
 function normalizeText(value) {
   return String(value || '').trim()
 }
@@ -244,14 +282,10 @@ exports.main = async (event = {}) => {
   const latestFollowMap = {}
 
   if (projectIds.length) {
-    const followResult = await db.collection('followUps')
-      .where({
-        _openid: wxContext.OPENID
-      })
-      .orderBy('followUpTime', 'desc')
-      .get()
-
-    ;(followResult.data || []).forEach((followUp) => {
+    ;(await safeGetOpenidList('followUps', wxContext.OPENID, {
+      orderByField: 'followUpTime',
+      orderByDirection: 'desc'
+    })).forEach((followUp) => {
       if (!followUp || !followUp.projectId || latestFollowMap[followUp.projectId]) {
         return
       }
@@ -262,27 +296,17 @@ exports.main = async (event = {}) => {
 
   const taskStatsMap = {}
   if (projectIds.length) {
-    try {
-      const taskResult = await db.collection('tasks')
-        .where({
-          _openid: wxContext.OPENID
-        })
-        .get()
+    ;(await safeGetOpenidList('tasks', wxContext.OPENID)).forEach((task) => {
+      if (!task || !task.projectId || projectIds.indexOf(task.projectId) === -1) {
+        return
+      }
 
-      ;(taskResult.data || []).forEach((task) => {
-        if (!task || !task.projectId || projectIds.indexOf(task.projectId) === -1) {
-          return
-        }
+      if (!taskStatsMap[task.projectId]) {
+        taskStatsMap[task.projectId] = []
+      }
 
-        if (!taskStatsMap[task.projectId]) {
-          taskStatsMap[task.projectId] = []
-        }
-
-        taskStatsMap[task.projectId].push(task)
-      })
-    } catch (error) {
-      // Allow the project list to keep working before the tasks collection is created.
-    }
+      taskStatsMap[task.projectId].push(task)
+    })
   }
 
   return {

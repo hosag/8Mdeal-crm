@@ -562,32 +562,11 @@
   color: var(--theme-text-soft);
 }
 
-.result-detail-grid {
-  margin-top: 16rpx;
-}
-
-.result-task-list {
-  margin-top: 12rpx;
-}
-
-.result-task-card {
-  background: var(--theme-project-card-bg);
-  box-shadow: var(--theme-project-card-shadow);
-}
-
-.result-task-card + .result-task-card {
-  margin-top: 10rpx;
-}
-
 .task-draft-title {
   margin-top: 10rpx;
   font-size: 25rpx;
   font-weight: 700;
   color: var(--theme-title);
-}
-
-.result-task-desc {
-  margin-top: 8rpx;
 }
 
 .ai-sheet-mask {
@@ -616,11 +595,6 @@
   display: flex;
   align-items: flex-start;
   margin-top: 12rpx;
-}
-
-.ai-origin-row-inline {
-  margin-top: 0;
-  margin-bottom: 14rpx;
 }
 
 .ai-origin-badge {

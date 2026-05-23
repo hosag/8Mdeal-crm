@@ -1,0 +1,925 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>闪录确认态 Demo</title>
+  <style>
+    :root {
+      --page-bg:
+        radial-gradient(circle at top left, rgba(27, 54, 76, 0.14), transparent 28%),
+        radial-gradient(circle at top right, rgba(133, 113, 77, 0.12), transparent 24%),
+        linear-gradient(180deg, #f6f4ef 0%, #f1eee7 42%, #ebe8df 100%);
+      --hero-bg: linear-gradient(145deg, #162d42 0%, #203d58 54%, #294f67 100%);
+      --hero-shadow: 0 20px 56px rgba(18, 33, 47, 0.2);
+      --title: #17242e;
+      --text-main: #233847;
+      --text-secondary: #3f4f5d;
+      --text-soft: #6a7784;
+      --text-muted: #7a8692;
+      --surface-bg: rgba(255, 252, 247, 0.88);
+      --surface-shadow: 0 18px 38px rgba(30, 39, 45, 0.08);
+      --soft-block-bg: #f4f2ed;
+      --soft-block-strong: rgba(255, 255, 255, 0.7);
+      --project-card-bg: linear-gradient(180deg, rgba(255, 254, 252, 0.98) 0%, rgba(248, 245, 239, 0.96) 100%);
+      --glass-bg: rgba(255, 255, 255, 0.72);
+      --divider: rgba(24, 39, 51, 0.08);
+      --chip-bg: #edf1f3;
+      --chip-text: #40505d;
+      --chip-active-bg: #173347;
+      --chip-active-text: #fff5e8;
+      --status-bg: rgba(177, 139, 86, 0.14);
+      --status-text: #8d6631;
+      --brand-bg: rgba(38, 74, 96, 0.12);
+      --brand-text: #244b61;
+      --button-primary-bg: linear-gradient(145deg, #183447 0%, #2b5369 100%);
+      --button-primary-text: #fff5e5;
+      --button-ghost-bg: rgba(255, 255, 255, 0.78);
+      --button-ghost-text: #516473;
+      --button-shadow: 0 14px 26px rgba(24, 56, 76, 0.16);
+      --link: #315a74;
+      --sheet-bg: rgba(247, 243, 236, 0.98);
+      --sheet-shadow: 0 -16px 46px rgba(20, 34, 45, 0.12);
+      --accent: #a88b61;
+      --accent-strong: #1b3a53;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html, body {
+      margin: 0;
+      min-height: 100%;
+      font-family: "Avenir Next", "PingFang SC", "Helvetica Neue", sans-serif;
+      color: var(--title);
+      background: var(--page-bg);
+    }
+
+    body {
+      padding: 28px 18px 40px;
+    }
+
+    .demo-shell {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .demo-head {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      gap: 18px;
+      margin-bottom: 22px;
+    }
+
+    .demo-title-block {
+      min-width: 280px;
+      flex: 1 1 360px;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      min-height: 34px;
+      padding: 0 14px;
+      border-radius: 999px;
+      background: rgba(24, 53, 72, 0.08);
+      color: var(--link);
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .demo-title {
+      margin: 12px 0 0;
+      font-size: clamp(28px, 4vw, 40px);
+      line-height: 1.1;
+      color: var(--title);
+    }
+
+    .demo-desc {
+      margin: 12px 0 0;
+      max-width: 640px;
+      font-size: 15px;
+      line-height: 1.7;
+      color: var(--text-secondary);
+    }
+
+    .demo-toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-start;
+      gap: 12px;
+      min-width: 280px;
+      flex: 0 1 420px;
+      padding: 14px;
+      border-radius: 22px;
+      background: rgba(255, 252, 247, 0.78);
+      box-shadow: var(--surface-shadow);
+      backdrop-filter: blur(14px);
+    }
+
+    .toolbar-group {
+      flex: 1 1 180px;
+      min-width: 0;
+    }
+
+    .toolbar-label {
+      margin-bottom: 10px;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-soft);
+    }
+
+    .toolbar-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .toolbar-chip {
+      border: 0;
+      background: var(--chip-bg);
+      color: var(--chip-text);
+      padding: 10px 14px;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: 180ms ease;
+    }
+
+    .toolbar-chip.is-active {
+      background: var(--chip-active-bg);
+      color: var(--chip-active-text);
+      box-shadow: 0 8px 18px rgba(23, 51, 71, 0.18);
+    }
+
+    .demo-stage {
+      display: grid;
+      grid-template-columns: minmax(0, 440px) minmax(280px, 1fr);
+      gap: 28px;
+      align-items: start;
+    }
+
+    .phone-shell {
+      width: 100%;
+      max-width: 440px;
+      margin: 0 auto;
+      padding: 14px;
+      border-radius: 34px;
+      background: rgba(18, 31, 43, 0.92);
+      box-shadow: 0 24px 64px rgba(16, 28, 36, 0.28);
+    }
+
+    .phone-screen {
+      height: min(860px, calc(100vh - 120px));
+      min-height: 760px;
+      border-radius: 26px;
+      overflow: hidden;
+      background: var(--hero-bg);
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+    }
+
+    .sheet {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      background:
+        radial-gradient(circle at top left, rgba(255, 255, 255, 0.16), transparent 26%),
+        linear-gradient(180deg, rgba(247, 243, 236, 0.94) 0%, rgba(247, 243, 236, 0.99) 18%, var(--sheet-bg) 100%);
+    }
+
+    .sheet-header {
+      flex: 0 0 auto;
+      padding: 16px 18px 14px;
+      color: #f7f3ec;
+      background:
+        radial-gradient(circle at top right, rgba(255, 244, 223, 0.16), transparent 44%),
+        var(--hero-bg);
+      box-shadow: var(--hero-shadow);
+    }
+
+    .sheet-handle {
+      width: 52px;
+      height: 5px;
+      margin: 0 auto 14px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.18);
+    }
+
+    .sheet-head-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .sheet-title {
+      font-size: 18px;
+      font-weight: 800;
+      letter-spacing: 0.02em;
+    }
+
+    .sheet-close {
+      font-size: 14px;
+      font-weight: 700;
+      color: rgba(247, 243, 236, 0.84);
+    }
+
+    .sheet-subtitle {
+      margin-top: 10px;
+      font-size: 14px;
+      line-height: 1.6;
+      color: rgba(247, 243, 236, 0.78);
+    }
+
+    .sheet-body {
+      flex: 1 1 auto;
+      overflow: auto;
+      padding: 18px 16px 22px;
+      scrollbar-width: none;
+    }
+
+    .sheet-body::-webkit-scrollbar {
+      display: none;
+    }
+
+    .card {
+      margin-top: 14px;
+      padding: 16px 16px 18px;
+      border-radius: 22px;
+      background: var(--soft-block-bg);
+      box-shadow:
+        inset 0 0 0 1px var(--divider),
+        0 12px 24px rgba(24, 39, 51, 0.04);
+    }
+
+    .card:first-child {
+      margin-top: 0;
+    }
+
+    .card.is-project {
+      background: var(--project-card-bg);
+    }
+
+    .card.is-source {
+      background: rgba(255, 252, 247, 0.6);
+    }
+
+    .card-head,
+    .line-between {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .card-title {
+      font-size: 14px;
+      font-weight: 800;
+      color: var(--text-soft);
+      letter-spacing: 0.01em;
+    }
+
+    .card-subhint {
+      margin-top: 6px;
+      font-size: 12px;
+      line-height: 1.55;
+      color: var(--text-muted);
+    }
+
+    .section-link {
+      font-size: 13px;
+      font-weight: 800;
+      color: var(--link);
+      white-space: nowrap;
+    }
+
+    .project-name {
+      margin-top: 10px;
+      font-size: 22px;
+      line-height: 1.25;
+      font-weight: 800;
+      color: var(--title);
+    }
+
+    .project-meta,
+    .followup-meta {
+      margin-top: 6px;
+      font-size: 14px;
+      line-height: 1.6;
+      color: var(--text-secondary);
+    }
+
+    .status-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 32px;
+      padding: 0 12px;
+      border-radius: 999px;
+      background: var(--status-bg);
+      color: var(--status-text);
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .status-badge.is-brand {
+      background: var(--brand-bg);
+      color: var(--brand-text);
+    }
+
+    .summary-text,
+    .next-action {
+      margin-top: 10px;
+      font-size: 16px;
+      line-height: 1.7;
+      color: var(--text-main);
+    }
+
+    .weak-link {
+      margin-top: 12px;
+      font-size: 13px;
+      font-weight: 800;
+      color: var(--link);
+    }
+
+    .draft-head-main {
+      min-width: 0;
+      flex: 1 1 auto;
+    }
+
+    .draft-status-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .draft-note {
+      margin-top: 8px;
+      font-size: 13px;
+      line-height: 1.6;
+      color: var(--text-soft);
+    }
+
+    .grid-two {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .info-block {
+      padding: 12px 13px;
+      border-radius: 18px;
+      background: var(--soft-block-strong);
+      box-shadow: inset 0 0 0 1px var(--divider);
+    }
+
+    .info-label {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .info-value {
+      margin-top: 6px;
+      font-size: 15px;
+      line-height: 1.5;
+      font-weight: 700;
+      color: var(--title);
+    }
+
+    .field-group {
+      margin-top: 14px;
+    }
+
+    .field-label {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 13px;
+      font-weight: 800;
+      color: var(--text-soft);
+    }
+
+    .input,
+    .textarea,
+    .picker {
+      width: 100%;
+      border: 0;
+      outline: 0;
+      border-radius: 18px;
+      background: rgba(255, 255, 255, 0.72);
+      box-shadow: inset 0 0 0 1px rgba(24, 39, 51, 0.08);
+      color: var(--title);
+      font: inherit;
+    }
+
+    .input,
+    .picker {
+      min-height: 52px;
+      padding: 0 15px;
+      display: flex;
+      align-items: center;
+      font-size: 15px;
+      font-weight: 600;
+    }
+
+    .textarea {
+      min-height: 92px;
+      padding: 14px 15px;
+      font-size: 15px;
+      line-height: 1.7;
+      resize: none;
+    }
+
+    .chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 42px;
+      padding: 0 14px;
+      border-radius: 999px;
+      background: var(--chip-bg);
+      color: var(--chip-text);
+      font-size: 13px;
+      font-weight: 800;
+      cursor: pointer;
+      user-select: none;
+      transition: 180ms ease;
+    }
+
+    .chip.is-active {
+      background: var(--chip-active-bg);
+      color: var(--chip-active-text);
+      box-shadow: 0 10px 22px rgba(23, 51, 71, 0.16);
+    }
+
+    .split-row {
+      display: grid;
+      grid-template-columns: 1fr 132px;
+      gap: 10px;
+    }
+
+    .source-preview {
+      margin-top: 8px;
+      font-size: 14px;
+      line-height: 1.7;
+      color: var(--text-secondary);
+    }
+
+    .source-editor {
+      margin-top: 12px;
+      display: none;
+    }
+
+    .source-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 12px;
+      margin-top: 12px;
+    }
+
+    .body-spacer {
+      height: 18px;
+    }
+
+    .sheet-footer {
+      flex: 0 0 auto;
+      padding: 14px 16px calc(16px + env(safe-area-inset-bottom));
+      border-top: 1px solid var(--divider);
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0) 0%, var(--sheet-bg) 22%, var(--sheet-bg) 100%);
+      backdrop-filter: blur(14px);
+    }
+
+    .footer-hint {
+      margin-bottom: 12px;
+      font-size: 13px;
+      line-height: 1.6;
+      color: var(--text-soft);
+    }
+
+    .dual-actions {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+    }
+
+    .btn {
+      border: 0;
+      cursor: pointer;
+      font: inherit;
+      transition: 180ms ease;
+    }
+
+    .btn-ghost {
+      flex: 0 0 134px;
+      min-height: 52px;
+      border-radius: 20px;
+      background: var(--button-ghost-bg);
+      color: var(--button-ghost-text);
+      box-shadow: inset 0 0 0 1px rgba(24, 39, 51, 0.08);
+      font-size: 15px;
+      font-weight: 800;
+    }
+
+    .btn-primary {
+      min-height: 52px;
+      border-radius: 20px;
+      background: var(--button-primary-bg);
+      color: var(--button-primary-text);
+      box-shadow: var(--button-shadow);
+      font-size: 15px;
+      font-weight: 800;
+    }
+
+    .primary-group {
+      flex: 1 1 auto;
+      min-width: 0;
+    }
+
+    .primary-group .btn-primary {
+      width: 100%;
+    }
+
+    .primary-meta {
+      margin-top: 8px;
+      text-align: right;
+      font-size: 12px;
+      line-height: 1.5;
+      color: var(--text-soft);
+    }
+
+    .demo-notes {
+      padding: 18px;
+      border-radius: 28px;
+      background: rgba(255, 252, 247, 0.78);
+      box-shadow: var(--surface-shadow);
+      backdrop-filter: blur(14px);
+    }
+
+    .notes-title {
+      margin: 0;
+      font-size: 18px;
+      line-height: 1.3;
+    }
+
+    .notes-list {
+      margin: 14px 0 0;
+      padding-left: 18px;
+      color: var(--text-secondary);
+      font-size: 14px;
+      line-height: 1.8;
+    }
+
+    .notes-list li + li {
+      margin-top: 6px;
+    }
+
+    .notes-block {
+      margin-top: 18px;
+      padding: 14px 15px;
+      border-radius: 20px;
+      background: rgba(255, 255, 255, 0.66);
+      box-shadow: inset 0 0 0 1px var(--divider);
+    }
+
+    .notes-block-title {
+      margin: 0 0 8px;
+      font-size: 14px;
+      font-weight: 800;
+      color: var(--text-soft);
+    }
+
+    .notes-block p {
+      margin: 0;
+      font-size: 14px;
+      line-height: 1.7;
+      color: var(--text-secondary);
+    }
+
+    @media (max-width: 980px) {
+      .demo-stage {
+        grid-template-columns: 1fr;
+      }
+
+      .demo-notes {
+        order: -1;
+      }
+    }
+
+    @media (max-width: 520px) {
+      body {
+        padding: 18px 10px 28px;
+      }
+
+      .phone-shell {
+        padding: 10px;
+        border-radius: 24px;
+      }
+
+      .phone-screen {
+        min-height: 720px;
+      }
+
+      .sheet-header {
+        padding: 14px 14px 12px;
+      }
+
+      .sheet-body,
+      .sheet-footer {
+        padding-left: 12px;
+        padding-right: 12px;
+      }
+
+      .dual-actions {
+        flex-direction: column;
+      }
+
+      .btn-ghost {
+        flex-basis: auto;
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="demo-shell">
+    <header class="demo-head">
+      <div class="demo-title-block">
+        <div class="eyebrow">成交 CRM CodeX 版</div>
+        <h1 class="demo-title">闪录确认态 Demo</h1>
+        <p class="demo-desc">
+          这份页面按你们当前小程序的卡片、chip、badge、fixed 底部动作风格来做，
+          重点验证 AI 整理完成后是否已经从“录入页”切到“确认页”。
+        </p>
+      </div>
+      <div class="demo-toolbar">
+        <div class="toolbar-group">
+          <div class="toolbar-label">原始记录</div>
+          <div class="toolbar-chips">
+            <button class="toolbar-chip is-active" data-toggle-source="collapsed">折叠态</button>
+            <button class="toolbar-chip" data-toggle-source="expanded">展开态</button>
+          </div>
+        </div>
+        <div class="toolbar-group">
+          <div class="toolbar-label">执行时间</div>
+          <div class="toolbar-chips">
+            <button class="toolbar-chip is-active" data-toggle-time="preset">候选时间</button>
+            <button class="toolbar-chip" data-toggle-time="custom">自定义时间</button>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <main class="demo-stage">
+      <section class="phone-shell">
+        <div class="phone-screen">
+          <div class="sheet">
+            <div class="sheet-header">
+              <div class="sheet-handle"></div>
+              <div class="sheet-head-row">
+                <div class="sheet-title">快速录入</div>
+                <div class="sheet-close">关闭</div>
+              </div>
+              <div class="sheet-subtitle">AI 已整理完成，当前页面是确认态而不是录入态。</div>
+            </div>
+
+            <div class="sheet-body">
+              <section class="card is-project">
+                <div class="line-between">
+                  <div>
+                    <div class="card-title">本次跟进</div>
+                    <div class="card-subhint">项目已确认，可直接保存，也可先确认任务草案</div>
+                  </div>
+                  <div class="section-link">更换项目</div>
+                </div>
+                <div class="project-name">华大基因数据库改造</div>
+                <div class="project-meta">华大基因科技有限公司 · 商机推进</div>
+                <div class="followup-meta">2026-05-20 14:30 · 面谈</div>
+                <div class="status-row">
+                  <div class="status-badge is-brand">AI 已整理完成</div>
+                </div>
+              </section>
+
+              <section class="card">
+                <div class="line-between">
+                  <div class="card-title">AI摘要</div>
+                  <div class="section-link">调整</div>
+                </div>
+                <div class="summary-text">
+                  客户计划本周五完成内部方案评审，下周一上午确认预算口径。
+                  当前阶段重点是预算确认后是否进入报价锁定。
+                </div>
+                <div class="weak-link">重新AI整理</div>
+              </section>
+
+              <section class="card">
+                <div class="card-head">
+                  <div class="draft-head-main">
+                    <div class="card-title">AI建议的下一步</div>
+                    <div class="draft-status-row">
+                      <div class="status-badge is-brand">任务草案</div>
+                      <div class="status-badge">未创建</div>
+                    </div>
+                  </div>
+                  <div class="section-link">调整</div>
+                </div>
+
+                <div class="next-action">联系王总确认预算口径，并推进报价确认</div>
+                <div class="draft-note">这是 AI 生成的建议动作，创建任务前可先调整。</div>
+
+                <div class="grid-two">
+                  <div class="info-block">
+                    <div class="info-label">对象</div>
+                    <div class="info-value">客户决策人</div>
+                  </div>
+                  <div class="info-block">
+                    <div class="info-label">建议触达时间</div>
+                    <div class="info-value">05-26 10:00</div>
+                  </div>
+                </div>
+
+                <div class="field-group">
+                  <label class="field-label" for="task-title">任务标题</label>
+                  <div class="input" id="task-title">联系王总确认预算口径，并推进报价确认</div>
+                </div>
+
+                <div class="field-group">
+                  <div class="field-label">建议执行时间</div>
+                  <div class="chips" id="time-chips">
+                    <div class="chip is-active">05-26 10:00</div>
+                    <div class="chip">05-26 15:30</div>
+                    <div class="chip">05-27 09:30</div>
+                    <div class="chip" id="custom-time-chip">自定义</div>
+                  </div>
+                </div>
+
+                <div class="field-group" id="custom-time-group" hidden>
+                  <div class="field-label">自定义时间</div>
+                  <div class="split-row">
+                    <div class="picker">2026-05-26</div>
+                    <div class="picker">14:00</div>
+                  </div>
+                </div>
+
+                <div class="field-group">
+                  <label class="field-label" for="task-desc">任务说明</label>
+                  <div class="textarea" id="task-desc">
+                    预算口径确认后，再决定是否同步更新正式报价版本。
+                  </div>
+                </div>
+              </section>
+
+              <section class="card is-source" id="source-card">
+                <div class="line-between">
+                  <div class="card-title">原始记录</div>
+                  <div class="section-link" id="source-toggle-text">展开修改</div>
+                </div>
+                <div class="source-preview" id="source-preview">
+                  客户说本周五内部过方案，下周一上午确认预算口径，预算没问题就直接推进报价。
+                </div>
+                <div class="source-editor" id="source-editor">
+                  <div class="textarea">
+                    客户说本周五内部过方案，下周一上午确认预算口径，预算没问题就直接推进报价。
+                  </div>
+                  <div class="source-actions">
+                    <div class="section-link">切回语音录入</div>
+                    <div class="section-link">重新AI整理</div>
+                  </div>
+                </div>
+              </section>
+
+              <div class="body-spacer"></div>
+            </div>
+
+            <div class="sheet-footer">
+              <div class="footer-hint">AI 已生成任务草案，请选择保存方式。</div>
+              <div class="dual-actions">
+                <button class="btn btn-ghost">仅保存跟进</button>
+                <div class="primary-group">
+                  <button class="btn btn-primary">保存并创建任务</button>
+                  <div class="primary-meta" id="create-meta">将创建：05-26 10:00</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <aside class="demo-notes">
+        <h2 class="notes-title">这版主要看 4 件事</h2>
+        <ol class="notes-list">
+          <li>顶部先建立上下文，不再让大录入框占据首屏主视觉。</li>
+          <li>AI摘要先于任务草案出现，先解释“发生了什么”，再进入“接下来做什么”。</li>
+          <li>对象、建议触达时间、任务标题、执行时间、任务说明全部收进一张任务草案卡，不再散成很多同级字段。</li>
+          <li>原始记录默认折叠，确认页默认可读，不默认可写。</li>
+        </ol>
+
+        <div class="notes-block">
+          <h3 class="notes-block-title">建议审核点</h3>
+          <p>
+            重点看“扫一眼是否能按 概览卡 → AI摘要 → 任务草案 → 底部动作 的顺序理解页面”，
+            而不是继续把它当成长表单来读。
+          </p>
+        </div>
+
+        <div class="notes-block">
+          <h3 class="notes-block-title">交互开关</h3>
+          <p>
+            顶部工具栏可以切换“原始记录折叠/展开”和“候选时间/自定义时间”，
+            用来检查这两个状态下版面是否依然稳定。
+          </p>
+        </div>
+      </aside>
+    </main>
+  </div>
+
+  <script>
+    const sourceButtons = document.querySelectorAll("[data-toggle-source]");
+    const timeButtons = document.querySelectorAll("[data-toggle-time]");
+    const sourceToggleText = document.getElementById("source-toggle-text");
+    const sourceEditor = document.getElementById("source-editor");
+    const sourcePreview = document.getElementById("source-preview");
+    const customTimeGroup = document.getElementById("custom-time-group");
+    const customTimeChip = document.getElementById("custom-time-chip");
+    const createMeta = document.getElementById("create-meta");
+    const timeChips = Array.from(document.querySelectorAll("#time-chips .chip"));
+
+    function setToolbarActive(buttons, value, attributeName) {
+      buttons.forEach((button) => {
+        button.classList.toggle("is-active", button.dataset[attributeName] === value);
+      });
+    }
+
+    function updateSourceMode(mode) {
+      const expanded = mode === "expanded";
+      sourceEditor.style.display = expanded ? "block" : "none";
+      sourcePreview.style.display = expanded ? "none" : "block";
+      sourceToggleText.textContent = expanded ? "收起" : "展开修改";
+      setToolbarActive(sourceButtons, mode, "toggleSource");
+    }
+
+    function activateTimeChip(indexToActivate) {
+      timeChips.forEach((chip, index) => {
+        chip.classList.toggle("is-active", index === indexToActivate);
+      });
+    }
+
+    function updateTimeMode(mode) {
+      const custom = mode === "custom";
+      customTimeGroup.hidden = !custom;
+      if (custom) {
+        activateTimeChip(timeChips.length - 1);
+        createMeta.textContent = "将创建：05-26 14:00";
+      } else {
+        activateTimeChip(0);
+        createMeta.textContent = "将创建：05-26 10:00";
+      }
+      setToolbarActive(timeButtons, mode, "toggleTime");
+    }
+
+    sourceButtons.forEach((button) => {
+      button.addEventListener("click", () => updateSourceMode(button.dataset.toggleSource));
+    });
+
+    sourceToggleText.addEventListener("click", () => {
+      const nextMode = sourceEditor.style.display === "block" ? "collapsed" : "expanded";
+      updateSourceMode(nextMode);
+    });
+
+    timeButtons.forEach((button) => {
+      button.addEventListener("click", () => updateTimeMode(button.dataset.toggleTime));
+    });
+
+    customTimeChip.addEventListener("click", () => updateTimeMode("custom"));
+    timeChips.slice(0, 3).forEach((chip, index) => {
+      chip.addEventListener("click", () => {
+        updateTimeMode("preset");
+        activateTimeChip(index);
+        createMeta.textContent = "将创建：" + chip.textContent;
+      });
+    });
+
+    updateSourceMode("collapsed");
+    updateTimeMode("preset");
+  </script>
+</body>
+</html>

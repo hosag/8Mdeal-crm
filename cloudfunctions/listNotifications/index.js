@@ -633,24 +633,27 @@ exports.main = async (event) => {
   const openid = wxContext.OPENID
   const statusFilter = normalizeText(event.statusFilter) || 'all'
   const limit = Math.max(1, Math.min(Number(event.limit) || 20, 100))
+  const skipGenerate = event && event.skipGenerate === true
   let reminderSettings = getDefaultReminderSettings()
 
-  try {
-    reminderSettings = await loadReminderSettings(openid)
-  } catch (error) {
-    reminderSettings = getDefaultReminderSettings()
-  }
+  if (!skipGenerate) {
+    try {
+      reminderSettings = await loadReminderSettings(openid)
+    } catch (error) {
+      reminderSettings = getDefaultReminderSettings()
+    }
 
-  try {
-    await generateTodoNotifications(openid, reminderSettings)
-  } catch (error) {
-    // Keep the notification center available even if today's reminder generation fails.
-  }
+    try {
+      await generateTodoNotifications(openid, reminderSettings)
+    } catch (error) {
+      // Keep the notification center available even if today's reminder generation fails.
+    }
 
-  try {
-    await generateTaskNotifications(openid, reminderSettings)
-  } catch (error) {
-    // Keep the notification center available even if task reminder generation fails.
+    try {
+      await generateTaskNotifications(openid, reminderSettings)
+    } catch (error) {
+      // Keep the notification center available even if task reminder generation fails.
+    }
   }
 
   const result = await db.collection('notifications')

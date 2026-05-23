@@ -11,10 +11,19 @@ const { buildFollowUpEntryHint } = require('../../utils/navigation-context')
 const { touchNotificationSync } = require('../../utils/notification-sync')
 const { syncPageAppearance } = require('../../utils/appearance')
 const { ensureActionAllowed, getEntitlementSnapshot, buildEntitlementPagePrompt } = require('../../utils/entitlement-guard')
+const {
+  FOLLOW_UP_METHODS,
+  normalizeFollowUpMethod,
+  detectFollowUpMethodFromContent,
+  normalizeFollowUpOccurredMeta,
+  buildDefaultFollowUpOccurredMeta,
+  extractFollowUpOccurredMetaFromContent,
+  resolvePreferredFollowUpMethod,
+  resolvePreferredFollowUpOccurredMeta
+} = require('../../utils/follow-up-meta')
 const { startVoiceRecordingTicker, stopVoiceRecordingTicker } = require('../../utils/voice-recording')
 
 const MAX_RECORD_DURATION = 60000
-const FOLLOW_UP_METHODS = ['电话', '微信', '邮件', '面谈', '其他']
 
 function getDraftStorageKey(projectId) {
   return `follow-up-draft:${projectId || 'default'}`
@@ -375,45 +384,19 @@ function normalizeNextSuggestion(value) {
   }
 }
 
-function normalizeFollowUpMethod(value, fallback = '') {
-  const method = String(value || '').trim()
-  return FOLLOW_UP_METHODS.includes(method) ? method : fallback
-}
-
-function inferFollowUpMethodFromContent(value) {
-  const text = String(value || '').trim()
-  if (!text) {
-    return '其他'
-  }
-
-  if (/电话|通话|打给|来电|回电|语音电话|电联|致电/.test(text)) {
-    return '电话'
-  }
-
-  if (/微信|企微|企业微信|wx|群里|私信|聊天记录|朋友圈/.test(text)) {
-    return '微信'
-  }
-
-  if (/邮件|邮箱|email|e-mail|发函|回函/.test(text)) {
-    return '邮件'
-  }
-
-  if (/面谈|拜访|到访|见面|会议室|现场|约见|当面|会面|线下|开会/.test(text)) {
-    return '面谈'
-  }
-
-  return '其他'
-}
-
 function normalizeAiSummaryResult(value) {
   const result = value && typeof value === 'object' ? value : {}
   const normalizedSource = normalizeAiSourceMeta(result)
   const recommendedStage = String(result.recommendedStage || '').trim()
   const currentStage = String(result.currentStage || '').trim()
+  const normalizedOccurredMeta = normalizeFollowUpOccurredMeta(result)
   return {
     ...result,
     ...normalizedSource,
     followUpMethod: normalizeFollowUpMethod(result.followUpMethod, ''),
+    followUpOccurredDate: normalizedOccurredMeta ? normalizedOccurredMeta.followUpOccurredDate : '',
+    followUpOccurredTime: normalizedOccurredMeta ? normalizedOccurredMeta.followUpOccurredTime : '',
+    followUpOccurredTimePrecision: normalizedOccurredMeta ? normalizedOccurredMeta.followUpOccurredTimePrecision : '',
     recommendedStage,
     showRecommendedStage: Boolean(
       recommendedStage
@@ -449,6 +432,8 @@ Page({
     methods: FOLLOW_UP_METHODS,
     currentMethod: '',
     methodTouched: false,
+    followUpDateTouched: false,
+    followUpClockTouched: false,
     showMethodOptions: false,
     stages: ['不变更', '线索', '洽谈', '方案', '商务', '成交', '流失'],
     followUpDate: defaultDates.followUpDate,
@@ -463,7 +448,6 @@ Page({
     aiResultBackup: null,
     adoptedAiSummaryVersionKey: '',
     aiNextSuggestion: null,
-    aiNextSuggestionBackup: null,
     adoptedAiNextVersionKey: '',
     aiError: '',
     aiNextError: '',
@@ -605,13 +589,15 @@ Page({
 
   onFollowUpDateInput(event) {
     this.setData({
-      followUpDate: event.detail.value
+      followUpDate: event.detail.value,
+      followUpDateTouched: true
     })
   },
 
   onFollowUpClockInput(event) {
     this.setData({
-      followUpClock: event.detail.value
+      followUpClock: event.detail.value,
+      followUpClockTouched: true
     })
   },
 
@@ -637,6 +623,8 @@ Page({
       this.setData({
         currentMethod: normalizeFollowUpMethod(draft.currentMethod, this.data.currentMethod),
         methodTouched: draft.methodTouched === true,
+        followUpDateTouched: draft.followUpDateTouched === true,
+        followUpClockTouched: draft.followUpClockTouched === true,
         followUpDate: draft.followUpDate || this.data.followUpDate,
         followUpClock: draft.followUpClock || this.data.followUpClock,
         nextFollowUpDate: draft.nextFollowUpDate || this.data.nextFollowUpDate,
@@ -677,6 +665,8 @@ Page({
     const draft = {
       currentMethod: this.data.currentMethod,
       methodTouched: this.data.methodTouched === true,
+      followUpDateTouched: this.data.followUpDateTouched === true,
+      followUpClockTouched: this.data.followUpClockTouched === true,
       followUpDate: this.data.followUpDate,
       followUpClock: this.data.followUpClock,
       nextFollowUpDate: this.data.nextFollowUpDate,
@@ -1335,9 +1325,19 @@ Page({
       aiError: '',
       aiResultBackup: this.data.aiResult ? cloneSnapshot(this.data.aiResult) : this.data.aiResultBackup,
       aiNextSuggestion: null,
-      aiNextSuggestionBackup: null,
       adoptedAiNextVersionKey: '',
       aiNextError: ''
+    })
+
+    const requestNow = new Date()
+    const referenceNowMeta = buildDefaultFollowUpOccurredMeta({
+      now: requestNow
+    })
+    const detectedMethod = detectFollowUpMethodFromContent(this.data.content, {
+      now: requestNow
+    })
+    const detectedOccurredMeta = extractFollowUpOccurredMetaFromContent(this.data.content, {
+      now: requestNow
     })
 
     try {
@@ -1346,6 +1346,12 @@ Page({
         method: this.data.methodTouched ? this.data.currentMethod : '',
         content: this.data.content,
         stageChange: '',
+        referenceNowDate: referenceNowMeta.followUpOccurredDate,
+        referenceNowTime: referenceNowMeta.followUpOccurredTime,
+        detectedFollowUpMethod: detectedMethod,
+        detectedFollowUpOccurredDate: detectedOccurredMeta.followUpOccurredDate,
+        detectedFollowUpOccurredTime: detectedOccurredMeta.followUpOccurredTime,
+        detectedFollowUpOccurredTimePrecision: detectedOccurredMeta.followUpOccurredTimePrecision,
         projectContext: {
           projectName: this.data.projectTitle,
           clientName: '',
@@ -1371,6 +1377,11 @@ Page({
       })
       const hadPreviousVersion = !!this.data.aiResult
       const shouldApplyAiMethod = this.data.methodTouched !== true
+      const shouldApplyAiDate = this.data.followUpDateTouched !== true
+      const shouldApplyAiClock = this.data.followUpClockTouched !== true
+      const resolvedOccurredMeta = resolvePreferredFollowUpOccurredMeta(nextAiResult, detectedOccurredMeta, {
+        now: requestNow
+      })
       const nextData = {
         ...decorateAiDialogState(
           nextAiResult,
@@ -1382,10 +1393,19 @@ Page({
       }
 
       if (shouldApplyAiMethod) {
-        nextData.currentMethod = normalizeFollowUpMethod(
-          nextAiResult.followUpMethod,
-          inferFollowUpMethodFromContent(this.data.content)
-        )
+        nextData.currentMethod = resolvePreferredFollowUpMethod({
+          aiMethod: nextAiResult.followUpMethod,
+          detectedMethod,
+          fallbackMethod: this.data.currentMethod || '其他'
+        })
+      }
+
+      if (shouldApplyAiDate) {
+        nextData.followUpDate = resolvedOccurredMeta.followUpOccurredDate
+      }
+
+      if (shouldApplyAiClock) {
+        nextData.followUpClock = resolvedOccurredMeta.followUpOccurredTime
       }
 
       this.setData(nextData)
@@ -1410,9 +1430,23 @@ Page({
         actionLabel: '重新生成'
       })
 
-      this.setData({
-        aiError: error.message || '当前无法生成整理结果，请稍后重试'
+      const resolvedFallbackOccurredMeta = resolvePreferredFollowUpOccurredMeta(null, detectedOccurredMeta, {
+        now: requestNow
       })
+      const nextData = {
+        aiError: error.message || '当前无法生成整理结果，请稍后重试'
+      }
+      if (this.data.methodTouched !== true && detectedMethod !== '其他') {
+        nextData.currentMethod = detectedMethod
+      }
+      if (this.data.followUpDateTouched !== true && resolvedFallbackOccurredMeta.followUpOccurredTimePrecision !== 'default_now') {
+        nextData.followUpDate = resolvedFallbackOccurredMeta.followUpOccurredDate
+      }
+      if (this.data.followUpClockTouched !== true && resolvedFallbackOccurredMeta.followUpOccurredTimePrecision !== 'default_now') {
+        nextData.followUpClock = resolvedFallbackOccurredMeta.followUpOccurredTime
+      }
+
+      this.setData(nextData)
       wx.showToast({
         title: '当前无法生成整理结果',
         icon: 'none'
@@ -1540,7 +1574,6 @@ Page({
       ),
       aiResultBackup: cloneSnapshot(this.data.aiResult),
       aiNextSuggestion: null,
-      aiNextSuggestionBackup: null,
       adoptedAiNextVersionKey: '',
       aiNextError: ''
     })
@@ -1571,8 +1604,7 @@ Page({
 
     this.setData({
       isAiNextLoading: true,
-      aiNextError: '',
-      aiNextSuggestionBackup: this.data.aiNextSuggestion ? cloneSnapshot(this.data.aiNextSuggestion) : this.data.aiNextSuggestionBackup
+      aiNextError: ''
     })
 
     try {
@@ -1595,7 +1627,6 @@ Page({
         ...result,
         generatedAt: result.generatedAt || new Date().toISOString()
       })
-      const hadPreviousVersion = !!this.data.aiNextSuggestion
 
       this.setData({
         ...decorateAiDialogState(
@@ -1606,13 +1637,6 @@ Page({
         ),
         showAiDialog: true
       })
-
-      if (hadPreviousVersion) {
-        wx.showToast({
-          title: '新建议已生成，可恢复上一版',
-          icon: 'none'
-        })
-      }
     } catch (error) {
       await reportSystemFailureData({
         type: 'ai_failed',
@@ -1724,27 +1748,6 @@ Page({
     })
   },
 
-  restoreAiNextSuggestionVersion() {
-    if (!this.data.aiNextSuggestionBackup) {
-      return
-    }
-
-    this.setData({
-      ...decorateAiDialogState(
-        this.data.aiResult,
-        cloneSnapshot(this.data.aiNextSuggestionBackup),
-        this.data.adoptedAiSummaryVersionKey,
-        this.data.adoptedAiNextVersionKey
-      ),
-      aiNextSuggestionBackup: cloneSnapshot(this.data.aiNextSuggestion)
-    })
-
-    wx.showToast({
-      title: '已恢复上一版建议',
-      icon: 'success'
-    })
-  },
-
   async handleSave() {
     if (this.data.isSaving) {
       return
@@ -1795,6 +1798,8 @@ Page({
 
     try {
       const selectedMethod = normalizeFollowUpMethod(this.data.currentMethod, '其他')
+      const nextSuggestion = this.data.aiNextSuggestion || null
+      const suggestedTaskSnapshot = taskBuildResult.tasks[0] || null
       const result = await saveFollowUpData({
         projectId: this.data.projectId,
         method: selectedMethod,
@@ -1809,6 +1814,20 @@ Page({
         aiRecommendedStage: this.data.aiResult ? this.data.aiResult.recommendedStage : '',
         aiStageChangeReason: this.data.aiResult ? this.data.aiResult.stageChangeReason : '',
         aiMissingInfo: this.data.aiResult ? this.data.aiResult.missingInfo : [],
+        aiNextAction: nextSuggestion ? nextSuggestion.nextAction : '',
+        aiNextRecommendedTarget: nextSuggestion ? nextSuggestion.recommendedTarget : '',
+        aiNextRecommendedMethod: nextSuggestion ? nextSuggestion.recommendedMethod : '',
+        aiNextRecommendedTimeWindow: nextSuggestion ? nextSuggestion.recommendedTimeWindow : '',
+        aiNextRecommendedDate: nextSuggestion ? nextSuggestion.recommendedDate : '',
+        aiNextRecommendedTime: nextSuggestion ? nextSuggestion.recommendedTime : '',
+        aiNextTalkTrack: nextSuggestion ? nextSuggestion.talkTrack : '',
+        aiNextReason: nextSuggestion ? nextSuggestion.reason : '',
+        aiNextMissingInfo: nextSuggestion ? nextSuggestion.missingInfo : [],
+        aiSuggestedTaskTitle: suggestedTaskSnapshot ? suggestedTaskSnapshot.title : '',
+        aiSuggestedTaskType: suggestedTaskSnapshot ? suggestedTaskSnapshot.type : '',
+        aiSuggestedTaskDueDate: suggestedTaskSnapshot ? suggestedTaskSnapshot.dueDate : '',
+        aiSuggestedTaskDueTime: suggestedTaskSnapshot ? suggestedTaskSnapshot.dueTime : '',
+        aiSuggestedTaskDescription: suggestedTaskSnapshot ? suggestedTaskSnapshot.description : '',
         tasks: taskBuildResult.tasks
       })
 

@@ -23,11 +23,22 @@
 - 云函数部署后检查清单： [云函数部署后检查清单](/Users/shaominhe/成交CRM-CodeX版/docs/云函数部署后检查清单.md)
 - AI 功能 PRD 与数据流设计： [AI功能PRD与数据流设计](/Users/shaominhe/成交CRM-CodeX版/docs/AI功能PRD与数据流设计.md)
 - AI 功能部署与联调清单： [AI功能部署与联调清单](/Users/shaominhe/成交CRM-CodeX版/docs/AI功能部署与联调清单.md)
+- 跟进时间与方式识别回归清单： [跟进时间与方式识别回归清单](/Users/shaominhe/成交CRM-CodeX版/docs/跟进时间与方式识别回归清单.md)
 - 管理台骨架说明： [admin-web/README.md](/Users/shaominhe/成交CRM-CodeX版/admin-web/README.md)
 - 前台权益与付费承接闭环说明： [前台权益与付费承接闭环说明](/Users/shaominhe/成交CRM-CodeX版/docs/前台权益与付费承接闭环说明.md)
 - `plans` 集合初始化清单： [plans集合初始化与导入清单](/Users/shaominhe/成交CRM-CodeX版/docs/plans集合初始化与导入清单.md)
 - 支付回调适配与联调清单： [支付回调适配与联调清单](/Users/shaominhe/成交CRM-CodeX版/docs/支付回调适配与联调清单.md)
 - 微信支付真云部署与联调清单： [微信支付真云部署与联调清单](/Users/shaominhe/成交CRM-CodeX版/docs/微信支付真云部署与联调清单.md)
+
+## 跟进识别回归
+
+本地回归脚本：
+
+```bash
+node scripts/check_follow_up_meta.js
+```
+
+页面级手工检查请看： [跟进时间与方式识别回归清单](/Users/shaominhe/成交CRM-CodeX版/docs/跟进时间与方式识别回归清单.md)
 
 ## 接入真实云环境
 
