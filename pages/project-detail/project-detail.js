@@ -11,7 +11,9 @@ const {
 } = require('../../services/data')
 const { touchNotificationSync } = require('../../utils/notification-sync')
 const { syncPageAppearance } = require('../../utils/appearance')
+const { markHomePageCacheDirty, markProjectRelatedCachesDirty } = require('../../utils/core-page-cache')
 const { ensureActionAllowed } = require('../../utils/entitlement-guard')
+const { readPageCache, shouldRefreshPageCache, writePageCache } = require('../../utils/page-cache')
 const { startVoiceRecordingTicker, stopVoiceRecordingTicker } = require('../../utils/voice-recording')
 const {
   buildTaskCompletionFeedback,
@@ -19,6 +21,10 @@ const {
   getTaskCompletionToastTitle,
   getTaskStatusToastTitle
 } = require('../../services/task-feedback')
+
+const PROJECT_DETAIL_CACHE_PREFIX = 'project-detail:'
+const PROJECT_DETAIL_CACHE_TTL = 60 * 1000
+const PROJECT_DETAIL_CACHE_LIMIT = 12
 
 const NEXT_TASK_TEMPLATES = [
   { type: 'send_solution', label: '待发方案' },
@@ -119,7 +125,7 @@ function normalizeProjectAiSourceMeta(value) {
     sourceDisplayText: sourceType === 'fallback'
       ? '来自：系统基础建议'
       : `来自：云端模型${modelName ? ` · ${modelName}` : ''}`,
-    regenerateLabel: sourceType === 'fallback' ? '获取云端复盘' : 'AI重新复盘'
+    regenerateLabel: '重新生成'
   }
 }
 
@@ -170,7 +176,12 @@ function shouldShowProjectAiAction(stage, isReadOnlySharedOut, projectAccess = {
 }
 
 function shouldShowProjectReviewAction(stage, isReadOnlySharedOut, projectAccess = {}) {
-  return false
+  const currentStage = String(stage || '').trim()
+  if (isReadOnlySharedOut || projectAccess.canEditProject === false) {
+    return false
+  }
+
+  return currentStage === '成交' || currentStage === '流失'
 }
 
 function padNumber(value) {
@@ -680,10 +691,14 @@ Page({
     },
     isReadOnlySharedOut: false,
     isLoading: true,
+    hasLoadedOnce: false,
+    isRefreshing: false,
     dataSource: 'Mock Demo'
   },
 
   onLoad(options) {
+    this.isPageActive = true
+    this.skipNextShowRefresh = true
     syncPageAppearance(this)
     this.setData({
       projectId: options.projectId || '',
@@ -695,18 +710,36 @@ Page({
     })
 
     this.initTaskCompletionKeyboard()
+    const restoredProjectDetailCache = this.restoreProjectDetailCache()
+    if (restoredProjectDetailCache) {
+      if (shouldRefreshPageCache(restoredProjectDetailCache)) {
+        this.fetchProjectDetail({ silent: true }).catch(() => {})
+      }
+      return
+    }
+
     this.fetchProjectDetail()
   },
 
   onShow() {
+    this.isPageActive = true
     syncPageAppearance(this)
     this.initTaskCompletionKeyboard()
-    if (this.data.projectId && !this.data.isLoading) {
-      this.fetchProjectDetail()
+    if (this.skipNextShowRefresh) {
+      this.skipNextShowRefresh = false
+      return
+    }
+    if (
+      this.data.projectId
+      && this.data.hasLoadedOnce
+      && shouldRefreshPageCache(readPageCache(this.getProjectDetailCacheKey()))
+    ) {
+      this.fetchProjectDetail({ silent: true })
     }
   },
 
   onHide() {
+    this.isPageActive = false
     this.releaseCopyProjectLock()
     this.stopTaskCompletionVoiceInput({ silent: true })
     stopVoiceRecordingTicker(this, 'taskCompletionVoiceTimer', 'taskCompletionVoiceElapsedText')
@@ -715,6 +748,7 @@ Page({
   },
 
   onUnload() {
+    this.isPageActive = false
     this.releaseCopyProjectLock()
     this.stopTaskCompletionVoiceInput({ silent: true })
     stopVoiceRecordingTicker(this, 'taskCompletionVoiceTimer', 'taskCompletionVoiceElapsedText')
@@ -774,8 +808,86 @@ Page({
     }
   },
 
-  async fetchProjectDetail() {
-    this.setData({ isLoading: true })
+  getProjectDetailCacheKey() {
+    const projectId = String(this.data.projectId || '').trim()
+    const viewMode = String(this.data.viewMode || 'default').trim() || 'default'
+    if (!projectId) {
+      return ''
+    }
+
+    return `${PROJECT_DETAIL_CACHE_PREFIX}${viewMode}:${projectId}`
+  },
+
+  restoreProjectDetailCache() {
+    const cacheKey = this.getProjectDetailCacheKey()
+    const cached = cacheKey ? readPageCache(cacheKey) : null
+    if (!cached || !cached.data) {
+      return null
+    }
+
+    this.setData({
+      ...cached.data,
+      isLoading: false,
+      hasLoadedOnce: true,
+      isRefreshing: false
+    }, () => {
+      this.consumePendingTaskCompletion()
+    })
+
+    return cached
+  },
+
+  persistProjectDetailCache() {
+    const cacheKey = this.getProjectDetailCacheKey()
+    if (!cacheKey || !this.data.hasLoadedOnce) {
+      return
+    }
+
+    writePageCache(cacheKey, {
+      projectDetail: this.data.projectDetail,
+      contacts: this.data.contacts,
+      tasks: this.data.tasks,
+      taskSummary: this.data.taskSummary,
+      followTimeline: this.data.followTimeline,
+      shareHistory: this.data.shareHistory,
+      projectAssets: this.data.projectAssets,
+      projectAssetSummary: this.data.projectAssetSummary,
+      showProjectAiAction: this.data.showProjectAiAction,
+      showProjectReviewAction: this.data.showProjectReviewAction,
+      showProjectAiSheet: false,
+      projectAiError: '',
+      projectAiResult: null,
+      projectAiResultBackup: null,
+      showProjectReviewSheet: false,
+      projectReviewError: '',
+      projectReviewResult: this.data.projectReviewResult,
+      projectReviewResultBackup: null,
+      projectBadges: this.data.projectBadges,
+      heroMetrics: this.data.heroMetrics,
+      projectOverview: this.data.projectOverview,
+      contactMeta: this.data.contactMeta,
+      timelineMeta: this.data.timelineMeta,
+      shareHistoryMeta: this.data.shareHistoryMeta,
+      projectAccess: this.data.projectAccess,
+      canMarkDeal: this.data.canMarkDeal,
+      showActionFooter: this.data.showActionFooter,
+      isReadOnlySharedOut: this.data.isReadOnlySharedOut,
+      dataSource: this.data.dataSource
+    }, {
+      ttl: PROJECT_DETAIL_CACHE_TTL,
+      prefix: PROJECT_DETAIL_CACHE_PREFIX,
+      maxEntries: PROJECT_DETAIL_CACHE_LIMIT
+    })
+  },
+
+  async fetchProjectDetail(options = {}) {
+    const silent = options.silent === true
+    const shouldPreserveContent = silent || this.data.hasLoadedOnce
+
+    this.setData({
+      isLoading: silent ? this.data.isLoading : true,
+      isRefreshing: shouldPreserveContent
+    })
     try {
       const { data, source } = await loadProjectDetailData(this.data.projectId, {
         viewMode: this.data.viewMode
@@ -787,7 +899,8 @@ Page({
 
       if (isReadOnlySharedOut && this.data.viewMode !== 'shared-out') {
         this.setData({
-          isLoading: false
+          isLoading: false,
+          isRefreshing: false
         })
         wx.redirectTo({
           url: `/pages/project-detail/project-detail?projectId=${this.data.projectId}&view=shared-out`
@@ -840,15 +953,27 @@ Page({
         showActionFooter,
         isReadOnlySharedOut,
         isLoading: false,
+        hasLoadedOnce: true,
+        isRefreshing: false,
         dataSource: source
       }, () => {
+        this.persistProjectDetailCache()
         this.consumePendingTaskCompletion()
       })
 
       this.syncNotificationReadState(data.projectDetail, normalizedShareHistory)
     } catch (error) {
+      if (shouldPreserveContent) {
+        this.setData({
+          isLoading: false,
+          isRefreshing: false
+        })
+        return
+      }
+
       this.setData({
-        isLoading: false
+        isLoading: false,
+        isRefreshing: false
       })
       wx.showToast({
         title: '当前无法加载项目详情',
@@ -901,6 +1026,7 @@ Page({
     try {
       await Promise.all(tasks)
       touchNotificationSync('detail_notification_synced')
+      markHomePageCacheDirty()
     } catch (error) {
       // Keep the detail page available even if read-state sync fails.
     }
@@ -1047,6 +1173,12 @@ Page({
         contactDraft: buildEmptyContactDraft(this.data.projectDetail)
       })
 
+      markProjectRelatedCachesDirty({
+        projectId: this.data.projectId,
+        includeHome: true,
+        includeProjects: true,
+        includeProjectDetail: true
+      })
       await this.fetchProjectDetail()
     } catch (error) {
       wx.showToast({
@@ -1169,6 +1301,7 @@ Page({
         types: ['ai_failed'],
         scenes: ['project_ai_judgement']
       })
+      markHomePageCacheDirty()
 
       const nextResult = normalizeProjectAiResult({
         ...result,
@@ -1179,6 +1312,8 @@ Page({
       this.setData({
         projectAiResult: nextResult,
         projectAiError: ''
+      }, () => {
+        this.persistProjectDetailCache()
       })
 
       if (hadPreviousVersion) {
@@ -1218,6 +1353,8 @@ Page({
       projectAiResult: cloneSnapshot(this.data.projectAiResultBackup),
       projectAiResultBackup: cloneSnapshot(this.data.projectAiResult),
       projectAiError: ''
+    }, () => {
+      this.persistProjectDetailCache()
     })
 
     wx.showToast({
@@ -1227,15 +1364,14 @@ Page({
   },
 
   async handleProjectAiReview() {
-    if (!this.data.projectId || !this.data.showProjectReviewAction || !this.data.projectAccess.canAdvanceProject) {
+    if (!this.data.projectId || !this.data.showProjectReviewAction || this.data.projectAccess.canEditProject === false) {
       return
     }
 
-    this.setData({
-      showProjectReviewSheet: true
-    })
-
     if (this.data.projectReviewResult || this.data.isProjectReviewLoading) {
+      this.setData({
+        showProjectReviewSheet: true
+      })
       return
     }
 
@@ -1244,11 +1380,20 @@ Page({
       return
     }
 
+    this.setData({
+      showProjectReviewSheet: true
+    })
+
     await this.fetchProjectAiReview()
   },
 
   async regenerateProjectAiReview() {
-    if (!this.data.projectId || !this.data.showProjectReviewAction || !this.data.projectAccess.canAdvanceProject) {
+    if (!this.data.projectId || !this.data.showProjectReviewAction || this.data.projectAccess.canEditProject === false) {
+      return
+    }
+
+    const decision = await ensureActionAllowed('ai', { guide: true })
+    if (!decision.allowed) {
       return
     }
 
@@ -1286,6 +1431,7 @@ Page({
         types: ['ai_failed'],
         scenes: ['project_ai_review']
       })
+      markHomePageCacheDirty()
 
       const nextResult = normalizeProjectReviewResult({
         ...result,
@@ -1300,6 +1446,8 @@ Page({
         },
         projectReviewResult: nextResult,
         projectReviewError: ''
+      }, () => {
+        this.persistProjectDetailCache()
       })
 
       if (hadPreviousVersion) {
@@ -1336,9 +1484,15 @@ Page({
     }
 
     this.setData({
+      projectDetail: {
+        ...this.data.projectDetail,
+        aiReview: cloneSnapshot(this.data.projectReviewResultBackup)
+      },
       projectReviewResult: cloneSnapshot(this.data.projectReviewResultBackup),
       projectReviewResultBackup: cloneSnapshot(this.data.projectReviewResult),
       projectReviewError: ''
+    }, () => {
+      this.persistProjectDetailCache()
     })
 
     wx.showToast({
@@ -1374,6 +1528,12 @@ Page({
       })
 
       touchNotificationSync('task_status_updated')
+      markProjectRelatedCachesDirty({
+        projectId: this.data.projectId,
+        includeHome: true,
+        includeProjects: true,
+        includeProjectDetail: true
+      })
       await this.fetchProjectDetail()
       this.showTaskFeedback(feedback)
     } catch (error) {
@@ -1930,6 +2090,12 @@ Page({
 
       touchNotificationSync('task_completed')
       this.closeTaskCompleteSheet(true)
+      markProjectRelatedCachesDirty({
+        projectId: this.data.projectId,
+        includeHome: true,
+        includeProjects: true,
+        includeProjectDetail: true
+      })
       await this.fetchProjectDetail()
       this.showTaskFeedback(feedback)
     } catch (error) {
@@ -2120,6 +2286,10 @@ Page({
       wx.showToast({
         title: '已复制为新项目',
         icon: 'success'
+      })
+      markProjectRelatedCachesDirty({
+        includeHome: true,
+        includeProjects: true
       })
       keepCopyProjectLock = true
       await new Promise((resolve, reject) => {

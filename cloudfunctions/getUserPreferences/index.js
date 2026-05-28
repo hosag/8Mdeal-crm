@@ -25,6 +25,14 @@ function getDefaultAppearanceSettings() {
   }
 }
 
+function getDefaultEntryGuideSettings() {
+  return {
+    homeBrandSplashDismissed: false,
+    homeBrandSplashDismissedVersion: '',
+    homeBrandSplashDismissedAt: ''
+  }
+}
+
 function normalizeAdvance(value) {
   const current = String(value || '').trim()
   return current === 'one_day_before' ? 'one_day_before' : 'same_day'
@@ -62,6 +70,18 @@ function normalizeAppearanceSettings(value) {
     festivalThemeEnabled: typeof source.festivalThemeEnabled === 'boolean'
       ? source.festivalThemeEnabled
       : defaults.festivalThemeEnabled
+  }
+}
+
+function normalizeEntryGuideSettings(value) {
+  const source = value && typeof value === 'object' && !Array.isArray(value) ? value : {}
+  const defaults = getDefaultEntryGuideSettings()
+  return {
+    homeBrandSplashDismissed: typeof source.homeBrandSplashDismissed === 'boolean'
+      ? source.homeBrandSplashDismissed
+      : defaults.homeBrandSplashDismissed,
+    homeBrandSplashDismissedVersion: normalizeText(source.homeBrandSplashDismissedVersion || defaults.homeBrandSplashDismissedVersion),
+    homeBrandSplashDismissedAt: normalizeText(source.homeBrandSplashDismissedAt || defaults.homeBrandSplashDismissedAt)
   }
 }
 
@@ -160,6 +180,7 @@ exports.main = async () => {
     ok: true,
     reminderSettings: normalizeReminderSettings(currentUser && currentUser.reminderSettings),
     appearanceSettings: normalizeAppearanceSettings(currentUser && currentUser.appearanceSettings),
+    entryGuideSettings: normalizeEntryGuideSettings(currentUser && currentUser.entryGuideSettings),
     wechatNickname: displayProfile.wechatNickname,
     customDisplayName: displayProfile.customDisplayName,
     displayName: displayProfile.displayName,

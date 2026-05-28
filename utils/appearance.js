@@ -36,6 +36,20 @@ const THEME_LABELS = THEME_OPTIONS.reduce((result, item) => {
   return result
 }, {})
 const FONT_SCALE_MODES = ['default', 'large', 'readable']
+const TAB_ROUTE_TO_KEY = {
+  'pages/index/index': 'home',
+  'pages/projects/projects': 'projects',
+  'pages/shared-out/shared-out': 'shared',
+  'pages/mine/mine': 'mine'
+}
+
+function shouldHideCustomTabBar(page) {
+  const pageData = page && page.data && typeof page.data === 'object' ? page.data : {}
+  return pageData.showHomeEntryGuide === true
+    || pageData.showQuickEntrySheet === true
+    || pageData.showTaskCompleteSheet === true
+    || pageData.hideCustomTabBar === true
+}
 
 function getDefaultAppearanceSettings() {
   return {
@@ -115,6 +129,39 @@ function syncPageAppearance(page) {
   if (Object.keys(update).length) {
     page.setData(update)
   }
+
+  syncCustomTabBar(page, appearancePageClass)
+}
+
+function syncCustomTabBar(page, appearancePageClass) {
+  if (!page || typeof page.getTabBar !== 'function') {
+    return
+  }
+
+  const tabBar = page.getTabBar()
+  if (!tabBar || typeof tabBar.setData !== 'function') {
+    return
+  }
+
+  const current = TAB_ROUTE_TO_KEY[String(page.route || '').trim()]
+  const nextData = {}
+
+  if (current && tabBar.data.current !== current) {
+    nextData.current = current
+  }
+
+  if (tabBar.data.appearancePageClass !== appearancePageClass) {
+    nextData.appearancePageClass = appearancePageClass
+  }
+
+  const hidden = shouldHideCustomTabBar(page)
+  if (tabBar.data.hidden !== hidden) {
+    nextData.hidden = hidden
+  }
+
+  if (Object.keys(nextData).length) {
+    tabBar.setData(nextData)
+  }
 }
 
 module.exports = {
@@ -124,5 +171,6 @@ module.exports = {
   normalizeAppearanceSettings,
   getAppearancePageClass,
   applyAppearanceSettingsToApp,
-  syncPageAppearance
+  syncPageAppearance,
+  syncCustomTabBar
 }

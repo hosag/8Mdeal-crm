@@ -16,7 +16,9 @@ const {
   filterTimelineForHistoryScope
 } = require('../../services/share')
 const { syncPageAppearance } = require('../../utils/appearance')
+const { markProjectRelatedCachesDirty } = require('../../utils/core-page-cache')
 const { ensureActionAllowed } = require('../../utils/entitlement-guard')
+const { openTabPage } = require('../../utils/tab-bar-navigation')
 
 function countTimelineRecords(followTimeline) {
   return (Array.isArray(followTimeline) ? followTimeline : []).reduce((total, group) => {
@@ -165,7 +167,7 @@ function normalizeShareBrief(value) {
     sourceOriginText: sourceType === 'fallback'
       ? '来自：系统基础建议'
       : `来自：云端模型${modelName ? ` · ${modelName}` : ''}`,
-    regenerateLabel: sourceType === 'fallback' ? '获取云端结果' : '重新生成'
+    regenerateLabel: '重新生成'
   }
 }
 
@@ -637,6 +639,14 @@ Page({
       scenes: ['share_record_create']
     })
 
+    markProjectRelatedCachesDirty({
+      projectId: payload.projectId,
+      includeHome: payload.shareMode === 'outbound',
+      includeProjects: true,
+      includeSharedOut: payload.shareMode === 'outbound',
+      includeProjectDetail: true
+    })
+
     return result || {}
   },
 
@@ -976,15 +986,11 @@ Page({
   },
 
   openProjectsPage() {
-    wx.reLaunch({
-      url: '/pages/projects/projects'
-    })
+    openTabPage('/pages/projects/projects')
   },
 
   openHomePage() {
-    wx.reLaunch({
-      url: '/pages/index/index'
-    })
+    openTabPage('/pages/index/index')
   },
 
   openTimelinePage() {

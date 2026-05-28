@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>提审前执行清单 - 2026-05-28</title>
+  <style>
+    :root {
+      --bg: #f3efe8;
+      --surface: rgba(255, 252, 247, 0.92);
+      --card: #fffdfa;
+      --ink: #1e2d37;
+      --muted: #697681;
+      --line: rgba(30, 45, 55, 0.1);
+      --brand: #1f566f;
+      --brand-strong: #163a4d;
+      --danger: #8f1f1f;
+      --warn: #8e5a00;
+      --ok: #15664f;
+      --danger-bg: rgba(143, 31, 31, 0.1);
+      --warn-bg: rgba(142, 90, 0, 0.1);
+      --ok-bg: rgba(21, 102, 79, 0.1);
+      --shadow: 0 20px 44px rgba(26, 39, 48, 0.08);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: "PingFang SC", "Helvetica Neue", "Microsoft YaHei", sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at top left, rgba(111, 168, 255, 0.12), transparent 28%),
+        radial-gradient(circle at bottom right, rgba(245, 166, 35, 0.12), transparent 30%),
+        var(--bg);
+    }
+
+    .page {
+      max-width: 1240px;
+      margin: 0 auto;
+      padding: 32px 20px 72px;
+    }
+
+    .hero {
+      padding: 28px 30px;
+      border-radius: 28px;
+      background: linear-gradient(145deg, #17384a 0%, #30586d 100%);
+      color: #f8fbff;
+      box-shadow: var(--shadow);
+    }
+
+    .hero h1 {
+      margin: 0 0 10px;
+      font-size: 34px;
+      line-height: 1.15;
+    }
+
+    .hero p {
+      margin: 0;
+      line-height: 1.75;
+      color: rgba(248, 251, 255, 0.88);
+      max-width: 1020px;
+    }
+
+    .section {
+      margin-top: 20px;
+      padding: 22px 24px;
+      border-radius: 24px;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(16px);
+    }
+
+    h2 {
+      margin: 0 0 14px;
+      font-size: 24px;
+      line-height: 1.25;
+    }
+
+    h3 {
+      margin: 0 0 10px;
+      font-size: 18px;
+      line-height: 1.35;
+    }
+
+    p {
+      margin: 0 0 10px;
+      line-height: 1.75;
+    }
+
+    ul {
+      margin: 10px 0 0;
+      padding-left: 18px;
+      line-height: 1.75;
+    }
+
+    li + li {
+      margin-top: 6px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .metric,
+    .lane,
+    .work-card {
+      padding: 18px;
+      border-radius: 20px;
+      background: var(--card);
+      border: 1px solid var(--line);
+    }
+
+    .metric .label,
+    .lane .label {
+      font-size: 13px;
+      color: var(--muted);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .metric .value {
+      margin-top: 10px;
+      font-size: 28px;
+      font-weight: 700;
+      line-height: 1.1;
+    }
+
+    .metric .desc,
+    .lane .desc {
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.65;
+    }
+
+    .chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 10px 0 4px;
+    }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      padding: 5px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      white-space: nowrap;
+    }
+
+    .chip.blocker {
+      color: var(--danger);
+      background: var(--danger-bg);
+    }
+
+    .chip.should {
+      color: var(--warn);
+      background: var(--warn-bg);
+    }
+
+    .chip.keep {
+      color: var(--ok);
+      background: var(--ok-bg);
+    }
+
+    .stack + .stack {
+      margin-top: 14px;
+    }
+
+    .work-card h3 {
+      margin-bottom: 6px;
+    }
+
+    .subtle {
+      color: var(--muted);
+    }
+
+    .table-wrap {
+      overflow-x: auto;
+      border-radius: 20px;
+      border: 1px solid var(--line);
+      background: var(--card);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 980px;
+    }
+
+    th,
+    td {
+      padding: 14px 16px;
+      vertical-align: top;
+      border-bottom: 1px solid var(--line);
+      text-align: left;
+      line-height: 1.65;
+      font-size: 14px;
+    }
+
+    th {
+      font-size: 13px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      background: rgba(30, 45, 55, 0.04);
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    code {
+      padding: 2px 6px;
+      border-radius: 8px;
+      background: rgba(30, 45, 55, 0.06);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      font-size: 12px;
+    }
+
+    .note {
+      padding: 16px 18px;
+      border-radius: 18px;
+      background: var(--card);
+      border: 1px solid var(--line);
+    }
+
+    .note + .note {
+      margin-top: 12px;
+    }
+
+    @media (max-width: 980px) {
+      .page {
+        padding: 20px 12px 48px;
+      }
+
+      .hero {
+        padding: 22px 18px;
+      }
+
+      .hero h1 {
+        font-size: 28px;
+      }
+
+      .section {
+        padding: 18px;
+      }
+
+      .grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <section class="hero">
+      <h1>提审前执行清单</h1>
+      <p>日期：2026-05-28。这个版本不是问题复述，而是给开发直接执行的拆解版。原则只有两个：第一，先修真正阻断提审的 4 个问题；第二，保持已经确认的正确产品方向，不做“误修”。尤其不要把闪录重新改回入口前置权益拦截，也不要把“外发 claim 原子性问题”误修成“强行指定接收人校验”。</p>
+    </section>
+
+    <section class="section">
+      <h2>总排期</h2>
+      <div class="grid">
+        <div class="metric">
+          <div class="label">T0 提审门槛</div>
+          <div class="value">4 组</div>
+          <div class="desc">隐私合规、缓存账号隔离、手机号真实验证、外发 claim 原子性。</div>
+        </div>
+        <div class="metric">
+          <div class="label">T1 本轮建议一起做</div>
+          <div class="value">4 组</div>
+          <div class="desc">shared-out 脏标记、通知同步、tab bar 浮层隐藏、联系人密钥 fallback 清理。</div>
+        </div>
+        <div class="metric">
+          <div class="label">T2 可后置</div>
+          <div class="value">5 组</div>
+          <div class="desc">请求版本号、偏好保存竞态、推荐码频控、日志清理、过度失效优化。</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>并行分工建议</h2>
+      <div class="grid">
+        <div class="lane">
+          <div class="label">Lane A</div>
+          <h3>前端主流程</h3>
+          <div class="desc">隐私授权接入、缓存与 storage 命名空间、tab bar 浮层隐藏、shared-out 通知同步。</div>
+        </div>
+        <div class="lane">
+          <div class="label">Lane B</div>
+          <h3>云函数与数据边界</h3>
+          <div class="desc">bindPhone 改可信链路、openSharedProject 事务化、CONTACT_CRYPTO_SECRET 严格化。</div>
+        </div>
+        <div class="lane">
+          <div class="label">Lane C</div>
+          <h3>后台与提审配置</h3>
+          <div class="desc">微信后台《用户隐私保护指引》声明、project.config 发布配置收口、提审前 smoke 验证。</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>T0 提审门槛</h2>
+
+      <div class="stack work-card">
+        <div class="chips">
+          <span class="chip blocker">T0</span>
+          <span class="chip keep">保持现有闪录策略</span>
+        </div>
+        <h3>1. 隐私合规接入</h3>
+        <p>目标：不再裸用录音/媒体相关隐私接口；补齐用户授权同步链路与后台声明，避免录音、媒体选择、上传链路在真机或审核环境被封禁。</p>
+        <p class="subtle">核心文件范围：<code>app.json</code>、<code>pages/index/index.js</code>、<code>pages/follow-up/follow-up.js</code>、<code>pages/projects/projects.js</code>、<code>pages/project-detail/project-detail.js</code>、<code>pages/tasks/tasks.js</code>，建议新增统一工具如 <code>utils/privacy-authorize.js</code>。</p>
+        <ul>
+          <li>新增统一隐私授权工具：封装 <code>wx.getPrivacySetting</code>、<code>wx.onNeedPrivacyAuthorization</code>、<code>agreePrivacyAuthorization</code> 相关逻辑，避免每页各写一套。</li>
+          <li>把录音、语音转写、媒体选择入口改成“先确认隐私同意，再走 <code>authorize(scope.record)</code> 或 <code>chooseMedia</code>”。</li>
+          <li>首页闪录、跟进页、项目页、项目详情页、任务页这五条语音链路统一接入同一个隐私授权工具。</li>
+          <li>微信后台补齐《用户隐私保护指引》：至少覆盖录音、媒体选择、文件上传涉及的信息收集类型。</li>
+          <li>若要兼容手机号授权方案，预留 <code>getPhoneNumber|agreePrivacyAuthorization</code> 组合按钮能力。</li>
+        </ul>
+        <p><strong>验收：</strong> 未同意隐私时，点击录音/媒体入口不会直接报错；用户同意后功能继续；审核环境不再出现隐私声明缺失类报错。</p>
+      </div>
+
+      <div class="stack work-card">
+        <div class="chips">
+          <span class="chip blocker">T0</span>
+        </div>
+        <h3>2. 缓存与本地草稿账号隔离</h3>
+        <p>目标：杜绝同设备换号或身份切换后，A 账号缓存/草稿回显到 B 账号。</p>
+        <p class="subtle">核心文件范围：<code>utils/page-cache.js</code>、<code>utils/core-page-cache.js</code>、<code>pages/index/index.js</code>、<code>pages/projects/projects.js</code>、<code>pages/shared-out/shared-out.js</code>、<code>pages/project-detail/project-detail.js</code>、<code>pages/follow-up/follow-up.js</code>、<code>utils/home-entry-guide.js</code>、<code>app.js</code>。</p>
+        <ul>
+          <li>新增统一账号命名空间工具，例如 <code>getAccountScopedKey(baseKey)</code>，统一基于 <code>accountId</code> 或稳定身份前缀生成 key。</li>
+          <li><code>pageMemoryCache</code> 不再用裸 key，首页、项目列表、外发页、项目详情缓存全部改成账号级 key。</li>
+          <li>本地 storage key 全部改成账号级：<code>follow-up-draft</code>、<code>homeQuickEntryDraftsV1</code>、<code>homeQuickEntryProjectAliasesV1</code>、<code>homeEntryGuideSettings</code> 以及相关语音提示标记。</li>
+          <li>在 <code>app.js</code> 增加“账号上下文变更清理”逻辑：当 <code>refreshAccount()</code> 识别到账号变化或首次初始化时，清掉旧账号缓存和旧 storage。</li>
+          <li>旧格式 key 不做迁移复用，直接视为废弃缓存，避免跨账号串读。</li>
+        </ul>
+        <p><strong>验收：</strong> A 账号打开过首页、项目详情、跟进草稿后切到 B 账号，B 不会先看到 A 的任何项目、联系人、AI 摘要、草稿内容。</p>
+      </div>
+
+      <div class="stack work-card">
+        <div class="chips">
+          <span class="chip blocker">T0</span>
+        </div>
+        <h3>3. bindPhone 改为可信手机号验证</h3>
+        <p>目标：不再接受前端手填手机号直接把 <code>phoneVerified</code> 置为 <code>true</code>；恢复手机号绑定作为真实信任边界，而不是伪门槛。</p>
+        <p class="subtle">核心文件范围：<code>pages/phone-bind/phone-bind.js</code>、<code>pages/phone-bind/phone-bind.wxml</code>、<code>services/data.js</code>、<code>cloudfunctions/bindPhone/index.js</code>，并联动下单与写入门槛链路。</p>
+        <ul>
+          <li>前端从“手动输入手机号”切到微信官方手机号授权按钮方案；若短期无法完成，至少不要再把手输手机号写成 <code>phoneVerified=true</code>。</li>
+          <li>云函数 <code>bindPhone</code> 改为接收可信授权凭证，不再接收裸 <code>phoneNumber</code> 作为验证依据。</li>
+          <li>绑定成功后再刷新 <code>resolveAccount</code> / <code>getEntitlements</code>，保证写入能力、下单能力与真实绑定状态一致。</li>
+          <li>回归检查所有 <code>ACCOUNT_PHONE_REQUIRED</code> 调用链：<code>saveProject</code>、<code>saveFollowUp</code>、<code>flowProject</code>、<code>createBillingOrder</code>、<code>prepareBillingPayment</code>。</li>
+        </ul>
+        <p><strong>验收：</strong> 未完成官方手机号授权时，账号仍是未绑定；完成授权后才变成已绑定，并能通过写入与支付门槛。</p>
+      </div>
+
+      <div class="stack work-card">
+        <div class="chips">
+          <span class="chip blocker">T0</span>
+          <span class="chip keep">不要误修成指定接收人模型</span>
+        </div>
+        <h3>4. 外发接手 claim 原子化</h3>
+        <p>目标：消除外发卡接手过程中的并发竞争、重复导入、后写覆盖和归属竞争。</p>
+        <p class="subtle">核心文件范围：<code>cloudfunctions/openSharedProject/index.js</code>，必要时联动 <code>cloudfunctions/createShareRecord/index.js</code> 的字段设计。</p>
+        <ul>
+          <li>把“检查 shareRecord 是否已被锁定 / 项目是否已转交”与“写入 lock / 写入接手归属”做成原子流程。</li>
+          <li>建议做法：先用事务 claim <code>shareRecord</code> 的接手锁，再继续导入项目与跟进；或者把最小可判定的 ownership lock 放在事务里 compare-and-set。</li>
+          <li>避免多个接收方同时通过前置判断后，分别创建 imported project 或覆盖 <code>handoverToOpenid</code>。</li>
+          <li>保持当前产品语义：现阶段外发卡仍是“持卡方可接手”，不要在没有产品改版的前提下硬塞 <code>recipientAccountId</code> 强校验。</li>
+        </ul>
+        <p><strong>验收：</strong> 并发模拟下，同一张外发卡最终只能有一个成功接手者；源项目归属与 shareRecord 锁定状态一致，不会出现双导入或后写覆盖。</p>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>T1 本轮建议一起做</h2>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th style="width:90px">优先级</th>
+              <th style="width:240px">事项</th>
+              <th>执行要点</th>
+              <th style="width:300px">核心文件</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="chip should">T1</span></td>
+              <td>补齐 <code>includeSharedOut: true</code></td>
+              <td>所有会影响外发追踪页状态的 mutator，补脏标记到 shared-out，避免缓存体系下外发页继续显示旧状态。</td>
+              <td><code>pages/mark-deal/mark-deal.js</code>、<code>pages/follow-up/follow-up.js</code>、<code>pages/tasks/tasks.js</code>、<code>pages/project-detail/project-detail.js</code></td>
+            </tr>
+            <tr>
+              <td><span class="chip should">T1</span></td>
+              <td>缓存命中时也同步外发通知</td>
+              <td><code>pages/shared-out/shared-out.js</code> 在 restore cache 分支后也要执行 <code>syncSharedNotifications()</code>，不要只在真实拉数后执行。</td>
+              <td><code>pages/shared-out/shared-out.js</code></td>
+            </tr>
+            <tr>
+              <td><span class="chip should">T1</span></td>
+              <td>统一 tab bar 浮层隐藏规则</td>
+              <td>不是只补 sync；还要把 <code>showShareSheet</code>、<code>showTransferSheet</code>、<code>showProjectReviewSheet</code> 等浮层纳入隐藏判定，避免 tab bar 浮在半窗/弹层上方。</td>
+              <td><code>utils/appearance.js</code>、<code>custom-tab-bar/index.js</code>、<code>pages/index/index.js</code>、<code>pages/projects/projects.js</code>、必要时 <code>pages/project-detail/project-detail.js</code></td>
+            </tr>
+            <tr>
+              <td><span class="chip should">T1</span></td>
+              <td>清掉联系人加密硬编码 fallback</td>
+              <td><code>CONTACT_CRYPTO_SECRET</code> 环境变量缺失时直接抛错，不再回退到仓库固定密钥；同时补部署检查。</td>
+              <td><code>cloudfunctions/saveProject/index.js</code>、<code>cloudfunctions/getProjectDetail/index.js</code>、<code>cloudfunctions/migrateProjectContacts/index.js</code>、<code>cloudfunctions/listContacts/index.js</code>、<code>cloudfunctions/openSharedProject/index.js</code></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>T2 可后置项</h2>
+      <ul>
+        <li><code>utils/tab-bar-navigation.js</code>：用 <code>id</code> 版本号做 path-aware clear，避免旧请求把新请求清掉。</li>
+        <li><code>app.js</code> / <code>pages/index/index.js</code>：去掉 <code>getUserPreferences</code> 重复请求，减少冷启动噪音。</li>
+        <li><code>cloudfunctions/saveUserPreferences/index.js</code>：改为字段级 patch，避免 <code>entryGuideSettings</code> 并发覆盖。</li>
+        <li><code>cloudfunctions/bindReferral/index.js</code>：加每 openid / IP 频控与冷却机制，作为通用风控增强。</li>
+        <li><code>pages/share-card/share-card.js</code>：清理带上下文的 <code>console.info</code>。</li>
+      </ul>
+    </section>
+
+    <section class="section">
+      <h2>不要误修的两件事</h2>
+      <div class="note">
+        <h3>1. 不要把闪录重新改回入口前置权益校验</h3>
+        <p>当前正确策略是：点击“闪录”先开半窗，后台静默校验，用户点击下一步或真正提交时再按动作类型拦截。开发不要把 <code>openQuickEntrySheet()</code> 前面重新塞回 <code>ensureActionAllowed('quick_entry')</code> 入口阻断。</p>
+      </div>
+      <div class="note">
+        <h3>2. 不要在未改产品模型前，硬把外发修成“指定接收人强校验”</h3>
+        <p>当前产品不是定向转交模型。现阶段必须修的是原子性与并发 claim，不是强行要求 <code>recipientAccountId</code> 与当前用户相等。除非产品明确改版为定向接收卡，否则这会把正常分享/转交行为误伤掉。</p>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>提审前 smoke 清单</h2>
+      <ul>
+        <li>未同意隐私时，首页闪录、跟进页录音、项目页录音、项目详情录音、任务页录音，都能先触发正确的隐私流程，而不是直接失败。</li>
+        <li>同一设备 A 账号访问首页/项目详情/跟进草稿后切换 B 账号，B 账号首屏和详情不回显 A 的任何内容。</li>
+        <li>手机号未授权时，无法通过“绑定完成”绕过写入与下单门槛；授权完成后能力恢复正常。</li>
+        <li>同一张外发卡两端并发打开时，只允许一端成功接手，另一端收到稳定且可解释的反馈。</li>
+        <li>外发页在缓存命中时也能同步通知读态；跟进、任务、成交后再进外发页状态不陈旧。</li>
+        <li>分享卡、项目复盘、任务完成、转交流程等浮层出现时，自定义 tab bar 不会上浮挡按钮。</li>
+      </ul>
+    </section>
+
+    <section class="section">
+      <h2>建议执行顺序</h2>
+      <ol style="margin:10px 0 0; padding-left:20px; line-height:1.8;">
+        <li>先做 T0-2 缓存账号隔离 和 T0-4 外发 claim 原子化。这两项最容易形成真实错数据或错归属。</li>
+        <li>并行做 T0-1 隐私合规接入 和 T0-3 手机号可信验证。这两项决定提审与后续支付链路可靠性。</li>
+        <li>T0 合完后，立即补 T1 的 shared-out 脏标记、通知同步、tab bar 浮层隐藏、密钥 fallback 清理。</li>
+        <li>最后做一次完整 smoke，再收口 <code>project.config.json</code> 的发布配置与提审信息。</li>
+      </ol>
+    </section>
+  </div>
+</body>
+</html>

@@ -1,181 +1,213 @@
-<view class="page-shell home-page {{appearancePageClass}}">
-  <view wx:if="{{isLoading}}" class="rise-in">
-    <loading-panel rows="2" appearance-page-class="{{appearancePageClass}}" />
-  </view>
-
-  <block wx:else>
-    <view class="hero rise-in">
-      <view class="hero-top-actions">
-        <view class="home-avatar-entry" bindtap="openMinePage">{{homeAvatarText}}</view>
-        <view class="notify-entry" bindtap="openNotificationsPage">
-          <view class="notify-entry-text">消息中心</view>
-          <view wx:if="{{notificationUnreadCount}}" class="notify-entry-count">{{notificationUnreadCount > 99 ? '99+' : notificationUnreadCount}}</view>
-        </view>
-      </view>
-      <view class="brand-lockup">
-        <view class="brand-lockup-logo-shell">
-          <image class="brand-lockup-image" src="/assets/brand/logo-home-export-4-transparent-cropped.png" mode="aspectFit" />
-        </view>
-        <view class="brand-lockup-slogan {{homeSloganFontLoaded ? 'is-custom-title-font' : ''}}">
-          <view class="brand-lockup-slogan-bottom">
-            <text class="brand-lockup-slogan-emphasis {{homeSloganFontLoaded ? 'is-custom-title-font' : ''}}">私人CRM</text>
-            <text class="brand-lockup-slogan-tail">引擎</text>
-          </view>
-        </view>
-      </view>
-      <view class="hero-heading">
-        <view class="hero-heading-meta">
-          <view class="hero-heading-kicker">今日优先</view>
-          <view class="hero-heading-rule"></view>
-        </view>
-        <view class="hero-title">今天先处理 <text class="hero-title-emphasis">{{dashboard.taskBoard.summary.openCount || 0}} 条</text>推进动作</view>
-        <view class="hero-subtitle">把项目全局、推进动作和关键动态都收进八面成交，先看动作，再看项目，判断会更快。</view>
-      </view>
-      <view class="hero-message-strip {{notificationHeadlineToneClass}}" bindtap="openHeadlineNotification">
-        <view class="hero-message-copy">
-          <view class="hero-message-topline">
-            <view class="hero-message-badge">{{notificationHeadlineBadgeText}}</view>
-            <view wx:if="{{notificationHeadlineProjectName}}" class="hero-message-project">{{notificationHeadlineProjectName}}</view>
-          </view>
-          <view class="hero-message-title">{{notificationHeadlineTitle}}</view>
-          <view class="hero-message-desc">{{notificationHeadlineDesc}}</view>
-        </view>
-        <view class="hero-message-action">{{notificationHeadlineActionText}}</view>
-      </view>
-      <view class="hero-actions">
-        <view class="btn-secondary hero-primary-btn" data-url="/pages/project-form/project-form" bindtap="openPage">新建项目</view>
-        <view class="btn-ghost hero-secondary-btn" data-url="/pages/projects/projects" bindtap="openPage">我的项目</view>
-      </view>
-      <view class="pill-row hero-quick-pills">
-        <view class="field-pill" data-filter="open" data-sort="priority" bindtap="openTasksCenter">查看推进任务</view>
-        <view class="field-pill" data-filter="overdue" data-sort="priority" bindtap="openTasksCenter">查看逾期动作</view>
-        <view class="field-pill" data-quick-filter="shared" data-sort-mode="updated" data-source="home-shared" bindtap="openProjectsWithFilter">查看我接手的</view>
-      </view>
-      <view class="hero-metrics section hero-metrics-compact">
-        <view class="metric-card" wx:for="{{dashboard.metrics}}" wx:key="label">
-          <view class="metric-label">{{item.label}}</view>
-          <view class="metric-value">{{item.value}}</view>
-          <view class="metric-note">{{item.note}}</view>
-        </view>
-      </view>
+<view class="page-shell home-page {{appearancePageClass}} {{showHomeEntryGuide ? 'is-home-entry-guide-active' : ''}}">
+  <block wx:if="{{!showHomeEntryGuide}}">
+    <view class="home-page__custom-nav-spacer" style="height: {{homeNavigationSpacerHeight}}px;"></view>
+    <view wx:if="{{isLoading && !hasLoadedOnce}}" class="rise-in">
+      <loading-panel rows="2" appearance-page-class="{{appearancePageClass}}" />
     </view>
 
-    <view wx:if="{{homeAccessCard.visible}}" class="form-card section home-access-card rise-in stagger-1">
-      <view class="home-access-head">
-        <view class="home-access-title-wrap">
-          <view class="section-title">{{homeAccessCard.title}}</view>
-        </view>
-        <view wx:if="{{homeAccessCard.actionText}}" class="home-access-action" bindtap="handleHomeAccessAction">{{homeAccessCard.actionText}}</view>
-      </view>
-      <view wx:if="{{homeAccessCard.desc}}" class="card-subtitle home-access-desc">{{homeAccessCard.desc}}</view>
-      <view class="home-access-grid">
-        <view class="home-access-item" wx:for="{{homeAccessCard.rows}}" wx:key="key">
-          <view class="home-access-label">{{item.label}}</view>
-          <view class="home-access-value">{{item.value}}</view>
-        </view>
-      </view>
-    </view>
-
-    <view wx:if="{{isLoadFailed}}" class="form-card section state-card rise-in stagger-1">
-      <view class="form-card-title">当前无法同步云端数据</view>
-      <view class="form-card-desc">{{loadError}}</view>
-      <view class="hero-actions state-actions">
-        <view class="btn-primary state-btn" bindtap="retryFetch">重新加载</view>
-        <view class="btn-ghost state-btn" bindtap="openProjectsPage">查看我的项目</view>
-      </view>
-    </view>
-
-    <view class="section rise-in stagger-1">
-      <view class="section-header">
-        <view class="section-title">推进动作优先</view>
-        <view class="section-link" data-filter="open" data-sort="priority" bindtap="openTasksCenter">查看全部</view>
-      </view>
-      <view class="task-summary-strip">
-        <view class="task-summary-item">
-          <view class="task-summary-value">{{dashboard.taskBoard.summary.openCount || 0}}</view>
-          <view class="task-summary-label">未完成</view>
-        </view>
-        <view class="task-summary-item">
-          <view class="task-summary-value is-danger">{{dashboard.taskBoard.summary.overdueCount || 0}}</view>
-          <view class="task-summary-label">逾期</view>
-        </view>
-        <view class="task-summary-item">
-          <view class="task-summary-value is-brand">{{dashboard.taskBoard.summary.todayCount || 0}}</view>
-          <view class="task-summary-label">今日</view>
-        </view>
-      </view>
-
-      <view wx:if="{{taskFeedback.title}}" class="task-feedback-banner">
-        <view class="task-feedback-main">
-          <view class="task-feedback-title">{{taskFeedback.title}}</view>
-          <view class="task-feedback-detail">{{taskFeedback.detail}}</view>
-        </view>
-        <view class="task-feedback-dismiss" bindtap="dismissTaskFeedback">收起</view>
-      </view>
-
-      <view class="task-priority-card" wx:for="{{dashboard.taskBoard.cards}}" wx:key="id">
-        <view class="task-priority-main">
-          <view class="task-priority-copy">
-            <view class="task-priority-head" data-project-id="{{item.projectId}}" bindtap="openTaskProjectDetail">
-              <view class="status-badge {{item.urgencyBadgeClass}} task-urgency-badge">{{item.urgencyText}}</view>
-              <view class="task-priority-project">{{item.projectName}}</view>
-            </view>
-            <view class="project-name task-title">{{item.title}}</view>
-            <view class="project-client task-project-link" data-project-id="{{item.projectId}}" bindtap="openTaskProjectDetail">
-              {{item.clientName}} · {{item.stage}}
-            </view>
-            <view wx:if="{{item.focusText}}" class="task-focus-line">{{item.focusText}}</view>
-          </view>
-          <view class="task-priority-side">
-            <view class="task-due-text">{{item.dueText}}</view>
-            <view class="btn-primary task-complete-action" data-task-id="{{item.id}}" bindtap="openTaskCompleteSheet">去完成</view>
+    <block wx:else>
+      <view class="hero rise-in">
+        <view class="hero-top-actions">
+          <view class="home-avatar-entry" bindtap="openMinePage">{{homeAvatarText}}</view>
+          <view class="notify-entry" bindtap="openNotificationsPage">
+            <view class="notify-entry-text">消息中心</view>
+            <view wx:if="{{notificationUnreadCount}}" class="notify-entry-count">{{notificationUnreadCount > 99 ? '99+' : notificationUnreadCount}}</view>
           </view>
         </view>
-      </view>
-
-      <empty-state
-        wx:if="{{!dashboard.taskBoard.cards.length}}"
-        appearance-page-class="{{appearancePageClass}}"
-        title="暂无推进动作"
-        desc="补充推进任务后，会自动显示在这里。"
-        image="/assets/illustrations/empty-projects.svg"
-        actionText="查看我的项目"
-        bind:action="openProjectsPage"
-      />
-    </view>
-
-    <view class="section rise-in stagger-2">
-      <view class="section-header">
-        <view class="section-title">动态时间线</view>
-      </view>
-      <view class="glass-card">
-        <view class="timeline-group" wx:for="{{dashboard.timeline}}" wx:key="date">
-          <view class="timeline-group-title">{{item.date}}</view>
-          <view class="timeline-item" wx:for="{{item.items}}" wx:key="key" data-project-id="{{item.projectId}}" bindtap="openTimelineProject">
-            <view class="timeline-axis">
-              <view class="timeline-dot"></view>
-              <view class="timeline-line"></view>
-            </view>
-            <view class="timeline-body">
-              <view class="timeline-time">{{item.time}}</view>
-              <view class="timeline-title">{{item.title}}</view>
-              <view class="timeline-desc">{{item.desc}}</view>
-              <view class="helper-text" wx:if="{{item.projectId}}">点击可查看该项目完整上下文</view>
+        <view class="brand-lockup">
+          <view class="brand-lockup-logo-shell">
+            <image class="brand-lockup-image" src="/assets/brand/logo-home-export-4-transparent-cropped.png" mode="aspectFit" />
+          </view>
+          <view class="brand-lockup-slogan {{homeSloganFontLoaded ? 'is-custom-title-font' : ''}}">
+            <view class="brand-lockup-slogan-bottom">
+              <text class="brand-lockup-slogan-emphasis {{homeSloganFontLoaded ? 'is-custom-title-font' : ''}}">私人CRM</text>
             </view>
           </view>
         </view>
+        <view class="hero-heading">
+          <view class="hero-heading-meta">
+            <view class="hero-heading-kicker">今日优先</view>
+            <view class="hero-heading-rule"></view>
+          </view>
+          <view class="hero-title">今天先处理 <text class="hero-title-emphasis">{{dashboard.taskBoard.summary.openCount || 0}} 条</text>推进动作</view>
+          <view class="hero-subtitle">把项目全局、推进动作和关键动态都收进八面成交，先看动作，再看项目，判断会更快。</view>
+        </view>
+        <view class="hero-message-strip {{notificationHeadlineToneClass}}" bindtap="openHeadlineNotification">
+          <view class="hero-message-copy">
+            <view class="hero-message-topline">
+              <view class="hero-message-badge">{{notificationHeadlineBadgeText}}</view>
+              <view wx:if="{{notificationHeadlineProjectName}}" class="hero-message-project">{{notificationHeadlineProjectName}}</view>
+            </view>
+            <view class="hero-message-title">{{notificationHeadlineTitle}}</view>
+            <view class="hero-message-desc">{{notificationHeadlineDesc}}</view>
+          </view>
+          <view class="hero-message-action">{{notificationHeadlineActionText}}</view>
+        </view>
+        <view class="hero-actions">
+          <view class="btn-secondary hero-primary-btn" data-url="/pages/project-form/project-form" bindtap="openPage">新建项目</view>
+          <view class="btn-ghost hero-secondary-btn" data-url="/pages/projects/projects" bindtap="openPage">我的项目</view>
+        </view>
+        <view class="pill-row hero-quick-pills">
+          <view class="field-pill" data-filter="open" data-sort="priority" bindtap="openTasksCenter">查看推进任务</view>
+          <view class="field-pill" data-filter="overdue" data-sort="priority" bindtap="openTasksCenter">查看逾期动作</view>
+          <view class="field-pill" data-quick-filter="shared" data-sort-mode="updated" data-source="home-shared" bindtap="openProjectsWithFilter">查看我接手的</view>
+        </view>
+        <view class="hero-metrics section hero-metrics-compact">
+          <view class="metric-card" wx:for="{{dashboard.metrics}}" wx:key="label">
+            <view class="metric-label">{{item.label}}</view>
+            <view class="metric-value">{{item.value}}</view>
+            <view class="metric-note">{{item.note}}</view>
+          </view>
+        </view>
       </view>
-      <empty-state
-        wx:if="{{!dashboard.timeline.length}}"
-        appearance-page-class="{{appearancePageClass}}"
-        title="暂无最新动态"
-        desc="新建项目、录入跟进或完成任务后，会自动显示在这里。"
-        image="/assets/illustrations/empty-projects.svg"
-        actionText="新建项目"
-        bind:action="openProjectForm"
-      />
-    </view>
+
+      <view wx:if="{{homeAccessCard.visible}}" class="form-card section home-access-card rise-in stagger-1">
+        <view class="home-access-head">
+          <view class="home-access-title-wrap">
+            <view class="section-title">{{homeAccessCard.title}}</view>
+          </view>
+          <view wx:if="{{homeAccessCard.actionText}}" class="home-access-action" bindtap="handleHomeAccessAction">{{homeAccessCard.actionText}}</view>
+        </view>
+        <view wx:if="{{homeAccessCard.desc}}" class="card-subtitle home-access-desc">{{homeAccessCard.desc}}</view>
+        <view class="home-access-grid">
+          <view class="home-access-item" wx:for="{{homeAccessCard.rows}}" wx:key="key">
+            <view class="home-access-label">{{item.label}}</view>
+            <view class="home-access-value">{{item.value}}</view>
+          </view>
+        </view>
+      </view>
+
+      <view wx:if="{{isLoadFailed}}" class="form-card section state-card rise-in stagger-1">
+        <view class="form-card-title">当前无法同步云端数据</view>
+        <view class="form-card-desc">{{loadError}}</view>
+        <view class="hero-actions state-actions">
+          <view class="btn-primary state-btn" bindtap="retryFetch">重新加载</view>
+          <view class="btn-ghost state-btn" bindtap="openProjectsPage">查看我的项目</view>
+        </view>
+      </view>
+
+      <view class="section rise-in stagger-1">
+        <view class="section-header">
+          <view class="section-title">推进动作优先</view>
+          <view class="section-link" data-filter="open" data-sort="priority" bindtap="openTasksCenter">查看全部</view>
+        </view>
+        <view class="task-summary-strip">
+          <view class="task-summary-item">
+            <view class="task-summary-value">{{dashboard.taskBoard.summary.openCount || 0}}</view>
+            <view class="task-summary-label">未完成</view>
+          </view>
+          <view class="task-summary-item">
+            <view class="task-summary-value is-danger">{{dashboard.taskBoard.summary.overdueCount || 0}}</view>
+            <view class="task-summary-label">逾期</view>
+          </view>
+          <view class="task-summary-item">
+            <view class="task-summary-value is-brand">{{dashboard.taskBoard.summary.todayCount || 0}}</view>
+            <view class="task-summary-label">今日</view>
+          </view>
+        </view>
+
+        <view wx:if="{{taskFeedback.title}}" class="task-feedback-banner">
+          <view class="task-feedback-main">
+            <view class="task-feedback-title">{{taskFeedback.title}}</view>
+            <view class="task-feedback-detail">{{taskFeedback.detail}}</view>
+          </view>
+          <view class="task-feedback-dismiss" bindtap="dismissTaskFeedback">收起</view>
+        </view>
+
+        <view class="task-priority-card" wx:for="{{dashboard.taskBoard.cards}}" wx:key="id">
+          <view class="task-priority-main">
+            <view class="task-priority-copy">
+              <view class="task-priority-head" data-project-id="{{item.projectId}}" bindtap="openTaskProjectDetail">
+                <view class="status-badge {{item.urgencyBadgeClass}} task-urgency-badge">{{item.urgencyText}}</view>
+                <view class="task-priority-project">{{item.projectName}}</view>
+              </view>
+              <view class="project-name task-title">{{item.title}}</view>
+              <view class="project-client task-project-link" data-project-id="{{item.projectId}}" bindtap="openTaskProjectDetail">
+                {{item.clientName}} · {{item.stage}}
+              </view>
+              <view wx:if="{{item.focusText}}" class="task-focus-line">{{item.focusText}}</view>
+            </view>
+            <view class="task-priority-side">
+              <view class="task-due-text">{{item.dueText}}</view>
+              <view class="btn-primary task-complete-action" data-task-id="{{item.id}}" bindtap="openTaskCompleteSheet">去完成</view>
+            </view>
+          </view>
+        </view>
+
+        <empty-state
+          wx:if="{{!dashboard.taskBoard.cards.length}}"
+          appearance-page-class="{{appearancePageClass}}"
+          title="暂无推进动作"
+          desc="补充推进任务后，会自动显示在这里。"
+          image="/assets/illustrations/empty-projects.svg"
+          actionText="查看我的项目"
+          bind:action="openProjectsPage"
+        />
+      </view>
+
+      <view class="section rise-in stagger-2">
+        <view class="section-header">
+          <view class="section-title">动态时间线</view>
+        </view>
+        <view class="glass-card">
+          <view class="timeline-group" wx:for="{{dashboard.timeline}}" wx:key="date">
+            <view class="timeline-group-title">{{item.date}}</view>
+            <view class="timeline-item" wx:for="{{item.items}}" wx:key="key" data-project-id="{{item.projectId}}" bindtap="openTimelineProject">
+              <view class="timeline-axis">
+                <view class="timeline-dot"></view>
+                <view class="timeline-line"></view>
+              </view>
+              <view class="timeline-body">
+                <view class="timeline-time">{{item.time}}</view>
+                <view class="timeline-title">{{item.title}}</view>
+                <view class="timeline-desc">{{item.desc}}</view>
+                <view class="helper-text" wx:if="{{item.projectId}}">点击可查看该项目完整上下文</view>
+              </view>
+            </view>
+          </view>
+        </view>
+        <empty-state
+          wx:if="{{!dashboard.timeline.length}}"
+          appearance-page-class="{{appearancePageClass}}"
+          title="暂无最新动态"
+          desc="新建项目、录入跟进或完成任务后，会自动显示在这里。"
+          image="/assets/illustrations/empty-projects.svg"
+          actionText="新建项目"
+          bind:action="openProjectForm"
+        />
+      </view>
+    </block>
   </block>
+
+  <view wx:if="{{showHomeEntryGuide}}" class="home-entry-guide" catchtouchmove="noop">
+    <view class="home-entry-guide__backdrop"></view>
+    <view class="home-entry-guide__panel" catchtap="noop">
+      <view class="home-entry-guide__main">
+        <view class="home-entry-guide__logo-shell">
+          <image class="home-entry-guide__logo" src="/assets/brand/logo-home-export-4-transparent-cropped.png" mode="aspectFit" />
+        </view>
+        <view class="home-entry-guide__brand">BAMIAN DEAL CRM</view>
+        <view class="home-entry-guide__slogan {{homeSloganFontLoaded ? 'is-custom-title-font' : ''}}">私人CRM</view>
+        <view class="home-entry-guide__title">你的项目，你做主</view>
+
+        <view class="home-entry-guide__values">
+          <view class="home-entry-guide__value-chip">默认私密</view>
+          <view class="home-entry-guide__value-chip">商机转发</view>
+          <view class="home-entry-guide__value-chip">AI辅助推进</view>
+        </view>
+      </view>
+
+      <view class="home-entry-guide__bottom">
+        <view class="home-entry-guide__enter-btn" bindtap="confirmHomeEntryGuide">进入八面成交</view>
+        <view class="home-entry-guide__skip-line" bindtap="toggleHomeEntryGuideSkipNext">
+          <view class="home-entry-guide__skip-box {{homeEntryGuideSkipNext ? 'is-checked' : ''}}">
+            <view wx:if="{{homeEntryGuideSkipNext}}" class="home-entry-guide__skip-checkmark"></view>
+          </view>
+          <view class="home-entry-guide__skip-text">我已熟悉，下次不再显示</view>
+        </view>
+      </view>
+    </view>
+  </view>
 </view>
 
 <view wx:if="{{showQuickEntrySheet}}">
@@ -223,6 +255,13 @@
         data-mode="{{item.key}}"
         bindtap="setQuickEntryMode"
       >{{item.label}}</view>
+    </view>
+    <view wx:if="{{!showQuickEntrySuccessPanel && quickEntryAccessPrompt.visible}}" class="quick-entry-access-banner is-{{quickEntryAccessPrompt.tone}}">
+      <view class="quick-entry-access-main">
+        <view class="quick-entry-access-title">{{quickEntryAccessPrompt.title}}</view>
+        <view wx:if="{{quickEntryAccessPrompt.desc}}" class="quick-entry-access-desc">{{quickEntryAccessPrompt.desc}}</view>
+      </view>
+      <view wx:if="{{quickEntryAccessPrompt.actionText}}" class="quick-entry-access-action" bindtap="handleQuickEntryAccessAction">{{quickEntryAccessPrompt.actionText}}</view>
     </view>
     <view class="quick-entry-body {{quickEntryMode === 'follow_up' && quickEntryFollowUpStage === 'review' ? 'is-review' : ''}}" style="{{quickEntryBodyStyle}}">
       <block wx:if="{{showQuickEntrySuccessPanel}}">
@@ -412,7 +451,7 @@
             <view wx:if="{{!quickEntryAiNextSuggestion && quickEntryAiNextSuggestionError}}" class="quick-entry-ai-tip-card">
               <view class="line-between quick-entry-ai-card-head">
                 <view class="quick-entry-ai-tip-title">AI建议的下一步</view>
-                <view class="section-link quick-entry-ai-card-link {{isQuickEntryAiLoading ? 'is-disabled' : ''}}" bindtap="retryQuickEntryNextSuggestion">{{isQuickEntryAiLoading ? '生成中...' : '重试建议'}}</view>
+                <view class="section-link quick-entry-ai-card-link {{isQuickEntryAiLoading ? 'is-disabled' : ''}}" bindtap="retryQuickEntryNextSuggestion">{{isQuickEntryAiLoading ? '生成中...' : '重新生成'}}</view>
               </view>
               <view class="helper-text quick-entry-ai-tip-text">{{quickEntryAiNextSuggestionError}}</view>
             </view>
@@ -754,7 +793,7 @@
       </block>
       </block>
     </view>
-    <view wx:if="{{!showQuickEntrySuccessPanel && !(quickEntryMode === 'follow_up' && !quickEntryShowFollowUpDetails)}}" class="inline-actions quick-entry-actions is-fixed {{isQuickEntryEditing ? 'is-editing' : ''}}" style="{{quickEntryActionsStyle}}">
+    <view wx:if="{{!showQuickEntrySuccessPanel}}" class="inline-actions quick-entry-actions is-fixed {{isQuickEntryEditing ? 'is-editing' : ''}}" style="{{quickEntryActionsStyle}}">
       <block wx:if="{{quickEntryMode === 'follow_up'}}">
         <block wx:if="{{quickEntryFollowUpStage === 'project' && quickEntrySelectedProjectId}}">
           <view class="quick-entry-dual-submit-row">
@@ -935,5 +974,3 @@
     </view>
   </view>
 </view>
-
-<bottom-nav current="home" appearance-page-class="{{appearancePageClass}}" bind:quickentry="handleQuickEntryTap" />

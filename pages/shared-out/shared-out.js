@@ -1,6 +1,13 @@
 const { loadOutboundData, markNotificationReadData, resolveNotificationData } = require('../../services/data')
+const { touchNotificationSync } = require('../../utils/notification-sync')
 const { syncPageAppearance } = require('../../utils/appearance')
+const { markHomePageCacheDirty } = require('../../utils/core-page-cache')
+const { readPageCache, shouldRefreshPageCache, writePageCache } = require('../../utils/page-cache')
+const { openTabPage } = require('../../utils/tab-bar-navigation')
+const { getNavigationSpacerHeight } = require('../../utils/navigation-metrics')
 
+const SHARED_OUT_PAGE_CACHE_KEY = 'shared-out:list'
+const SHARED_OUT_PAGE_CACHE_TTL = 45 * 1000
 const STATUS_FILTERS = [
   { key: 'all', label: '全部外发' },
   { key: 'unopened', label: '未打开' },
@@ -159,6 +166,7 @@ function buildResultSummaryText({ count, total, statusFilter, sortMode, keyword 
 Page({
   data: {
     appearancePageClass: '',
+    tabNavigationSpacerHeight: getNavigationSpacerHeight(),
     searchKeyword: '',
     statusFilter: 'all',
     sortMode: 'updated',
@@ -172,6 +180,8 @@ Page({
     emptyDesc: '你可以切回全部外发项目，或先发起一次项目转交。',
     emptyActionText: '查看我的项目',
     isLoading: true,
+    hasLoadedOnce: false,
+    isRefreshing: false,
     isLoadFailed: false,
     loadError: '',
     dataSource: 'Mock Demo'
@@ -187,15 +197,30 @@ Page({
 
   async onLoad() {
     this.isPageActive = true
+    this.skipNextShowRefresh = true
+    this.syncTabNavigationMetrics()
     syncPageAppearance(this)
+    const restoredSharedOutCache = this.restoreSharedOutPageCache()
+    if (restoredSharedOutCache) {
+      if (shouldRefreshPageCache(restoredSharedOutCache)) {
+        this.fetchOutboundProjects({ silent: true }).catch(() => {})
+      }
+      return
+    }
+
     await this.fetchOutboundProjects()
   },
 
   async onShow() {
     this.isPageActive = true
+    this.syncTabNavigationMetrics()
     syncPageAppearance(this)
-    if (!this.data.isLoading) {
-      await this.fetchOutboundProjects()
+    if (this.skipNextShowRefresh) {
+      this.skipNextShowRefresh = false
+      return
+    }
+    if (this.data.hasLoadedOnce && shouldRefreshPageCache(readPageCache(SHARED_OUT_PAGE_CACHE_KEY))) {
+      await this.fetchOutboundProjects({ silent: true })
     }
   },
 
@@ -207,9 +232,56 @@ Page({
     this.isPageActive = false
   },
 
-  async fetchOutboundProjects() {
+  syncTabNavigationMetrics() {
+    const navigationSpacerHeight = getNavigationSpacerHeight()
+    if (navigationSpacerHeight === this.data.tabNavigationSpacerHeight) {
+      return
+    }
+
     this.safeSetData({
-      isLoading: true,
+      tabNavigationSpacerHeight: navigationSpacerHeight
+    })
+  },
+
+  restoreSharedOutPageCache() {
+    const cached = readPageCache(SHARED_OUT_PAGE_CACHE_KEY)
+    if (!cached || !cached.data) {
+      return null
+    }
+
+    this.safeSetData({
+      outboundProjects: Array.isArray(cached.data.outboundProjects) ? cached.data.outboundProjects : [],
+      dataSource: cached.data.dataSource || this.data.dataSource,
+      isLoading: false,
+      hasLoadedOnce: true,
+      isRefreshing: false,
+      isLoadFailed: false,
+      loadError: ''
+    }, () => this.applyFilters())
+
+    return cached
+  },
+
+  persistSharedOutPageCache() {
+    if (!this.data.hasLoadedOnce) {
+      return
+    }
+
+    writePageCache(SHARED_OUT_PAGE_CACHE_KEY, {
+      outboundProjects: this.data.outboundProjects,
+      dataSource: this.data.dataSource
+    }, {
+      ttl: SHARED_OUT_PAGE_CACHE_TTL
+    })
+  },
+
+  async fetchOutboundProjects(options = {}) {
+    const silent = options.silent === true
+    const shouldPreserveContent = silent || this.data.hasLoadedOnce
+
+    this.safeSetData({
+      isLoading: silent ? this.data.isLoading : true,
+      isRefreshing: shouldPreserveContent,
       isLoadFailed: false,
       loadError: ''
     })
@@ -220,10 +292,23 @@ Page({
       this.safeSetData({
         outboundProjects,
         isLoading: false,
+        hasLoadedOnce: true,
+        isRefreshing: false,
         dataSource: source
-      }, () => this.applyFilters())
+      }, () => {
+        this.persistSharedOutPageCache()
+        this.applyFilters()
+      })
       this.syncSharedNotifications()
     } catch (error) {
+      if (shouldPreserveContent) {
+        this.safeSetData({
+          isLoading: false,
+          isRefreshing: false
+        })
+        return
+      }
+
       const message = error && error.message ? error.message : '当前无法同步云端数据，请稍后重试'
       this.safeSetData({
         outboundProjects: [],
@@ -234,6 +319,7 @@ Page({
         emptyDesc: '请检查网络或云环境连接后重新加载。',
         emptyActionText: '查看我的项目',
         isLoading: false,
+        isRefreshing: false,
         isLoadFailed: true,
         loadError: message
       })
@@ -258,6 +344,8 @@ Page({
           types: ['shared_imported', 'shared_followed']
         })
       ])
+      touchNotificationSync('shared_out_notifications_synced')
+      markHomePageCacheDirty()
     } catch (error) {
       // Keep the tracking page available even if notification sync fails.
     }
@@ -377,6 +465,10 @@ Page({
       return
     }
 
+    if (openTabPage(url)) {
+      return
+    }
+
     wx.navigateTo({ url })
   },
 
@@ -397,8 +489,6 @@ Page({
   },
 
   handleQuickEntryTap() {
-    wx.navigateTo({
-      url: '/pages/index/index?openQuickEntry=1&quickEntryStandalone=1'
-    })
+    openTabPage('/pages/index/index?openQuickEntry=1&quickEntryStandalone=1')
   }
 })

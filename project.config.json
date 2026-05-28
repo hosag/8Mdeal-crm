@@ -61,6 +61,38 @@
         "type": "folder"
       },
       {
+        "value": "scripts",
+        "type": "folder"
+      },
+      {
+        "value": "demo.html",
+        "type": "file"
+      },
+      {
+        "value": "项目规划文档.md",
+        "type": "file"
+      },
+      {
+        "value": ".DS_Store",
+        "type": "file"
+      },
+      {
+        "value": "assets/.DS_Store",
+        "type": "file"
+      },
+      {
+        "value": "assets/icons/.DS_Store",
+        "type": "file"
+      },
+      {
+        "value": "pages/.DS_Store",
+        "type": "file"
+      },
+      {
+        "value": "components/.DS_Store",
+        "type": "file"
+      },
+      {
         "value": "assets/brand/logo-home-export-3.svg",
         "type": "file"
       },
@@ -122,6 +154,14 @@
       },
       {
         "value": "assets/brand/robot.png",
+        "type": "file"
+      },
+      {
+        "value": "assets/share/referral-guide-cover.png",
+        "type": "file"
+      },
+      {
+        "value": "assets/share/referral-guide-cover.svg",
         "type": "file"
       }
     ],

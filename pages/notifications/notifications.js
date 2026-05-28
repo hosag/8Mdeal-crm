@@ -7,6 +7,8 @@ const { appendQueryParams } = require('../../utils/navigation-context')
 const { getNotificationCategoryMeta } = require('../../utils/notification-meta')
 const { touchNotificationSync } = require('../../utils/notification-sync')
 const { syncPageAppearance } = require('../../utils/appearance')
+const { markHomePageCacheDirty } = require('../../utils/core-page-cache')
+const { openTabPage } = require('../../utils/tab-bar-navigation')
 
 const STATUS_FILTERS = [
   { key: 'all', label: '全部消息' },
@@ -700,6 +702,7 @@ Page({
       })
 
       touchNotificationSync('notifications_mark_all_read')
+      markHomePageCacheDirty()
       await this.fetchNotifications()
     } catch (error) {
       wx.showToast({
@@ -728,6 +731,7 @@ Page({
       }
 
       touchNotificationSync('notification_mark_read')
+      markHomePageCacheDirty()
       await this.fetchNotifications()
     } catch (error) {
       wx.showToast({
@@ -758,6 +762,7 @@ Page({
       })
 
       touchNotificationSync('notification_resolved')
+      markHomePageCacheDirty()
       await this.fetchNotifications()
     } catch (error) {
       wx.showToast({
@@ -822,6 +827,7 @@ Page({
           throw new Error('当前消息未成功标为已查看')
         }
         touchNotificationSync('notification_opened')
+        markHomePageCacheDirty()
         this.updateNotificationStatusLocally(id, 'read')
       } catch (error) {
         wx.showToast({
@@ -837,10 +843,17 @@ Page({
           notificationId: id
         })
         touchNotificationSync('notification_auto_resolved')
+        markHomePageCacheDirty()
         this.updateNotificationStatusLocally(id, 'resolved')
       } catch (error) {
         // Keep navigation available even if resolving fails.
       }
+    }
+
+    if (openTabPage(targetUrl, {
+      failTitle: '暂时无法打开提醒页面'
+    })) {
+      return
     }
 
     wx.navigateTo({

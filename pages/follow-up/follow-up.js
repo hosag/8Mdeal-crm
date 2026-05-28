@@ -10,6 +10,7 @@ const {
 const { buildFollowUpEntryHint } = require('../../utils/navigation-context')
 const { touchNotificationSync } = require('../../utils/notification-sync')
 const { syncPageAppearance } = require('../../utils/appearance')
+const { markHomePageCacheDirty, markProjectRelatedCachesDirty } = require('../../utils/core-page-cache')
 const { ensureActionAllowed, getEntitlementSnapshot, buildEntitlementPagePrompt } = require('../../utils/entitlement-guard')
 const {
   FOLLOW_UP_METHODS,
@@ -340,7 +341,7 @@ function normalizeAiSourceMeta(value) {
     sourceDisplayText: sourceType === 'fallback'
       ? '来自：系统基础建议'
       : `来自：云端模型${modelName ? ` · ${modelName}` : ''}`,
-    regenerateLabel: sourceType === 'fallback' ? '获取云端结果' : '重新生成'
+    regenerateLabel: '重新生成'
   }
 }
 
@@ -1369,6 +1370,7 @@ Page({
         types: ['ai_failed'],
         scenes: ['follow_up_ai']
       })
+      markHomePageCacheDirty()
 
       const nextAiResult = normalizeAiSummaryResult({
         ...result,
@@ -1622,6 +1624,7 @@ Page({
         types: ['ai_failed'],
         scenes: ['follow_up_ai_next']
       })
+      markHomePageCacheDirty()
 
       const nextSuggestion = normalizeNextSuggestion({
         ...result,
@@ -1842,6 +1845,12 @@ Page({
       })
 
       touchNotificationSync('follow_up_saved')
+      markProjectRelatedCachesDirty({
+        projectId: this.data.projectId,
+        includeHome: true,
+        includeProjects: true,
+        includeProjectDetail: true
+      })
       wx.showToast({
         title: '跟进已提交',
         icon: 'success'

@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="800" viewBox="0 0 1000 800" fill="none">
+  <defs>
+    <linearGradient id="bg" x1="500" y1="0" x2="500" y2="800" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#122330"/>
+      <stop offset="1" stop-color="#162B3A"/>
+    </linearGradient>
+    <radialGradient id="glowTop" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(500 88) rotate(90) scale(168 280)">
+      <stop stop-color="#FFECCB" stop-opacity="0.2"/>
+      <stop offset="1" stop-color="#FFECCB" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glowRight" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(848 160) rotate(90) scale(136 188)">
+      <stop stop-color="#FFF4E0" stop-opacity="0.12"/>
+      <stop offset="1" stop-color="#FFF4E0" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="logoGlow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(500 212) rotate(90) scale(124 144)">
+      <stop stop-color="#FFECCE" stop-opacity="0.22"/>
+      <stop offset="1" stop-color="#FFECCE" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="badge" x1="92" y1="78" x2="244" y2="78" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F2DEC0"/>
+      <stop offset="1" stop-color="#FFF5E6"/>
+    </linearGradient>
+    <filter id="shadowSoft" x="0" y="0" width="1000" height="800" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="20" stdDeviation="28" flood-color="#0B161E" flood-opacity="0.18"/>
+    </filter>
+    <filter id="logoShellShadow" x="356" y="128" width="288" height="288" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="18" stdDeviation="20" flood-color="#0B151D" flood-opacity="0.24"/>
+    </filter>
+  </defs>
+
+  <rect width="1000" height="800" fill="url(#bg)"/>
+  <rect width="1000" height="800" fill="url(#glowTop)"/>
+  <rect width="1000" height="800" fill="url(#glowRight)"/>
+
+  <g filter="url(#shadowSoft)">
+    <rect x="92" y="54" width="152" height="48" rx="24" fill="url(#badge)"/>
+    <text x="168" y="84" text-anchor="middle" fill="#1F4156" font-family="PingFang SC, Microsoft YaHei, sans-serif" font-size="24" font-weight="700" letter-spacing="1">朋友邀请</text>
+  </g>
+
+  <g filter="url(#logoShellShadow)">
+    <rect x="416" y="152" width="168" height="168" rx="48" fill="rgba(255,255,255,0.04)"/>
+    <rect x="416.5" y="152.5" width="167" height="167" rx="47.5" stroke="rgba(255,255,255,0.08)"/>
+    <rect x="416" y="152" width="168" height="168" rx="48" fill="url(#logoGlow)"/>
+  </g>
+
+  <image href="../brand/logo-home-export-4-transparent-cropped.png" x="448" y="176" width="104" height="116" preserveAspectRatio="xMidYMid meet"/>
+
+  <text x="500" y="388" text-anchor="middle" fill="rgba(247,237,222,0.72)" font-family="Avenir Next, PingFang SC, Microsoft YaHei, sans-serif" font-size="24" font-weight="800" letter-spacing="6">BAMIAN DEAL CRM</text>
+  <text x="500" y="468" text-anchor="middle" fill="#F1D9AA" font-family="PingFang SC, Microsoft YaHei, sans-serif" font-size="84" font-weight="700" letter-spacing="-3">私人CRM</text>
+  <text x="500" y="544" text-anchor="middle" fill="#FFF5E6" font-family="PingFang SC, Microsoft YaHei, sans-serif" font-size="64" font-weight="700" letter-spacing="-3">你的项目，你做主</text>
+
+  <g>
+    <rect x="290" y="600" width="132" height="52" rx="26" fill="rgba(255,255,255,0.10)"/>
+    <rect x="290.5" y="600.5" width="131" height="51" rx="25.5" stroke="rgba(255,233,197,0.14)"/>
+    <text x="356" y="633" text-anchor="middle" fill="rgba(248,239,224,0.94)" font-family="PingFang SC, Microsoft YaHei, sans-serif" font-size="24" font-weight="700">默认私密</text>
+  </g>
+
+  <g>
+    <rect x="434" y="600" width="132" height="52" rx="26" fill="rgba(255,255,255,0.10)"/>
+    <rect x="434.5" y="600.5" width="131" height="51" rx="25.5" stroke="rgba(255,233,197,0.14)"/>
+    <text x="500" y="633" text-anchor="middle" fill="rgba(248,239,224,0.94)" font-family="PingFang SC, Microsoft YaHei, sans-serif" font-size="24" font-weight="700">商机转发</text>
+  </g>
+
+  <g>
+    <rect x="578" y="600" width="132" height="52" rx="26" fill="rgba(255,255,255,0.10)"/>
+    <rect x="578.5" y="600.5" width="131" height="51" rx="25.5" stroke="rgba(255,233,197,0.14)"/>
+    <text x="644" y="633" text-anchor="middle" fill="rgba(248,239,224,0.94)" font-family="PingFang SC, Microsoft YaHei, sans-serif" font-size="24" font-weight="700">AI辅助推进</text>
+  </g>
+</svg>

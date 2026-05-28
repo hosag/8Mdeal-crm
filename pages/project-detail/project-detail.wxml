@@ -1,5 +1,5 @@
 <view class="page-shell project-detail-page {{appearancePageClass}}">
-  <view wx:if="{{isLoading}}" class="rise-in">
+  <view wx:if="{{isLoading && !hasLoadedOnce}}" class="rise-in">
     <loading-panel rows="3" appearance-page-class="{{appearancePageClass}}" />
   </view>
 
@@ -26,37 +26,13 @@
     <view class="section-header">
       <view class="section-title">项目摘要</view>
       <view class="section-actions">
-        <view wx:if="{{showProjectAiAction}}" class="section-link section-link-brand ai-entry ai-entry-link" bindtap="handleProjectAiJudge">
-          <image wx:if="{{!isProjectAiLoading}}" class="ai-entry-icon" src="/assets/icons/ai-agent-dark.svg" mode="aspectFit" />
-          <view wx:else class="ai-agent-loader">
-            <view class="ai-agent-loader-antenna is-left"><view class="ai-agent-loader-dot"></view></view>
-            <view class="ai-agent-loader-antenna is-right"><view class="ai-agent-loader-dot"></view></view>
-            <view class="ai-agent-loader-cap"></view>
-            <view class="ai-agent-loader-ear is-left"></view>
-            <view class="ai-agent-loader-ear is-right"></view>
-            <view class="ai-agent-loader-head">
-              <view class="ai-agent-loader-eye is-left"></view>
-              <view class="ai-agent-loader-eye is-right"></view>
-              <view class="ai-agent-loader-mouth"></view>
-            </view>
-          </view>
-          <view class="ai-entry-text">{{isProjectAiLoading ? '生成中...' : 'AI研判'}}</view>
+        <view wx:if="{{showProjectAiAction}}" class="section-link section-link-brand ai-entry ai-entry-link project-ai-sheet-entry" bindtap="handleProjectAiJudge">
+          <image class="ai-entry-icon" src="/assets/icons/ai-agent-dark.svg" mode="aspectFit" />
+          <view class="ai-entry-text">AI研判</view>
         </view>
-        <view wx:if="{{showProjectReviewAction}}" class="section-link section-link-brand ai-entry ai-entry-link" bindtap="handleProjectAiReview">
-          <image wx:if="{{!isProjectReviewLoading}}" class="ai-entry-icon" src="/assets/icons/ai-agent-dark.svg" mode="aspectFit" />
-          <view wx:else class="ai-agent-loader">
-            <view class="ai-agent-loader-antenna is-left"><view class="ai-agent-loader-dot"></view></view>
-            <view class="ai-agent-loader-antenna is-right"><view class="ai-agent-loader-dot"></view></view>
-            <view class="ai-agent-loader-cap"></view>
-            <view class="ai-agent-loader-ear is-left"></view>
-            <view class="ai-agent-loader-ear is-right"></view>
-            <view class="ai-agent-loader-head">
-              <view class="ai-agent-loader-eye is-left"></view>
-              <view class="ai-agent-loader-eye is-right"></view>
-              <view class="ai-agent-loader-mouth"></view>
-            </view>
-          </view>
-          <view class="ai-entry-text">{{isProjectReviewLoading ? '生成中...' : 'AI复盘'}}</view>
+        <view wx:if="{{showProjectReviewAction}}" class="section-link section-link-brand ai-entry ai-entry-link project-ai-sheet-entry" bindtap="handleProjectAiReview">
+          <image class="ai-entry-icon" src="/assets/icons/ai-agent-dark.svg" mode="aspectFit" />
+          <view class="ai-entry-text">AI复盘</view>
         </view>
         <view wx:if="{{projectAccess.canEditProject}}" class="section-link" bindtap="copyProject">{{isCopyingProject ? '复制中...' : '复制项目'}}</view>
         <view wx:if="{{projectAccess.canEditProject}}" class="section-link {{!projectId ? 'is-muted' : ''}}" bindtap="goEditProject">编辑项目</view>
@@ -451,7 +427,7 @@
           </view>
 
           <view class="inline-actions project-ai-actions">
-            <view class="btn-ghost ai-entry ai-entry-button" bindtap="regenerateProjectAiJudge">
+            <view class="btn-ghost ai-entry ai-entry-button {{isProjectAiLoading ? 'is-loading is-disabled' : ''}}" bindtap="regenerateProjectAiJudge">
               <image wx:if="{{!isProjectAiLoading}}" class="ai-entry-icon" src="/assets/icons/ai-agent-dark.svg" mode="aspectFit" />
               <view wx:else class="ai-agent-loader">
                 <view class="ai-agent-loader-antenna is-left"><view class="ai-agent-loader-dot"></view></view>
@@ -465,7 +441,7 @@
                   <view class="ai-agent-loader-mouth"></view>
                 </view>
               </view>
-              <view class="ai-entry-text">{{isProjectAiLoading ? '生成中...' : projectAiResult.regenerateLabel}}</view>
+              <view class="ai-entry-text">{{isProjectAiLoading ? '生成中...' : '重新生成'}}</view>
             </view>
             <view wx:if="{{projectAiResultBackup}}" class="btn-ghost" bindtap="restoreProjectAiJudgeVersion">恢复上一版</view>
           </view>
@@ -524,7 +500,7 @@
           <view class="project-ai-result-head">
             <view class="project-ai-origin">{{projectReviewResult.sourceMetaText}}</view>
             <view class="inline-actions project-ai-actions project-ai-head-actions">
-              <view class="btn-ghost ai-entry ai-entry-button" bindtap="regenerateProjectAiReview">
+              <view class="btn-ghost ai-entry ai-entry-button {{isProjectReviewLoading ? 'is-loading is-disabled' : ''}}" bindtap="regenerateProjectAiReview">
                 <image wx:if="{{!isProjectReviewLoading}}" class="ai-entry-icon" src="/assets/icons/ai-agent-dark.svg" mode="aspectFit" />
                 <view wx:else class="ai-agent-loader">
                   <view class="ai-agent-loader-antenna is-left"><view class="ai-agent-loader-dot"></view></view>
@@ -538,7 +514,7 @@
                     <view class="ai-agent-loader-mouth"></view>
                   </view>
                 </view>
-                <view class="ai-entry-text">{{isProjectReviewLoading ? '生成中...' : projectReviewResult.regenerateLabel}}</view>
+                <view class="ai-entry-text">{{isProjectReviewLoading ? '生成中...' : '重新生成'}}</view>
               </view>
               <view wx:if="{{projectReviewResultBackup}}" class="btn-ghost" bindtap="restoreProjectAiReviewVersion">恢复上一版</view>
             </view>

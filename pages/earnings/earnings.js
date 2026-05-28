@@ -1,5 +1,6 @@
 const { loadEarningsData, saveDealData } = require('../../services/data')
 const { syncPageAppearance } = require('../../utils/appearance')
+const { openTabPage } = require('../../utils/tab-bar-navigation')
 
 function normalizeText(value) {
   return String(value || '').trim()
@@ -462,6 +463,10 @@ Page({
 
   openPage(event) {
     const { url } = event.currentTarget.dataset
+    if (openTabPage(url)) {
+      return
+    }
+
     wx.navigateTo({ url })
   }
 })

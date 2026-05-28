@@ -14,56 +14,17 @@ const {
   formatDateLabel
 } = require('../../utils/billing')
 
-function buildOverviewRows(account, entitlements) {
+function buildHeroCaption(account, entitlements) {
   const overview = buildEntitlementOverview({
     account,
     entitlements
   })
 
   return [
-    { key: 'access', label: '当前权益', value: overview.accessLevelLabel },
-    { key: 'phone', label: '手机号', value: overview.phoneStatusLabel },
-    { key: 'projects', label: '项目位', value: overview.projectQuotaText },
-    { key: 'voice', label: '语音额度', value: overview.voiceQuotaText },
-    { key: 'ai', label: 'AI 额度', value: overview.aiQuotaText },
-    { key: 'write', label: '写入状态', value: overview.writeStatusLabel }
-  ]
-}
-
-function buildHeroMetrics(account, entitlements) {
-  const overview = buildEntitlementOverview({
-    account,
-    entitlements
-  })
-  const voiceRemaining = Math.max(0, Number(entitlements.voiceSecondsRemaining || 0))
-  const aiRemaining = Math.max(0, Number(entitlements.aiTokensRemaining || 0))
-
-  return [
-    {
-      key: 'status',
-      label: '当前状态',
-      value: overview.accessLevelLabel,
-      note: overview.accountStatusLabel
-    },
-    {
-      key: 'projects',
-      label: '项目位',
-      value: overview.projectQuotaText,
-      note: entitlements.canCreateProject ? '可继续新增与推进' : '当前新增与写入受限'
-    },
-    {
-      key: 'voice',
-      label: '语音剩余',
-      value: `${voiceRemaining} 秒`,
-      note: ''
-    },
-    {
-      key: 'ai',
-      label: 'AI 剩余',
-      value: formatAiQuotaText(aiRemaining),
-      note: ''
-    }
-  ]
+    overview.accountStatusLabel,
+    overview.accessLevelLabel,
+    overview.phoneStatusLabel
+  ].filter(Boolean).join(' · ')
 }
 
 function buildPlanActionMeta(account, entitlements) {
@@ -78,8 +39,8 @@ function buildPlanActionMeta(account, entitlements) {
 
   if (!phoneVerified) {
     return {
-      title: '先完成手机号绑定，再开通正式套餐',
-      desc: '绑定后，订阅和后续语音 / AI 加购都会准确归属到当前账户，便于后续续费和权益同步。',
+      title: '先绑定手机号，再处理订阅或加购',
+      desc: '绑定后，购买记录和后续权益会准确归属到当前账户。',
       actionText: '去绑定手机号',
       actionType: 'bind_phone'
     }
@@ -87,8 +48,8 @@ function buildPlanActionMeta(account, entitlements) {
 
   if (accessLevel === 'paid_readonly' || accessLevel === 'free_readonly') {
     return {
-      title: '当前账号处于只读状态，建议优先恢复正式可写',
-      desc: '开通正式订阅后，可恢复项目新增、跟进保存、闪录语音和 AI 能力。',
+      title: '当前账号只读，建议先恢复正式可写',
+      desc: '正式订阅会恢复新增项目、跟进保存、闪录语音和 AI 能力。',
       actionText: '订阅套餐',
       actionType: 'open_subscription'
     }
@@ -96,8 +57,8 @@ function buildPlanActionMeta(account, entitlements) {
 
   if (voiceRemaining <= 120 || aiRemaining <= 10000) {
     return {
-      title: '当前语音或 AI 额度接近用尽，建议优先补充流量',
-      desc: '订阅负责持续可写，语音和 AI 可按使用强度单独补量，避免影响闪录与自动整理。',
+      title: '当前流量紧缺，建议先补最需要的额度',
+      desc: '补量后会立即恢复语音或 AI 能力，不影响现有订阅。',
       actionText: '查看流量包',
       actionType: 'open_addons'
     }
@@ -105,16 +66,16 @@ function buildPlanActionMeta(account, entitlements) {
 
   if (String(account.status || entitlements.status || '').trim() === 'trialing') {
     return {
-      title: '当前仍在试用期，建议提前确认正式开通方案',
-      desc: overview.reasonSummary || '试用结束后会保留查看，但不能继续新增项目、使用语音或 AI。',
+      title: '当前仍在试用期，建议提前确认正式方案',
+      desc: overview.reasonSummary || '试用结束后会保留查看，但不能继续新增、语音或 AI。',
       actionText: '订阅套餐',
       actionType: 'open_subscription'
     }
   }
 
   return {
-    title: '当前账户状态正常，可按使用强度选择订阅与加购',
-    desc: '正式订阅负责持续可写；语音和 AI 额度不足时，再按需补充流量包即可。',
+    title: '按使用强度选择订阅或加购',
+    desc: '订阅负责持续可写；额度不足时，再单独补语音或 AI。',
     actionText: '查看套餐与加购',
     actionType: 'open_subscription'
   }
@@ -124,13 +85,13 @@ function buildTrialBadge(account, product) {
   const currentStatus = String(account.status || '').trim()
   if (currentStatus === 'trialing') {
     return {
-      text: '当前在用',
+      text: '试用中',
       className: 'is-brand'
     }
   }
 
   return {
-    text: product.trialEligible ? '试用规则' : '体验入口',
+    text: '',
     className: ''
   }
 }
@@ -194,15 +155,8 @@ function buildSubscriptionBadge(product, latestSubscription, entitlements, optio
 
   if (accessLevel === 'paid_active' && !latestSubscription) {
     return {
-      text: '正式套餐',
+      text: '已生效',
       className: 'is-success'
-    }
-  }
-
-  if (product.billingCycle === 'yearly') {
-    return {
-      text: '长期使用',
-      className: 'is-soft'
     }
   }
 
@@ -214,8 +168,8 @@ function buildSubscriptionBadge(product, latestSubscription, entitlements, optio
   }
 
   return {
-    text: '推荐先做',
-    className: 'is-brand'
+    text: '',
+    className: ''
   }
 }
 
@@ -235,7 +189,7 @@ function buildAddonBadge(product, entitlements, options = {}) {
   }
 
   return {
-    text: isPriority ? '优先关注' : '按需加购',
+    text: isPriority ? '推荐' : '',
     className: isPriority ? 'is-danger' : ''
   }
 }
@@ -259,14 +213,14 @@ function buildProductAction(product, phoneVerified, options = {}) {
 
   if (product.productType === 'voice_pack') {
     return {
-      text: arrivalReason === 'speech_exhausted' ? '补语音时长' : '准备加购语音包',
+      text: arrivalReason === 'speech_exhausted' ? '补语音时长' : '查看语音包',
       mode: 'preview'
     }
   }
 
   if (product.productType === 'ai_pack') {
     return {
-      text: arrivalReason === 'ai_exhausted' ? '补 AI 额度' : '准备加购 AI 包',
+      text: arrivalReason === 'ai_exhausted' ? '补 AI 额度' : '查看 AI 包',
       mode: 'preview'
     }
   }
@@ -275,7 +229,7 @@ function buildProductAction(product, phoneVerified, options = {}) {
     return {
       text: ['project_limit_reached', 'write_disabled', 'share_out_disabled'].includes(arrivalReason)
         ? '订阅套餐'
-        : '准备开通年付',
+        : '选择年付',
       mode: 'preview'
     }
   }
@@ -283,7 +237,7 @@ function buildProductAction(product, phoneVerified, options = {}) {
   return {
     text: ['project_limit_reached', 'write_disabled', 'share_out_disabled'].includes(arrivalReason)
       ? '订阅套餐'
-      : '准备开通月付',
+      : '选择月付',
     mode: 'preview'
   }
 }
@@ -299,21 +253,23 @@ function buildProductCard(product, account, entitlements, latestSubscription, op
       ? buildSubscriptionBadge(product, latestSubscription, entitlements, options)
       : buildAddonBadge(product, entitlements, options))
   const action = buildProductAction(product, phoneVerified, options)
-  const billingText = product.productType === 'trial' && trialEndText
-    ? `试用至 ${trialEndText}`
-    : product.displayBillingText
+  const billingText = buildProductCardBillingText(product, trialEndText)
   const submittingProductKey = String(options.submittingProductKey || '').trim()
   const isSubmitting = submittingProductKey && submittingProductKey === String(product.productCode || '').trim()
 
   return {
     key: product.productCode,
     title: product.productName,
+    cardLayout: product.productType === 'voice_pack' || product.productType === 'ai_pack' ? 'addon' : 'plan',
     priceText,
     priceClass: /^¥/.test(priceText) ? 'is-amount' : 'is-copy',
     originalPriceText: String(product.originalPriceText || '').trim(),
     billingText,
     badgeText: badge.text,
     badgeClass: badge.className,
+    summaryText: buildProductSummaryText(product),
+    detailRows: buildProductDetailRows(product),
+    primarySpec: buildProductPrimarySpec(product),
     desc: product.summary,
     featureLines: product.featureLines,
     actionText: isSubmitting ? '处理中...' : action.text,
@@ -376,7 +332,12 @@ function buildEffectiveSubscriptionSummary(account, entitlements, latestSubscrip
     summaryText: latestSubscription.summaryText || '',
     voiceText: `${Math.max(0, Number(entitlements.voiceSecondsRemaining || 0))} 秒剩余`,
     aiText: `${formatAiQuotaText(entitlements.aiTokensRemaining)} 剩余`,
-    projectText
+    projectText,
+    detailText: [
+      projectText,
+      `${Math.max(0, Number(entitlements.voiceSecondsRemaining || 0))} 秒语音`,
+      `${formatAiQuotaText(entitlements.aiTokensRemaining)}`
+    ].filter(Boolean).join(' · ')
   }
 }
 
@@ -393,40 +354,34 @@ function buildPageState(account, entitlements, billingCatalog, options = {}) {
     ...getDefaultBillingCatalogData(),
     ...(billingCatalog && typeof billingCatalog === 'object' ? billingCatalog : {})
   })
-  const overview = buildEntitlementOverview({
-    account: nextAccount,
-    entitlements: nextEntitlements
-  })
   const actionMeta = buildPlanActionMeta(nextAccount, nextEntitlements)
   const arrivalReason = normalizeReason(options.reason)
+  const initialFocus = normalizeFocus(options.focus) || getFocusByReason(arrivalReason)
+  const subscriptionPlans = buildSubscriptionPlans(nextAccount, nextEntitlements, nextBillingCatalog, {
+    reason: arrivalReason,
+    submittingProductKey: options.submittingProductKey
+  })
+  const addonPacks = buildAddonPacks(nextAccount, nextEntitlements, nextBillingCatalog, {
+    reason: arrivalReason,
+    submittingProductKey: options.submittingProductKey
+  })
 
   return {
     account: nextAccount,
     entitlements: nextEntitlements,
     billingCatalog: nextBillingCatalog,
-    heroCaption: [
-      overview.accountStatusLabel,
-      overview.accessLevelLabel,
-      nextAccount.phoneVerified ? (nextAccount.phoneMasked || '已绑定手机号') : '待绑定手机号'
-    ].filter(Boolean).join(' · '),
-    heroMetrics: buildHeroMetrics(nextAccount, nextEntitlements),
+    heroCaption: buildHeroCaption(nextAccount, nextEntitlements),
     entryGuide: buildEntryGuide(arrivalReason),
-    overviewRows: buildOverviewRows(nextAccount, nextEntitlements),
     effectiveSubscriptionSummary: buildEffectiveSubscriptionSummary(
       nextAccount,
       nextEntitlements,
       nextBillingCatalog.latestSubscription
     ),
-    recentOrders: nextBillingCatalog.recentOrders,
+    recentOrders: Array.isArray(nextBillingCatalog.recentOrders) ? nextBillingCatalog.recentOrders.slice(0, 2) : [],
     planActionMeta: actionMeta,
-    subscriptionPlans: buildSubscriptionPlans(nextAccount, nextEntitlements, nextBillingCatalog, {
-      reason: arrivalReason,
-      submittingProductKey: options.submittingProductKey
-    }),
-    addonPacks: buildAddonPacks(nextAccount, nextEntitlements, nextBillingCatalog, {
-      reason: arrivalReason,
-      submittingProductKey: options.submittingProductKey
-    })
+    subscriptionPlans,
+    addonPacks,
+    productSections: buildProductSections(subscriptionPlans, addonPacks, initialFocus)
   }
 }
 
@@ -472,6 +427,162 @@ function formatProjectLimitText(value) {
   }
 
   return `${projectLimit} 个项目位`
+}
+
+function buildProductCardBillingText(product = {}, trialEndText = '') {
+  if (product.productType === 'trial') {
+    return trialEndText ? `试用至 ${trialEndText}` : '试用入口'
+  }
+
+  if (product.productType === 'voice_pack' || product.productType === 'ai_pack') {
+    return '一次性加购'
+  }
+
+  return String(product.displayBillingText || '').trim()
+}
+
+function formatIncludedBundleText(product = {}) {
+  const voiceSeconds = Number(product.includedVoiceSeconds || 0)
+  const aiTokens = Number(product.includedAiTokens || 0)
+  const parts = []
+
+  if (voiceSeconds > 0) {
+    parts.push(`${formatVoiceQuotaText(voiceSeconds)}语音`)
+  }
+
+  if (aiTokens > 0) {
+    parts.push(formatAiQuotaText(aiTokens))
+  }
+
+  return parts.join(' · ')
+}
+
+function buildProductSummaryText(product = {}) {
+  if (product.productType === 'trial') {
+    return '先体验闪录、AI 与外发的完整流程。'
+  }
+
+  if (product.productType === 'subscription' && product.billingCycle === 'yearly') {
+    return '长期保持可写，减少到期中断。'
+  }
+
+  if (product.productType === 'subscription') {
+    return '先恢复持续可写，适合日常稳定使用。'
+  }
+
+  if (product.productType === 'voice_pack') {
+    return '补量后，语音录入和闪录转写会立即恢复。'
+  }
+
+  if (product.productType === 'ai_pack') {
+    return '补量后，AI 理解、整理和建议会立即恢复。'
+  }
+
+  return String(product.summary || '').trim()
+}
+
+function buildProductDetailRows(product = {}) {
+  const productType = String(product.productType || '').trim()
+
+  if (productType === 'trial' || productType === 'subscription') {
+    return [
+      {
+        label: '项目位',
+        value: formatProjectLimitText(product.projectLimit)
+      },
+      {
+        label: productType === 'trial' ? '试用内含' : '套餐内含',
+        value: formatIncludedBundleText(product) || '按商品配置'
+      }
+    ]
+  }
+
+  if (productType === 'voice_pack') {
+    return [
+      {
+        label: '使用规则',
+        value: '按实际成功转写消耗'
+      },
+      {
+        label: '生效方式',
+        value: '不影响现有订阅'
+      }
+    ]
+  }
+
+  if (productType === 'ai_pack') {
+    return [
+      {
+        label: '覆盖范围',
+        value: '摘要、建议、项目研判'
+      },
+      {
+        label: '生效方式',
+        value: '不影响现有订阅'
+      }
+    ]
+  }
+
+  return []
+}
+
+function buildAddonMetaText(product = {}) {
+  const priceText = String(product.displayPriceText || '').trim()
+  return ['一次性加购', priceText].filter(Boolean).join(' · ')
+}
+
+function buildProductPrimarySpec(product = {}) {
+  const productType = String(product.productType || '').trim()
+
+  if (productType === 'voice_pack') {
+    return {
+      label: '本包语音时长',
+      value: formatVoiceQuotaText(product.includedVoiceSeconds),
+      meta: buildAddonMetaText(product)
+    }
+  }
+
+  if (productType === 'ai_pack') {
+    return {
+      label: '本包 AI 额度',
+      value: formatAiQuotaText(product.includedAiTokens),
+      meta: buildAddonMetaText(product)
+    }
+  }
+
+  return null
+}
+
+function buildProductSections(subscriptionPlans = [], addonPacks = [], focus = '') {
+  const sections = [
+    {
+      key: 'subscription',
+      id: 'subscription-section',
+      group: 'subscriptions',
+      title: '订阅套餐',
+      desc: '恢复持续可写、项目承载与外发能力。',
+      products: subscriptionPlans
+    },
+    {
+      key: 'addons',
+      id: 'addon-section',
+      group: 'addons',
+      title: '语音与 AI 流量包',
+      desc: '只补语音或 AI，不影响当前订阅。',
+      products: addonPacks
+    }
+  ]
+
+  const orderedSections = focus === 'addons'
+    ? [sections[1], sections[0]]
+    : sections
+
+  return orderedSections
+    .filter((section) => Array.isArray(section.products) && section.products.length)
+    .map((section, index) => ({
+    ...section,
+    staggerClass: index === 0 ? 'stagger-3' : 'stagger-4'
+    }))
 }
 
 function buildCapabilityLines(product = {}) {
@@ -622,44 +733,44 @@ function buildEntryGuide(reason) {
     bind_required: {
       visible: true,
       tone: 'soft',
-      title: '当前账户尚未绑定手机号',
-      desc: '你仍可继续浏览和体验，但在正式保存数据、开通订阅或加购额度前，需要先完成手机号绑定。'
+      title: '开通前需先绑定手机号',
+      desc: ''
     },
     speech_exhausted: {
       visible: true,
       tone: 'soft',
-      title: '当前语音额度已用完',
-      desc: '建议优先查看语音流量包；补量后，语音录入和闪录转写会立即恢复可用。'
+      title: '语音额度已用完，已优先展示流量包',
+      desc: ''
     },
     ai_exhausted: {
       visible: true,
       tone: 'brand',
-      title: '当前 AI 额度已用完',
-      desc: '建议优先查看 AI 流量包；补量后，AI 理解、整理和自动建议会恢复可用。'
+      title: 'AI 额度已用完，已优先展示流量包',
+      desc: ''
     },
     project_limit_reached: {
       visible: true,
       tone: 'soft',
-      title: '当前项目位已达上限',
-      desc: '建议优先查看正式订阅，恢复持续可写能力并扩展项目承载上限。'
+      title: '项目位已达上限，建议先恢复正式订阅',
+      desc: ''
     },
     write_disabled: {
       visible: true,
       tone: 'brand',
-      title: '当前账号已切换为只读',
-      desc: '你仍可查看完整进展，但新增项目、保存跟进、闪录和 AI 能力需要恢复正式可写状态。'
+      title: '账号当前只读，建议先恢复正式可写',
+      desc: ''
     },
     share_out_disabled: {
       visible: true,
       tone: 'neutral',
-      title: '当前套餐暂不支持项目外发',
-      desc: '如果你需要将项目直接转交给其他人接手，建议优先查看支持外发能力的正式订阅。'
+      title: '当前套餐不支持项目外发，建议先看订阅',
+      desc: ''
     },
     account_disabled: {
       visible: true,
       tone: 'danger',
-      title: '当前账号状态异常',
-      desc: '建议先到权益页确认账户状态，待账号恢复正常后，再继续处理订阅或加购。'
+      title: '账号状态异常，请先确认权益状态',
+      desc: ''
     }
   }
 
@@ -689,10 +800,9 @@ Page({
       desc: ''
     },
     heroCaption: '',
-    heroMetrics: [],
-    overviewRows: [],
     effectiveSubscriptionSummary: null,
     recentOrders: [],
+    productSections: [],
     submittingProductKey: '',
     confirmSheetVisible: false,
     confirmProduct: null,
@@ -765,7 +875,8 @@ Page({
           ? billingResult.source
           : (entitlementsResult && entitlementsResult.source ? entitlementsResult.source : (accountResult && accountResult.source ? accountResult.source : 'CloudBase')),
         ...buildPageState(account, entitlements, billingCatalog, {
-          reason: this.data.arrivalReason
+          reason: this.data.arrivalReason,
+          focus: this.data.initialFocus
         })
       })
       this.applyInitialFocus()
@@ -777,7 +888,8 @@ Page({
           getDefaultEntitlements(),
           normalizeBillingCatalogPayload(getDefaultBillingCatalogData()),
           {
-            reason: this.data.arrivalReason
+            reason: this.data.arrivalReason,
+            focus: this.data.initialFocus
           }
         )
       })
@@ -948,6 +1060,7 @@ Page({
         this.data.billingCatalog,
         {
           reason: this.data.arrivalReason,
+          focus: this.data.initialFocus,
           submittingProductKey: product.key
         }
       )
@@ -1021,6 +1134,7 @@ Page({
           this.data.billingCatalog,
           {
             reason: this.data.arrivalReason,
+            focus: this.data.initialFocus,
             submittingProductKey: ''
           }
         )

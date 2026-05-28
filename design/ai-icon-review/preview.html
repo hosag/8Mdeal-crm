@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI 图标第二轮预览</title>
+  <style>
+    :root {
+      --paper: #f4efe7;
+      --ink: #213243;
+      --muted: #6f7f8e;
+      --card: rgba(255, 255, 255, 0.88);
+      --line: rgba(33, 50, 67, 0.08);
+      --shadow: 0 22px 46px rgba(28, 42, 53, 0.08);
+      --brand-bg: linear-gradient(145deg, #193547 0%, #31586d 100%);
+      --brand-soft: rgba(228, 235, 242, 0.92);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 36px;
+      font-family: "PingFang SC", "Helvetica Neue", sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at top left, rgba(111, 168, 255, 0.12), transparent 34%),
+        radial-gradient(circle at bottom right, rgba(245, 166, 35, 0.12), transparent 28%),
+        var(--paper);
+    }
+
+    .shell {
+      max-width: 1080px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      margin: 0 0 10px;
+      font-size: 34px;
+      line-height: 1.15;
+    }
+
+    .intro {
+      margin: 0 0 26px;
+      font-size: 16px;
+      line-height: 1.7;
+      color: var(--muted);
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 18px;
+    }
+
+    .card {
+      padding: 22px;
+      border-radius: 28px;
+      background: var(--card);
+      box-shadow: var(--shadow);
+      border: 1px solid var(--line);
+      backdrop-filter: blur(16px);
+    }
+
+    .eyebrow {
+      margin-bottom: 8px;
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #7f8d99;
+    }
+
+    .title {
+      margin: 0;
+      font-size: 24px;
+      line-height: 1.2;
+    }
+
+    .desc {
+      margin: 10px 0 18px;
+      min-height: 68px;
+      font-size: 14px;
+      line-height: 1.65;
+      color: var(--muted);
+    }
+
+    .preview-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .preview {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 132px;
+      border-radius: 24px;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+    }
+
+    .preview.is-dark {
+      background: var(--brand-bg);
+    }
+
+    .preview.is-light {
+      background: var(--brand-soft);
+      box-shadow: inset 0 0 0 1px rgba(33, 50, 67, 0.06);
+    }
+
+    .preview img {
+      width: 72px;
+      height: 72px;
+      display: block;
+    }
+
+    .labels {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-top: 10px;
+      font-size: 13px;
+      color: #7d8a96;
+      text-align: center;
+    }
+
+    @media (max-width: 920px) {
+      .grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <h1>AI 图标第二轮 3 个方向</h1>
+    <p class="intro">这一轮有意去掉“助手 / 机器人 / 扫描器”的既视感，改成更偏业务 AI 的判断、推进、结构化语义。每个方向都给了浅底和深底适配版本，便于直接判断按钮体系里的气质是否成立。</p>
+
+    <div class="grid">
+      <section class="card">
+        <div class="eyebrow">Concept D</div>
+        <h2 class="title">决策信标</h2>
+        <p class="desc">更像 AI 把高优先级动作“点亮”出来，强调下一步判断和任务唤醒，入口感比较强。</p>
+        <div class="preview-row">
+          <div class="preview is-light"><img src="./ai-concept-d-decision-beacon-dark.svg" alt="决策信标浅底版"></div>
+          <div class="preview is-dark"><img src="./ai-concept-d-decision-beacon-light.svg" alt="决策信标深底版"></div>
+        </div>
+        <div class="labels"><div>浅底按钮</div><div>深底按钮</div></div>
+      </section>
+
+      <section class="card">
+        <div class="eyebrow">Concept E</div>
+        <h2 class="title">商机罗盘</h2>
+        <p class="desc">更偏“方向选择”和“路径推进”。如果你希望 AI 是成交推进器，而不是整理工具，这个方向更准。</p>
+        <div class="preview-row">
+          <div class="preview is-light"><img src="./ai-concept-e-opportunity-compass-dark.svg" alt="商机罗盘浅底版"></div>
+          <div class="preview is-dark"><img src="./ai-concept-e-opportunity-compass-light.svg" alt="商机罗盘深底版"></div>
+        </div>
+        <div class="labels"><div>浅底按钮</div><div>深底按钮</div></div>
+      </section>
+
+      <section class="card">
+        <div class="eyebrow">Concept F</div>
+        <h2 class="title">数据棱镜</h2>
+        <p class="desc">强调把零散输入折射成结构化结果，比较适合闪录、整理、摘要，也能兼容复盘能力。</p>
+        <div class="preview-row">
+          <div class="preview is-light"><img src="./ai-concept-f-data-prism-dark.svg" alt="数据棱镜浅底版"></div>
+          <div class="preview is-dark"><img src="./ai-concept-f-data-prism-light.svg" alt="数据棱镜深底版"></div>
+        </div>
+        <div class="labels"><div>浅底按钮</div><div>深底按钮</div></div>
+      </section>
+    </div>
+  </div>
+</body>
+</html>

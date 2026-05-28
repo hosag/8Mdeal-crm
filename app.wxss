@@ -122,6 +122,11 @@ page {
   color: var(--theme-title);
 }
 
+.custom-nav-spacer {
+  width: 100%;
+  pointer-events: none;
+}
+
 .page-shell.appearance-theme-deep_business {
   background: var(--theme-page-bg);
 }
@@ -909,6 +914,12 @@ page {
   gap: var(--ai-entry-gap);
 }
 
+.ai-entry-link,
+.ai-entry-chip,
+.ai-entry-button {
+  transition: opacity 160ms ease, box-shadow 160ms ease, background 160ms ease, color 160ms ease;
+}
+
 .ai-entry-button .ai-entry-text,
 .ai-entry-link .ai-entry-text,
 .ai-entry-chip .ai-entry-text {
@@ -920,6 +931,20 @@ page {
   background: var(--theme-brand-bg);
   color: var(--theme-brand-text);
   box-shadow: inset 0 0 0 1rpx rgba(24, 39, 51, 0.06);
+}
+
+.ai-entry.is-disabled {
+  opacity: 0.56;
+}
+
+.ai-entry-link.is-disabled,
+.ai-entry-chip.is-disabled,
+.ai-entry-button.is-disabled {
+  box-shadow: none;
+}
+
+.ai-entry.is-loading {
+  opacity: 0.72;
 }
 
 @keyframes aiPlanetOrbitSpin {

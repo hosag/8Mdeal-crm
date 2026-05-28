@@ -14,6 +14,10 @@ const {
   applyAppearanceSettingsToApp,
   syncPageAppearance
 } = require('./utils/appearance')
+const {
+  getDefaultHomeEntryGuideSettings,
+  normalizeHomeEntryGuideSettings
+} = require('./utils/home-entry-guide')
 
 App({
   onLaunch(options) {
@@ -23,7 +27,7 @@ App({
 
     this.globalData = {
       brandName: '八面成交',
-      brandSubtitle: '您的私人 CRM 引擎',
+      brandSubtitle: '您的私人 CRM',
       brandMark: '/assets/brand/logo-core-transparent.png',
       cloudReady,
       cloudStatus,
@@ -35,6 +39,8 @@ App({
       appearanceSettings: defaultAppearanceSettings,
       appearancePageClass: getAppearancePageClass(defaultAppearanceSettings),
       appearanceVersion: 0,
+      entryGuideSettings: getDefaultHomeEntryGuideSettings(),
+      homeEntryGuideSessionDismissed: false,
       notificationSync: {
         version: 0,
         updatedAt: 0,
@@ -87,10 +93,13 @@ App({
       try {
         const result = await loadUserPreferencesData()
         applyAppearanceSettingsToApp(result && result.appearanceSettings)
+        this.applyEntryGuideSettings(result && result.entryGuideSettings)
         const pages = getCurrentPages()
         pages.forEach((page) => syncPageAppearance(page))
+        return result
       } catch (error) {
         // Keep default appearance when cloud preferences are unavailable.
+        return null
       } finally {
         this.bootstrapAppearancePreferencesPromise = null
       }
@@ -103,6 +112,12 @@ App({
     const savedSettings = applyAppearanceSettingsToApp(nextSettings)
     const pages = getCurrentPages()
     pages.forEach((page) => syncPageAppearance(page))
+    return savedSettings
+  },
+
+  applyEntryGuideSettings(nextSettings) {
+    const savedSettings = normalizeHomeEntryGuideSettings(nextSettings)
+    this.globalData.entryGuideSettings = savedSettings
     return savedSettings
   },
 

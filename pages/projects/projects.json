@@ -1,7 +1,7 @@
 {
   "navigationBarTitleText": "我的项目",
+  "navigationStyle": "custom",
   "usingComponents": {
-    "bottom-nav": "/components/bottom-nav/index",
     "loading-panel": "/components/loading-panel/index",
     "empty-state": "/components/empty-state/index",
     "share-entry-sheet": "/components/share-entry-sheet/index"

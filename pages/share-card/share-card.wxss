@@ -313,15 +313,15 @@
   height: var(--ai-entry-control-height);
   padding: 0 var(--ai-entry-padding-x);
   border-radius: var(--ai-entry-radius);
-  background: var(--theme-button-primary-bg);
-  box-shadow: var(--theme-button-shadow);
+  background: var(--theme-brand-bg);
+  box-shadow: inset 0 0 0 1rpx rgba(24, 39, 51, 0.06);
 }
 
 .share-card-page .share-brief-btn-text {
   flex: 0 0 auto;
   font-size: var(--ai-entry-font-size);
   font-weight: 700;
-  color: var(--theme-button-primary-text);
+  color: var(--theme-brand-text);
   text-align: center;
 }
 

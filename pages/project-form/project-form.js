@@ -1,6 +1,8 @@
 const { loadProjectFormData, saveProjectData, reportSystemFailureData, resolveNotificationData } = require('../../services/data')
 const { syncPageAppearance } = require('../../utils/appearance')
+const { markProjectRelatedCachesDirty } = require('../../utils/core-page-cache')
 const { ensureActionAllowed } = require('../../utils/entitlement-guard')
+const { openTabPage } = require('../../utils/tab-bar-navigation')
 
 Page({
   data: {
@@ -210,6 +212,13 @@ Page({
         scenes: [this.data.isEdit ? 'project_update' : 'project_create']
       })
 
+      markProjectRelatedCachesDirty({
+        projectId: this.data.isEdit ? result.projectId : '',
+        includeHome: true,
+        includeProjects: true,
+        includeProjectDetail: this.data.isEdit
+      })
+
       wx.showToast({
         title: this.data.isEdit ? '项目已更新' : '项目已创建',
         icon: 'success'
@@ -245,8 +254,6 @@ Page({
   },
 
   goBack() {
-    wx.reLaunch({
-      url: '/pages/projects/projects'
-    })
+    openTabPage('/pages/projects/projects')
   }
 })

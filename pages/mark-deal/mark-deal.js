@@ -1,5 +1,6 @@
 const { loadDealFormData, saveDealData, reportSystemFailureData, resolveNotificationData } = require('../../services/data')
 const { syncPageAppearance } = require('../../utils/appearance')
+const { markProjectRelatedCachesDirty } = require('../../utils/core-page-cache')
 
 Page({
   data: {
@@ -153,6 +154,13 @@ Page({
         projectId: this.data.form.projectId,
         types: ['save_failed'],
         scenes: ['mark_deal_submit']
+      })
+
+      markProjectRelatedCachesDirty({
+        projectId: this.data.form.projectId,
+        includeHome: true,
+        includeProjects: true,
+        includeProjectDetail: true
       })
 
       wx.showToast({

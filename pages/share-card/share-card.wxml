@@ -82,9 +82,9 @@
     <view wx:if="{{showShareBriefCard}}" class="form-card section rise-in stagger-3 share-brief-card">
       <view class="section-header share-brief-head">
         <view class="section-title">摘要</view>
-        <view wx:if="{{isSenderEntry}}" class="share-brief-btn ai-entry ai-entry-button" bindtap="handleGenerateShareBrief">
-          <image wx:if="{{!isBriefLoading}}" class="ai-entry-icon" src="/assets/icons/ai-agent-light.svg" mode="aspectFit" />
-          <view wx:else class="ai-agent-loader is-light">
+        <view wx:if="{{isSenderEntry}}" class="share-brief-btn ai-entry ai-entry-button {{isBriefLoading ? 'is-loading is-disabled' : ''}}" bindtap="handleGenerateShareBrief">
+          <image wx:if="{{!isBriefLoading}}" class="ai-entry-icon" src="/assets/icons/ai-agent-dark.svg" mode="aspectFit" />
+          <view wx:else class="ai-agent-loader">
             <view class="ai-agent-loader-antenna is-left"><view class="ai-agent-loader-dot"></view></view>
             <view class="ai-agent-loader-antenna is-right"><view class="ai-agent-loader-dot"></view></view>
             <view class="ai-agent-loader-cap"></view>
@@ -96,7 +96,7 @@
               <view class="ai-agent-loader-mouth"></view>
             </view>
           </view>
-          <view class="share-brief-btn-text ai-entry-text">{{isBriefLoading ? '生成中...' : (shareBrief && shareBrief.title ? shareBrief.regenerateLabel : 'AI整理') }}</view>
+          <view class="share-brief-btn-text ai-entry-text">{{isBriefLoading ? (shareBrief && shareBrief.title ? '生成中...' : 'AI整理中...') : (shareBrief && shareBrief.title ? '重新生成' : 'AI整理') }}</view>
         </view>
       </view>
 

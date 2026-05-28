@@ -6,8 +6,10 @@ const {
 const { buildTaskCompletionFeedback, getTaskCompletionToastTitle } = require('../../services/task-feedback')
 const { touchNotificationSync } = require('../../utils/notification-sync')
 const { syncPageAppearance } = require('../../utils/appearance')
+const { markProjectRelatedCachesDirty } = require('../../utils/core-page-cache')
 const { ensureActionAllowed } = require('../../utils/entitlement-guard')
 const { startVoiceRecordingTicker, stopVoiceRecordingTicker } = require('../../utils/voice-recording')
+const { openTabPage } = require('../../utils/tab-bar-navigation')
 
 const FILTER_OPTIONS = [
   { key: 'all', label: '全部' },
@@ -168,6 +170,7 @@ Page({
     nextTaskTemplates: NEXT_TASK_TEMPLATES,
     showTaskCompleteSheet: false,
     taskCompletionTaskId: '',
+    taskCompletionProjectId: '',
     taskCompletionTaskTitle: '',
     taskCompletionText: '',
     taskCompletionCreateNextTask: false,
@@ -361,9 +364,7 @@ Page({
       return
     }
 
-    wx.navigateTo({
-      url: '/pages/projects/projects?quickFilter=task_open&sortMode=task&source=tasks-empty'
-    })
+    openTabPage('/pages/projects/projects?quickFilter=task_open&sortMode=task&source=tasks-empty')
   },
 
   openProjectDetail(event) {
@@ -392,6 +393,7 @@ Page({
     this.setData({
       showTaskCompleteSheet: true,
       taskCompletionTaskId: taskId,
+      taskCompletionProjectId: currentTask.projectId || '',
       taskCompletionTaskTitle: currentTask.title || '当前任务',
       taskCompletionText: '',
       taskCompletionCreateNextTask: false,
@@ -415,6 +417,7 @@ Page({
     this.setData({
       showTaskCompleteSheet: false,
       taskCompletionTaskId: '',
+      taskCompletionProjectId: '',
       taskCompletionTaskTitle: '',
       taskCompletionText: '',
       taskCompletionCreateNextTask: false,
@@ -921,7 +924,14 @@ Page({
         icon: 'success'
       })
 
+      const completedProjectId = String(this.data.taskCompletionProjectId || '').trim()
       touchNotificationSync('task_completed')
+      markProjectRelatedCachesDirty({
+        projectId: completedProjectId,
+        includeHome: true,
+        includeProjects: true,
+        includeProjectDetail: true
+      })
       this.closeTaskCompleteSheet(true)
       await this.fetchTasks()
       this.showTaskFeedback(feedback)

@@ -3,13 +3,21 @@
 }
 
 .plans-hero {
-  padding: 26rpx 26rpx 28rpx;
+  padding: 26rpx 26rpx 30rpx;
   border-radius: 34rpx;
 }
 
+.plans-hero-status {
+  margin-top: 14rpx;
+  max-width: 620rpx;
+  font-size: 20rpx;
+  line-height: 1.55;
+  color: rgba(255, 241, 224, 0.72);
+}
+
 .plans-hero .hero-title {
-  margin-top: 16rpx;
-  max-width: 560rpx;
+  margin-top: 10rpx;
+  max-width: 620rpx;
   font-size: 36rpx;
 }
 
@@ -24,44 +32,10 @@
   margin-top: 22rpx;
 }
 
-.plans-hero-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12rpx;
-  margin-top: 24rpx;
-}
-
-.plans-hero-metric {
-  padding: 18rpx 18rpx 16rpx;
-  border-radius: 24rpx;
-  background: rgba(255, 255, 255, 0.08);
-  backdrop-filter: blur(14rpx);
-}
-
-.plans-hero-metric-label {
-  font-size: 18rpx;
-  color: rgba(246, 240, 229, 0.72);
-}
-
-.plans-hero-metric-value {
-  margin-top: 6rpx;
-  font-size: 24rpx;
-  line-height: 1.35;
-  font-weight: 700;
-  color: var(--theme-hero-text);
-}
-
-.plans-hero-metric-note {
-  margin-top: 6rpx;
-  font-size: 18rpx;
-  line-height: 1.45;
-  color: rgba(255, 241, 224, 0.64);
-}
-
 .plans-entry-banner {
   position: relative;
   overflow: hidden;
-  padding: 20rpx 22rpx 22rpx;
+  padding: 18rpx 22rpx 18rpx;
   border-radius: 26rpx;
   background: var(--theme-state-card-bg);
   box-shadow: var(--theme-state-card-shadow);
@@ -107,73 +81,37 @@
   color: var(--theme-text-soft);
 }
 
-.plans-decision-card {
-  padding: 22rpx 22rpx 24rpx;
-  border: 1rpx solid rgba(36, 75, 97, 0.08);
-  background: linear-gradient(180deg, rgba(255, 252, 247, 0.94), rgba(244, 239, 231, 0.88));
-}
-
-.plans-decision-head {
-  align-items: flex-start;
-  gap: 18rpx;
-}
-
-.plans-decision-title {
-  margin-top: 18rpx;
-  font-size: 25rpx;
-  line-height: 1.4;
-  font-weight: 700;
-  color: var(--theme-title);
-}
-
-.plans-dashboard-card {
-  padding: 22rpx;
-}
-
-.plans-overview-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10rpx;
-  margin-top: 16rpx;
-}
-
-.plans-overview-item {
-  padding: 16rpx 16rpx 14rpx;
-  border-radius: 22rpx;
-  background: var(--theme-soft-block-bg);
-  box-shadow: inset 0 0 0 1rpx rgba(24, 39, 51, 0.05);
-}
-
-.plans-overview-label {
-  font-size: 18rpx;
-  color: var(--theme-text-muted);
-}
-
-.plans-overview-value {
-  margin-top: 8rpx;
-  font-size: 23rpx;
-  font-weight: 700;
-  line-height: 1.46;
-  color: var(--theme-title);
-}
-
-.plans-effective-card {
-  padding: 22rpx;
+.plans-effective-strip {
+  padding: 20rpx 22rpx;
   background: linear-gradient(180deg, rgba(228, 242, 233, 0.98), rgba(245, 251, 247, 0.98));
   box-shadow: 0 18rpx 36rpx rgba(73, 122, 93, 0.1);
 }
 
-.plans-subscription-head {
+.plans-effective-strip-head {
   align-items: flex-start;
   gap: 16rpx;
 }
 
-.plans-subscription-desc {
-  margin-top: 8rpx;
+.plans-effective-strip-title {
+  font-size: 25rpx;
+  line-height: 1.35;
+  font-weight: 700;
+  color: var(--theme-title);
+}
+
+.plans-effective-strip-summary {
+  margin-top: 10rpx;
+  font-size: 21rpx;
+  line-height: 1.58;
+  color: var(--theme-text-soft);
 }
 
 .plans-section-header {
-  margin-bottom: 18rpx;
+  margin-bottom: 16rpx;
+}
+
+.plans-section-desc {
+  margin-top: 6rpx;
 }
 
 .plans-card-wall {
@@ -187,6 +125,7 @@
   overflow: hidden;
   padding: 24rpx;
   border-radius: 30rpx;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(247, 244, 238, 0.92));
 }
 
 .plans-product-card::before {
@@ -195,7 +134,7 @@
   left: 0;
   right: 0;
   top: 0;
-  height: 8rpx;
+  height: 6rpx;
   background: linear-gradient(90deg, rgba(168, 139, 97, 0.6), rgba(49, 90, 116, 0.88));
   opacity: 0.6;
 }
@@ -218,12 +157,8 @@
   gap: 16rpx;
 }
 
-.plans-product-kicker {
-  margin-bottom: 14rpx;
-}
-
 .plans-product-title {
-  font-size: 27rpx;
+  font-size: 28rpx;
   line-height: 1.28;
   font-weight: 700;
   color: var(--theme-title);
@@ -237,8 +172,7 @@
 }
 
 .plans-product-price {
-  margin-top: 20rpx;
-  font-size: 38rpx;
+  font-size: 40rpx;
   line-height: 1.1;
   font-weight: 700;
   color: var(--theme-title);
@@ -246,10 +180,10 @@
 
 .plans-price-row {
   display: flex;
-  align-items: flex-end;
+  align-items: baseline;
   flex-wrap: wrap;
   gap: 12rpx;
-  margin-top: 20rpx;
+  margin-top: 18rpx;
 }
 
 .plans-price-row .plans-product-price {
@@ -257,8 +191,8 @@
 }
 
 .plans-product-price.is-copy {
-  font-size: 26rpx;
-  line-height: 1.35;
+  font-size: 30rpx;
+  line-height: 1.4;
   font-weight: 600;
 }
 
@@ -270,43 +204,82 @@
   text-decoration-thickness: 2rpx;
 }
 
-.plans-product-desc {
+.plans-product-summary {
   margin-top: 12rpx;
 }
 
-.plans-feature-list {
+.plans-addon-primary {
   margin-top: 18rpx;
-  display: flex;
-  flex-direction: column;
-  gap: 14rpx;
+  padding: 18rpx 18rpx 16rpx;
+  border-radius: 24rpx;
+  background: rgba(24, 53, 72, 0.06);
+  box-shadow: inset 0 0 0 1rpx rgba(24, 39, 51, 0.05);
 }
 
-.plans-feature-row {
+.plans-addon-primary-label {
+  font-size: 18rpx;
+  line-height: 1.3;
+  color: var(--theme-text-muted);
+}
+
+.plans-addon-primary-value {
+  margin-top: 8rpx;
+  font-size: 40rpx;
+  line-height: 1.12;
+  font-weight: 800;
+  color: var(--theme-accent-strong);
+}
+
+.plans-addon-primary-meta {
+  margin-top: 10rpx;
+  font-size: 22rpx;
+  line-height: 1.5;
+  color: var(--theme-text-soft);
+}
+
+.plans-product-detail-list {
+  margin-top: 16rpx;
+  border-radius: 22rpx;
+  background: var(--theme-soft-block-bg);
+  box-shadow: inset 0 0 0 1rpx rgba(24, 39, 51, 0.05);
+}
+
+.plans-product-detail-row {
   display: flex;
   align-items: flex-start;
-  gap: 12rpx;
+  justify-content: space-between;
+  gap: 18rpx;
+  padding: 16rpx 16rpx 14rpx;
 }
 
-.plans-feature-dot {
-  width: 12rpx;
-  height: 12rpx;
-  margin-top: 12rpx;
-  border-radius: 50%;
+.plans-product-detail-row + .plans-product-detail-row {
+  border-top: 1rpx solid rgba(24, 39, 51, 0.06);
+}
+
+.plans-product-detail-label {
   flex: 0 0 auto;
-  background: var(--theme-accent);
+  font-size: 19rpx;
+  line-height: 1.45;
+  color: var(--theme-text-muted);
 }
 
-.plans-feature-text {
+.plans-product-detail-value {
   flex: 1 1 auto;
   min-width: 0;
   font-size: 22rpx;
-  line-height: 1.62;
-  color: var(--theme-text-main);
+  line-height: 1.5;
+  font-weight: 700;
+  color: var(--theme-title);
+  text-align: right;
 }
 
 .plans-product-actions {
-  margin-top: 22rpx;
+  margin-top: 20rpx;
   gap: 12rpx;
+}
+
+.plans-orders-card {
+  padding: 22rpx;
 }
 
 .plans-order-list {
@@ -353,10 +326,6 @@
   font-size: 22rpx;
   font-weight: 700;
   color: var(--theme-title);
-}
-
-.plans-empty-copy {
-  margin-top: 12rpx;
 }
 
 .plans-confirm-sheet {
@@ -474,16 +443,21 @@
   font-size: 42rpx;
 }
 
-.page-shell.plans-page.appearance-font-large .plans-product-price {
-  font-size: 42rpx;
+.page-shell.plans-page.appearance-font-large .plans-effective-strip-title,
+.page-shell.plans-page.appearance-font-large .plans-product-detail-value {
+  font-size: 24rpx;
 }
 
 .page-shell.plans-page.appearance-font-large .plans-product-price.is-copy {
-  font-size: 30rpx;
+  font-size: 33rpx;
 }
 
-.page-shell.plans-page.appearance-font-large .plans-feature-text {
-  font-size: 24rpx;
+.page-shell.plans-page.appearance-font-large .plans-product-price {
+  font-size: 44rpx;
+}
+
+.page-shell.plans-page.appearance-font-large .plans-addon-primary-value {
+  font-size: 44rpx;
 }
 
 .page-shell.plans-page.appearance-font-large .plans-confirm-title,
@@ -507,23 +481,37 @@
   font-size: 24rpx;
 }
 
-.page-shell.plans-page.appearance-font-readable .plans-hero-grid,
-.page-shell.plans-page.appearance-font-readable .plans-overview-grid,
-.plans-confirm-sheet.appearance-font-readable .plans-confirm-grid {
-  grid-template-columns: repeat(1, minmax(0, 1fr));
-}
-
-.page-shell.plans-page.appearance-font-readable .plans-product-price {
-  font-size: 44rpx;
-}
-
 .page-shell.plans-page.appearance-font-readable .plans-product-price.is-copy {
   font-size: 32rpx;
   line-height: 1.4;
 }
 
-.page-shell.plans-page.appearance-font-readable .plans-feature-text {
+.page-shell.plans-page.appearance-font-readable .plans-product-price {
+  font-size: 46rpx;
+}
+
+.page-shell.plans-page.appearance-font-readable .plans-addon-primary-value {
+  font-size: 46rpx;
+}
+
+.page-shell.plans-page.appearance-font-readable .plans-section-desc,
+.page-shell.plans-page.appearance-font-readable .plans-effective-strip-summary,
+.page-shell.plans-page.appearance-font-readable .plans-addon-primary-meta {
+  font-size: 24rpx;
+}
+
+.page-shell.plans-page.appearance-font-readable .plans-product-detail-row {
+  flex-direction: column;
+  gap: 6rpx;
+}
+
+.page-shell.plans-page.appearance-font-readable .plans-product-detail-value {
+  text-align: left;
   font-size: 25rpx;
+}
+
+.plans-confirm-sheet.appearance-font-readable .plans-confirm-grid {
+  grid-template-columns: repeat(1, minmax(0, 1fr));
 }
 
 .page-shell.plans-page.appearance-font-readable .plans-confirm-price,

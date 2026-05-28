@@ -4,6 +4,24 @@ const {
   resolveAccountData
 } = require('../../services/data')
 const { syncPageAppearance } = require('../../utils/appearance')
+const { openTabPage } = require('../../utils/tab-bar-navigation')
+
+const REFERRAL_SHARE_IMAGE_URL = '/assets/share/referral-guide-cover.jpg'
+const REFERRAL_BRAND_VALUE_CHIPS = ['默认私密', '商机转发', 'AI辅助推进']
+const REFERRAL_BRAND_SCENES = [
+  {
+    label: '收项目',
+    desc: '项目、客户、联系人放一起'
+  },
+  {
+    label: '盯动作',
+    desc: '今天先推进什么一眼看清'
+  },
+  {
+    label: '看动态',
+    desc: '跟进、任务、外发状态随时回看'
+  }
+]
 
 function normalizeText(value) {
   return String(value || '').trim()
@@ -151,6 +169,8 @@ Page({
     isInviteeMode: false,
     isLoading: true,
     referralCode: '',
+    brandValueChips: REFERRAL_BRAND_VALUE_CHIPS,
+    brandScenes: REFERRAL_BRAND_SCENES,
     rewardAiTokens: 100000,
     sharePath: '',
     stats: buildStats(),
@@ -286,18 +306,16 @@ Page({
       return
     }
 
-    wx.reLaunch({
-      url: '/pages/index/index'
-    })
+    openTabPage('/pages/index/index')
   },
 
   onShareAppMessage() {
     const referralCode = normalizeText(this.data.referralCode)
     const path = normalizeText(this.data.sharePath) || `/pages/referral/referral?referrerCode=${encodeURIComponent(referralCode)}`
     return {
-      title: '我在用八面成交推进项目，推荐你试试',
+      title: '朋友推荐你试试八面成交，项目和推进动作一页看清',
       path,
-      imageUrl: ''
+      imageUrl: REFERRAL_SHARE_IMAGE_URL
     }
   }
 })

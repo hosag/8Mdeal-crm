@@ -13,7 +13,8 @@ const {
   loadNotificationsData,
   updateTaskStatusData,
   markNotificationReadData,
-  resolveNotificationData
+  resolveNotificationData,
+  saveUserPreferencesData
 } = require('../../services/data')
 const { buildTaskCompletionFeedback, getTaskCompletionToastTitle } = require('../../services/task-feedback')
 const { appendQueryParams } = require('../../utils/navigation-context')
@@ -34,10 +35,24 @@ const {
 const { formatAiQuotaValue } = require('../../utils/quota-format')
 const { startVoiceRecordingTicker, stopVoiceRecordingTicker } = require('../../utils/voice-recording')
 const { loadHomeSloganFontFace } = require('../../utils/home-slogan-font')
+const { markProjectRelatedCachesDirty } = require('../../utils/core-page-cache')
+const { readPageCache, shouldRefreshPageCache, writePageCache } = require('../../utils/page-cache')
+const { openTabPage } = require('../../utils/tab-bar-navigation')
+const { getNavigationSpacerHeight } = require('../../utils/navigation-metrics')
+const {
+  HOME_ENTRY_GUIDE_STORAGE_KEY,
+  normalizeHomeEntryGuideSettings,
+  buildDismissedHomeEntryGuideSettings,
+  isHomeBrandSplashDismissed
+} = require('../../utils/home-entry-guide')
 
 function getAppInstance() {
   return typeof getApp === 'function' ? getApp() : null
 }
+
+const HOME_PAGE_CACHE_KEY = 'home:dashboard'
+const HOME_PAGE_CACHE_TTL = 30 * 1000
+const QUICK_ENTRY_ACCESS_CHECK_TTL = 30 * 1000
 
 const NEXT_TASK_TEMPLATES = [
   { type: 'send_solution', label: '待发方案' },
@@ -322,6 +337,34 @@ function buildHomeAccessCard(snapshot = {}) {
       }
     ]
   }
+}
+
+function buildHiddenQuickEntryAccessPrompt() {
+  return {
+    visible: false,
+    tone: 'neutral',
+    title: '',
+    desc: '',
+    actionText: '',
+    actionType: '',
+    actionUrl: ''
+  }
+}
+
+function getQuickEntryPromptPageKey(mode = '') {
+  return normalizeText(mode) === 'project' ? 'projects' : 'follow_up'
+}
+
+function buildQuickEntryAccessPromptState(snapshot = null, mode = '') {
+  const safeSnapshot = snapshot && typeof snapshot === 'object' ? snapshot : {}
+  const prompt = buildEntitlementPagePrompt({
+    account: safeSnapshot.account || {},
+    entitlements: safeSnapshot.entitlements || {}
+  }, getQuickEntryPromptPageKey(mode))
+
+  return prompt && prompt.visible
+    ? prompt
+    : buildHiddenQuickEntryAccessPrompt()
 }
 
 function normalizeRecognizedText(value) {
@@ -1306,7 +1349,7 @@ function buildQuickEntryFollowUpSubmitState(options = {}) {
   if (isVoiceRecognizing || isAiLoading) {
     return {
       quickEntryFollowUpCanSubmit: false,
-      quickEntryFollowUpSubmitText: stage === 'project' || stage === 'review' ? 'AI整理中...' : '智能处理中...',
+      quickEntryFollowUpSubmitText: isAiLoading ? 'AI整理中...' : '识别中...',
       quickEntryFollowUpSubmitHint: '',
       quickEntryFollowUpSubmitIsAiAction: isAiLoading
     }
@@ -2941,6 +2984,7 @@ Page({
     quickEntrySelectedProjectName: '未关联项目',
     quickEntrySelectedProjectMeta: null,
     quickEntrySheetSource: '',
+    quickEntryAccessPrompt: buildHiddenQuickEntryAccessPrompt(),
     quickEntryForm: buildQuickEntryForm(),
     isQuickEntryVoiceSupported: true,
     isQuickEntryVoiceRecording: false,
@@ -2990,6 +3034,7 @@ Page({
     quickEntrySuccessState: buildQuickEntrySuccessState(),
     showTaskCompleteSheet: false,
     taskCompletionTaskId: '',
+    taskCompletionProjectId: '',
     taskCompletionTaskTitle: '',
     taskCompletionText: '',
     taskCompletionCreateNextTask: false,
@@ -3032,8 +3077,13 @@ Page({
       rows: []
     },
     homeAvatarText: '我',
+    homeNavigationSpacerHeight: getNavigationSpacerHeight(),
+    showHomeEntryGuide: false,
+    homeEntryGuideSkipNext: false,
     taskActionId: '',
     isLoading: true,
+    hasLoadedOnce: false,
+    isRefreshing: false,
     isLoadFailed: false,
     loadError: '',
     dataSource: 'Mock Demo'
@@ -3041,8 +3091,10 @@ Page({
 
   async onLoad(options) {
     this.isPageActive = true
+    this.skipNextShowRefresh = true
     this.quickEntryStandalone = String(options && options.quickEntryStandalone || '').trim() === '1'
     this.quickEntryProjectCloudAliasMemory = {}
+    this.initHomeNavigationMetrics()
     this.loadQuickEntryProjectAliases()
     syncPageAppearance(this)
     this.applyHomeSloganFont()
@@ -3051,26 +3103,45 @@ Page({
     this.setData({
       notificationSyncVersion: getNotificationSyncVersion()
     })
+    this.applyInitialHomeEntryGuideVisibility(options)
+    this.syncHomeEntryGuideVisibilityFromCloud(options)
+    const restoredHomeCache = this.restoreHomePageCache()
     await this.consumePendingQuickEntryOpen()
-    await this.fetchDashboard()
+    if (restoredHomeCache) {
+      if (shouldRefreshPageCache(restoredHomeCache)) {
+        this.fetchDashboard({ silent: true }).catch(() => {})
+      }
+    } else {
+      await this.fetchDashboard()
+    }
     this.refreshEntitlementPrompt({ refresh: true })
     await this.consumePendingQuickEntryOpen()
   },
 
   async onShow() {
     this.isPageActive = true
+    this.initHomeNavigationMetrics()
     this.loadQuickEntryProjectAliases()
     syncPageAppearance(this)
     this.applyHomeSloganFont()
     this.initTaskCompletionKeyboard()
+    if (this.skipNextShowRefresh) {
+      this.skipNextShowRefresh = false
+      return
+    }
+    await this.consumePendingQuickEntryOpen()
     const currentSyncVersion = getNotificationSyncVersion()
-    if (currentSyncVersion !== this.data.notificationSyncVersion) {
+    const shouldRefreshFromSync = currentSyncVersion !== this.data.notificationSyncVersion
+    if (shouldRefreshFromSync) {
       this.setData({
         notificationSyncVersion: currentSyncVersion
       })
     }
-    if (!this.data.isLoading) {
-      await this.fetchDashboard()
+    if (this.data.hasLoadedOnce && (
+      shouldRefreshFromSync
+      || shouldRefreshPageCache(readPageCache(HOME_PAGE_CACHE_KEY))
+    )) {
+      await this.fetchDashboard({ silent: true })
     }
     this.refreshEntitlementPrompt({ refresh: true })
     await this.consumePendingQuickEntryOpen()
@@ -3102,6 +3173,164 @@ Page({
     this.destroyTaskCompletionKeyboard()
   },
 
+  noop() {},
+
+  initHomeNavigationMetrics() {
+    const navigationSpacerHeight = getNavigationSpacerHeight()
+
+    if (navigationSpacerHeight === this.data.homeNavigationSpacerHeight) {
+      return
+    }
+
+    this.setData({
+      homeNavigationSpacerHeight: navigationSpacerHeight
+    })
+  },
+
+  shouldBypassHomeEntryGuide(options = {}) {
+    const app = getAppInstance()
+    const sessionDismissed = !!(app && app.globalData && app.globalData.homeEntryGuideSessionDismissed)
+
+    return sessionDismissed
+      || this.quickEntryStandalone
+      || this.pendingQuickEntryOpen
+      || String(options && options.quickEntryStandalone || '').trim() === '1'
+      || String(options && options.openQuickEntry || '').trim() === '1'
+  },
+
+  loadHomeEntryGuideSettingsFromStorage() {
+    if (typeof wx === 'undefined' || typeof wx.getStorageSync !== 'function') {
+      return normalizeHomeEntryGuideSettings()
+    }
+
+    try {
+      return normalizeHomeEntryGuideSettings(wx.getStorageSync(HOME_ENTRY_GUIDE_STORAGE_KEY))
+    } catch (error) {
+      return normalizeHomeEntryGuideSettings()
+    }
+  },
+
+  persistHomeEntryGuideSettingsToStorage(settings) {
+    if (typeof wx === 'undefined' || typeof wx.setStorageSync !== 'function') {
+      return
+    }
+
+    try {
+      wx.setStorageSync(HOME_ENTRY_GUIDE_STORAGE_KEY, normalizeHomeEntryGuideSettings(settings))
+    } catch (error) {
+      // Ignore storage failures so the homepage remains usable.
+    }
+  },
+
+  applyInitialHomeEntryGuideVisibility(options = {}) {
+    const app = getAppInstance()
+    const localSettings = this.loadHomeEntryGuideSettingsFromStorage()
+    const globalSettings = normalizeHomeEntryGuideSettings(
+      app && app.globalData ? app.globalData.entryGuideSettings : null
+    )
+    const effectiveSettings = isHomeBrandSplashDismissed(globalSettings) ? globalSettings : localSettings
+    const dismissed = isHomeBrandSplashDismissed(effectiveSettings)
+    const shouldShow = !this.shouldBypassHomeEntryGuide(options) && !dismissed
+
+    if (dismissed) {
+      if (app && typeof app.applyEntryGuideSettings === 'function') {
+        app.applyEntryGuideSettings(effectiveSettings)
+      }
+      this.persistHomeEntryGuideSettingsToStorage(effectiveSettings)
+    }
+
+    if (!this.isPageActive) {
+      return
+    }
+
+    this.setData({
+      showHomeEntryGuide: shouldShow,
+      homeEntryGuideSkipNext: false
+    }, () => {
+      syncPageAppearance(this)
+    })
+  },
+
+  async syncHomeEntryGuideVisibilityFromCloud(options = {}) {
+    const app = getAppInstance()
+    if (!app || typeof app.bootstrapAppearancePreferences !== 'function') {
+      return
+    }
+
+    try {
+      const result = await app.bootstrapAppearancePreferences()
+      const remoteSettings = normalizeHomeEntryGuideSettings(
+        result && result.entryGuideSettings
+          ? result.entryGuideSettings
+          : (app.globalData ? app.globalData.entryGuideSettings : null)
+      )
+
+      if (!isHomeBrandSplashDismissed(remoteSettings)) {
+        return
+      }
+
+      this.persistHomeEntryGuideSettingsToStorage(remoteSettings)
+      if (typeof app.applyEntryGuideSettings === 'function') {
+        app.applyEntryGuideSettings(remoteSettings)
+      }
+
+      if (!this.isPageActive || this.shouldBypassHomeEntryGuide(options)) {
+        return
+      }
+
+      this.setData({
+        showHomeEntryGuide: false,
+        homeEntryGuideSkipNext: false
+      }, () => {
+        syncPageAppearance(this)
+      })
+    } catch (error) {
+      // Keep local experience stable when preference sync is unavailable.
+    }
+  },
+
+  toggleHomeEntryGuideSkipNext() {
+    if (!this.data.showHomeEntryGuide) {
+      return
+    }
+
+    this.setData({
+      homeEntryGuideSkipNext: !this.data.homeEntryGuideSkipNext
+    })
+  },
+
+  confirmHomeEntryGuide() {
+    if (!this.data.showHomeEntryGuide) {
+      return
+    }
+
+    const shouldSkipNext = !!this.data.homeEntryGuideSkipNext
+    const app = getAppInstance()
+
+    if (app && app.globalData) {
+      app.globalData.homeEntryGuideSessionDismissed = true
+    }
+    this.setData({
+      showHomeEntryGuide: false
+    }, () => {
+      syncPageAppearance(this)
+    })
+
+    if (!shouldSkipNext) {
+      return
+    }
+
+    const settings = buildDismissedHomeEntryGuideSettings()
+    this.persistHomeEntryGuideSettingsToStorage(settings)
+    if (app && typeof app.applyEntryGuideSettings === 'function') {
+      app.applyEntryGuideSettings(settings)
+    }
+
+    saveUserPreferencesData({
+      entryGuideSettings: settings
+    }).catch(() => {})
+  },
+
   async applyHomeSloganFont() {
     if (this.data.homeSloganFontLoaded) {
       return
@@ -3124,6 +3353,10 @@ Page({
     }
   },
 
+  syncHomeOverlayTabBar() {
+    syncPageAppearance(this)
+  },
+
   clearQuickEntryDraftTimer() {
     if (this.quickEntryDraftTimer) {
       clearTimeout(this.quickEntryDraftTimer)
@@ -3136,6 +3369,163 @@ Page({
       clearTimeout(this.quickEntryAiDebounceTimer)
       this.quickEntryAiDebounceTimer = null
     }
+  },
+
+  getQuickEntryEntitlementSnapshot() {
+    const app = getAppInstance()
+    const globalData = app && app.globalData ? app.globalData : {}
+
+    return {
+      account: globalData.account && typeof globalData.account === 'object'
+        ? { ...globalData.account }
+        : {},
+      entitlements: globalData.entitlements && typeof globalData.entitlements === 'object'
+        ? { ...globalData.entitlements }
+        : {}
+    }
+  },
+
+  getQuickEntryAccessPromptState(mode = '', snapshot = null) {
+    const currentMode = normalizeText(mode) || normalizeText(this.data.quickEntryMode) || 'follow_up'
+    const currentSnapshot = snapshot && typeof snapshot === 'object'
+      ? snapshot
+      : (this.latestQuickEntryEntitlementSnapshot || this.getQuickEntryEntitlementSnapshot())
+
+    return buildQuickEntryAccessPromptState(currentSnapshot, currentMode)
+  },
+
+  syncQuickEntryAccessPrompt(mode = '', snapshot = null) {
+    this.setData({
+      quickEntryAccessPrompt: this.getQuickEntryAccessPromptState(mode, snapshot)
+    })
+  },
+
+  rememberQuickEntryEntitlementSnapshot(snapshot) {
+    if (!snapshot || typeof snapshot !== 'object') {
+      return
+    }
+
+    this.latestQuickEntryEntitlementSnapshot = {
+      account: snapshot.account && typeof snapshot.account === 'object'
+        ? { ...snapshot.account }
+        : {},
+      entitlements: snapshot.entitlements && typeof snapshot.entitlements === 'object'
+        ? { ...snapshot.entitlements }
+        : {},
+      refreshError: snapshot.refreshError || null
+    }
+
+    if (this.data.showQuickEntrySheet) {
+      this.syncQuickEntryAccessPrompt(this.data.quickEntryMode, this.latestQuickEntryEntitlementSnapshot)
+    }
+  },
+
+  rememberQuickEntryEntitlementDecision(decision) {
+    if (!decision || !decision.snapshot) {
+      return
+    }
+
+    this.rememberQuickEntryEntitlementSnapshot(decision.snapshot)
+    if (!decision.snapshot.refreshError) {
+      this.quickEntryEntitlementRefreshedAt = Date.now()
+    }
+  },
+
+  maybeRefreshQuickEntryAccessPrompt(options = {}) {
+    const mode = normalizeText(options.mode) || normalizeText(this.data.quickEntryMode) || 'follow_up'
+    const cachedSnapshot = this.getQuickEntryEntitlementSnapshot()
+
+    this.latestQuickEntryEntitlementSnapshot = cachedSnapshot
+    if (this.data.showQuickEntrySheet) {
+      this.syncQuickEntryAccessPrompt(mode, cachedSnapshot)
+    }
+
+    const shouldRefresh = options.refresh === true
+      && (
+        !this.quickEntryEntitlementRefreshedAt
+        || Date.now() - this.quickEntryEntitlementRefreshedAt > QUICK_ENTRY_ACCESS_CHECK_TTL
+      )
+
+    if (!shouldRefresh) {
+      return Promise.resolve(cachedSnapshot)
+    }
+
+    if (this.quickEntryEntitlementRefreshPromise) {
+      return this.quickEntryEntitlementRefreshPromise
+    }
+
+    this.quickEntryEntitlementRefreshPromise = getEntitlementSnapshot({
+      refresh: true
+    }).then((snapshot) => {
+      this.rememberQuickEntryEntitlementSnapshot(snapshot)
+      if (snapshot && !snapshot.refreshError) {
+        this.quickEntryEntitlementRefreshedAt = Date.now()
+      }
+      return snapshot
+    }).catch(() => cachedSnapshot).finally(() => {
+      this.quickEntryEntitlementRefreshPromise = null
+    })
+
+    return this.quickEntryEntitlementRefreshPromise
+  },
+
+  handleQuickEntryAccessAction() {
+    const actionUrl = normalizeText(this.data.quickEntryAccessPrompt && this.data.quickEntryAccessPrompt.actionUrl)
+    if (!actionUrl) {
+      return
+    }
+
+    if (openTabPage(actionUrl)) {
+      return
+    }
+
+    wx.navigateTo({
+      url: actionUrl
+    })
+  },
+
+  restoreHomePageCache() {
+    const cached = readPageCache(HOME_PAGE_CACHE_KEY)
+    if (!cached || !cached.data) {
+      return null
+    }
+
+    this.setData({
+      ...cached.data,
+      isLoading: false,
+      hasLoadedOnce: true,
+      isRefreshing: false,
+      isLoadFailed: false,
+      loadError: ''
+    })
+    return cached
+  },
+
+  persistHomePageCache() {
+    if (!this.data.hasLoadedOnce) {
+      return
+    }
+
+    writePageCache(HOME_PAGE_CACHE_KEY, {
+      dashboard: this.data.dashboard,
+      notificationUnreadCount: this.data.notificationUnreadCount,
+      notificationPendingCount: this.data.notificationPendingCount,
+      notificationHeadlineId: this.data.notificationHeadlineId,
+      notificationHeadlineType: this.data.notificationHeadlineType,
+      notificationHeadlineTitle: this.data.notificationHeadlineTitle,
+      notificationHeadlineDesc: this.data.notificationHeadlineDesc,
+      notificationHeadlineProjectName: this.data.notificationHeadlineProjectName,
+      notificationHeadlineActionText: this.data.notificationHeadlineActionText,
+      notificationHeadlineUrl: this.data.notificationHeadlineUrl,
+      notificationHeadlineAutoResolve: this.data.notificationHeadlineAutoResolve,
+      notificationHeadlineToneClass: this.data.notificationHeadlineToneClass,
+      notificationHeadlineBadgeText: this.data.notificationHeadlineBadgeText,
+      homeAccessCard: this.data.homeAccessCard,
+      homeAvatarText: this.data.homeAvatarText,
+      dataSource: this.data.dataSource
+    }, {
+      ttl: HOME_PAGE_CACHE_TTL
+    })
   },
 
   async consumePendingQuickEntryOpen() {
@@ -3172,12 +3562,17 @@ Page({
     }
 
     this.latestEntitlementSnapshot = snapshot
+    this.rememberQuickEntryEntitlementSnapshot(snapshot)
+    if (!snapshot.refreshError) {
+      this.quickEntryEntitlementRefreshedAt = Date.now()
+    }
 
     this.setData({
       homeAccessCard: buildHomeAccessCard(snapshot),
       homeAvatarText: buildHomeAvatarText(snapshot.account)
     })
     this.applyDefaultHeadlineFromEntitlements(snapshot)
+    this.persistHomePageCache()
   },
 
   applyDefaultHeadlineFromEntitlements(snapshot = null) {
@@ -3264,9 +3659,14 @@ Page({
     })
   },
 
-  async fetchDashboard() {
+  async fetchDashboard(options = {}) {
+    const silent = options.silent === true
+    const shouldPreserveContent = silent || this.data.hasLoadedOnce
+
     this.setData({
-      isLoading: true,
+      isLoading: silent ? this.data.isLoading : true,
+      hasLoadedOnce: this.data.hasLoadedOnce,
+      isRefreshing: shouldPreserveContent,
       isLoadFailed: false,
       loadError: ''
     })
@@ -3277,11 +3677,25 @@ Page({
       this.setData({
         dashboard: decorateDashboard(dashboardResult.data),
         isLoading: false,
+        hasLoadedOnce: true,
+        isRefreshing: false,
         dataSource: dashboardResult.source
+      }, () => {
+        this.persistHomePageCache()
       })
       this.applyDefaultHeadlineFromEntitlements()
-      this.refreshNotificationHeadline()
+      this.refreshNotificationHeadline({
+        silent
+      })
     } catch (error) {
+      if (shouldPreserveContent) {
+        this.setData({
+          isLoading: false,
+          isRefreshing: false
+        })
+        return
+      }
+
       const message = error && error.message ? error.message : '当前无法同步云端数据，请稍后重试'
       this.setData({
         dashboard: {
@@ -3312,6 +3726,7 @@ Page({
         notificationHeadlineToneClass: 'is-neutral',
         notificationHeadlineBadgeText: '待处理',
         isLoading: false,
+        isRefreshing: false,
         isLoadFailed: true,
         loadError: message
       })
@@ -3322,7 +3737,9 @@ Page({
     }
   },
 
-  async refreshNotificationHeadline() {
+  async refreshNotificationHeadline(options = {}) {
+    const silent = options.silent === true
+
     try {
       const notificationResult = await loadNotificationsData({
         statusFilter: 'unread',
@@ -3363,9 +3780,15 @@ Page({
         notificationHeadlineAutoResolve: !!headline.autoResolve,
         notificationHeadlineToneClass: headline.toneClass || 'is-success',
         notificationHeadlineBadgeText: headline.badgeText || '已收口'
+      }, () => {
+        this.persistHomePageCache()
       })
     } catch (error) {
       if (!this.isPageActive) {
+        return
+      }
+
+      if (silent && this.data.hasLoadedOnce) {
         return
       }
 
@@ -3382,6 +3805,8 @@ Page({
         notificationHeadlineAutoResolve: false,
         notificationHeadlineToneClass: 'is-neutral',
         notificationHeadlineBadgeText: '待处理'
+      }, () => {
+        this.persistHomePageCache()
       })
     }
   },
@@ -3438,6 +3863,7 @@ Page({
     this.setData({
       showTaskCompleteSheet: true,
       taskCompletionTaskId: taskId,
+      taskCompletionProjectId: currentTask.projectId || '',
       taskCompletionTaskTitle: currentTask.title || '当前任务',
       taskCompletionText: '',
       taskCompletionCreateNextTask: false,
@@ -3447,6 +3873,8 @@ Page({
       taskCompletionNextTaskTime: defaultNextTaskDraft.dueTime,
       taskCompletionNextTaskDescription: '',
       isTaskCompletionVoiceRecognizing: false
+    }, () => {
+      this.syncHomeOverlayTabBar()
     })
     this.syncTaskCompletionLayout(0, false)
     this.initTaskCompletionVoiceRecognition()
@@ -3461,6 +3889,7 @@ Page({
     this.setData({
       showTaskCompleteSheet: false,
       taskCompletionTaskId: '',
+      taskCompletionProjectId: '',
       taskCompletionTaskTitle: '',
       taskCompletionText: '',
       taskCompletionCreateNextTask: false,
@@ -3471,6 +3900,8 @@ Page({
       taskCompletionNextTaskDescription: '',
       isTaskCompletionVoiceRecording: false,
       isTaskCompletionVoiceRecognizing: false
+    }, () => {
+      this.syncHomeOverlayTabBar()
     })
     this.syncTaskCompletionLayout(0, false)
   },
@@ -3530,7 +3961,9 @@ Page({
     const bodyStyle = keyboardHeight
       ? `padding-bottom: ${keyboardHeight + 188}px;`
       : ''
-    const actionsStyle = ''
+    const actionsStyle = keyboardHeight
+      ? `margin-bottom: ${keyboardHeight}px;`
+      : ''
 
     this.setData({
       taskCompletionKeyboardHeight: keyboardHeight,
@@ -3976,7 +4409,14 @@ Page({
         icon: 'success'
       })
 
+      const completedProjectId = String(this.data.taskCompletionProjectId || '').trim()
       touchNotificationSync('task_completed')
+      markProjectRelatedCachesDirty({
+        projectId: completedProjectId,
+        includeHome: true,
+        includeProjects: true,
+        includeProjectDetail: true
+      })
       this.closeTaskCompleteSheet(true)
       await this.fetchDashboard()
       this.showTaskFeedback(feedback)
@@ -4004,21 +4444,17 @@ Page({
   },
 
   openProjectsPage() {
-    wx.navigateTo({
-      url: '/pages/projects/projects'
-    })
+    openTabPage('/pages/projects/projects')
   },
 
   openProjectsWithFilter(event) {
     const { quickFilter, sortMode, stageFilter, source } = event.currentTarget.dataset
-    wx.navigateTo({
-      url: buildProjectListUrl({
-        quickFilter,
-        sortMode,
-        stageFilter,
-        source
-      })
-    })
+    openTabPage(buildProjectListUrl({
+      quickFilter,
+      sortMode,
+      stageFilter,
+      source
+    }))
   },
 
   openTasksCenter(event) {
@@ -4776,12 +5212,7 @@ Page({
   },
 
   async openQuickEntrySheet() {
-    if (this.data.quickEntryActionId) {
-      return
-    }
-
-    const decision = await ensureActionAllowed('quick_entry', { refresh: true, guide: true })
-    if (!decision.allowed) {
+    if (this.data.quickEntryActionId || this.data.showQuickEntrySheet) {
       return
     }
 
@@ -4789,23 +5220,29 @@ Page({
     const mode = normalizeText(this.data.quickEntryMode) || 'follow_up'
     const draft = this.getQuickEntryDraft(mode)
     const draftState = this.buildQuickEntryStateFromDraft(mode, draft, this.data.quickEntryProjects)
+    const accessPrompt = this.getQuickEntryAccessPromptState(mode)
     this.setData({
       showQuickEntrySheet: true,
       showQuickEntrySuccessPanel: false,
       quickEntrySuccessState: buildQuickEntrySuccessState(),
       quickEntryShowVoiceExampleHint: mode === 'follow_up' && !draftState.quickEntryShowFollowUpDetails && !this.hasSeenQuickEntryVoiceHint(),
+      quickEntryAccessPrompt: accessPrompt,
       ...draftState
+    }, () => {
+      this.syncHomeOverlayTabBar()
     })
     this.syncQuickEntryLayout(0, false)
+    this.maybeRefreshQuickEntryAccessPrompt({
+      mode,
+      refresh: true
+    }).catch(() => {})
 
-    try {
-      await this.ensureQuickEntryProjects()
-    } catch (error) {
+    this.ensureQuickEntryProjects().catch((error) => {
       wx.showToast({
         title: error.message || '当前无法加载项目列表',
         icon: 'none'
       })
-    }
+    })
   },
 
   openQuickEntryManualInput() {
@@ -5081,6 +5518,7 @@ Page({
       this.setData({
         showQuickEntrySheet: false
       }, () => {
+        this.syncHomeOverlayTabBar()
         if (toastTitle) {
           wx.showToast({
             title: toastTitle,
@@ -5104,6 +5542,7 @@ Page({
       quickEntrySuccessState: buildQuickEntrySuccessState(),
       ...resetState
     }, () => {
+      this.syncHomeOverlayTabBar()
       if (toastTitle) {
         wx.showToast({
           title: toastTitle,
@@ -5128,9 +5567,7 @@ Page({
       return
     }
 
-    wx.reLaunch({
-      url: '/pages/index/index'
-    })
+    openTabPage('/pages/index/index')
   },
 
   onQuickEntryMaskTap() {
@@ -5285,6 +5722,7 @@ Page({
       quickEntrySuccessState: buildQuickEntrySuccessState(),
       ...this.buildQuickEntryStateFromDraft(mode, draft, this.data.quickEntryProjects)
     }, () => {
+      this.syncQuickEntryAccessPrompt(mode)
       if (!draft) {
         this.refreshQuickEntryProjectRecommendation()
       }
@@ -5351,6 +5789,8 @@ Page({
       showQuickEntrySuccessPanel: false,
       quickEntrySuccessState: buildQuickEntrySuccessState(),
       ...resetState
+    }, () => {
+      this.syncQuickEntryAccessPrompt(mode)
     })
     this.syncQuickEntryLayout(0, false)
   },
@@ -5902,6 +6342,7 @@ Page({
     const detectedFollowUpMeta = buildDetectedQuickEntryFollowUpMeta(content, requestNow)
 
     const decision = await ensureActionAllowed('ai', { guide: true })
+    this.rememberQuickEntryEntitlementDecision(decision)
     if (!decision.allowed) {
       this.setData({
         isQuickEntryAiLoading: false,
@@ -6307,6 +6748,7 @@ Page({
     }
 
     const decision = await ensureActionAllowed('ai', { guide: true })
+    this.rememberQuickEntryEntitlementDecision(decision)
     if (!decision.allowed) {
       return
     }
@@ -6662,7 +7104,9 @@ Page({
     const bodyStyle = keyboardHeight
       ? `padding-bottom: ${keyboardHeight + 196}px;`
       : ''
-    const actionsStyle = ''
+    const actionsStyle = keyboardHeight
+      ? `margin-bottom: ${keyboardHeight}px;`
+      : ''
 
     this.setData({
       quickEntryKeyboardHeight: keyboardHeight,
@@ -6905,6 +7349,7 @@ Page({
     }
 
     const decision = await ensureActionAllowed('create_project', { refresh: true, guide: true })
+    this.rememberQuickEntryEntitlementDecision(decision)
     if (!decision.allowed) {
       return
     }
@@ -6935,6 +7380,10 @@ Page({
         scenes: ['quick_project_create']
       })
 
+      markProjectRelatedCachesDirty({
+        includeHome: true,
+        includeProjects: true
+      })
       this.clearQuickEntryDraft('project')
       await this.fetchDashboard()
       this.showQuickEntrySuccess({
@@ -6999,6 +7448,7 @@ Page({
     }
 
     const decision = await ensureActionAllowed('save_follow_up', { refresh: true, guide: true })
+    this.rememberQuickEntryEntitlementDecision(decision)
     if (!decision.allowed) {
       return
     }
@@ -7058,6 +7508,12 @@ Page({
       })
 
       touchNotificationSync('quick_follow_up_saved')
+      markProjectRelatedCachesDirty({
+        projectId,
+        includeHome: true,
+        includeProjects: true,
+        includeProjectDetail: true
+      })
       this.clearQuickEntryDraft('follow_up')
       await this.fetchDashboard()
       this.closeQuickEntrySheet({
@@ -7126,6 +7582,7 @@ Page({
     }
 
     const decision = await ensureActionAllowed('create_task', { refresh: true, guide: true })
+    this.rememberQuickEntryEntitlementDecision(decision)
     if (!decision.allowed) {
       return
     }
@@ -7174,6 +7631,12 @@ Page({
       })
 
       touchNotificationSync('quick_task_saved')
+      markProjectRelatedCachesDirty({
+        projectId,
+        includeHome: true,
+        includeProjects: true,
+        includeProjectDetail: true
+      })
       this.clearQuickEntryDraft('task')
       await this.fetchDashboard()
       this.showTaskFeedback({
@@ -7245,7 +7708,9 @@ Page({
       nextData.notificationHeadlineBadgeText = nextPendingCount ? '待处理' : '已收口'
     }
 
-    this.setData(nextData)
+    this.setData(nextData, () => {
+      this.persistHomePageCache()
+    })
   },
 
   async openHeadlineNotification() {
@@ -7305,6 +7770,12 @@ Page({
       }
     }
 
+    if (openTabPage(targetUrl, {
+      failTitle: '暂时无法打开提醒页面'
+    })) {
+      return
+    }
+
     wx.navigateTo({
       url: targetUrl
     })
@@ -7312,12 +7783,14 @@ Page({
 
   openPage(event) {
     const { url } = event.currentTarget.dataset
+    if (openTabPage(url)) {
+      return
+    }
+
     wx.navigateTo({ url })
   },
 
   openMinePage() {
-    wx.navigateTo({
-      url: '/pages/mine/mine'
-    })
+    openTabPage('/pages/mine/mine')
   }
 })

@@ -3,28 +3,130 @@
     "pages/index/index",
     "pages/tasks/tasks",
     "pages/projects/projects",
-    "pages/project-detail/project-detail",
-    "pages/project-assets/project-assets",
-    "pages/follow-up/follow-up",
-    "pages/project-form/project-form",
-    "pages/share-config/share-config",
-    "pages/share-card/share-card",
-    "pages/share-timeline/share-timeline",
     "pages/shared-out/shared-out",
-    "pages/notifications/notifications",
-    "pages/mine/mine",
-    "pages/feedback/feedback",
-    "pages/referral/referral",
-    "pages/entitlements/entitlements",
-    "pages/plans/plans",
-    "pages/billing-order/billing-order",
-    "pages/phone-bind/phone-bind",
-    "pages/contacts/contacts",
-    "pages/contact-detail/contact-detail",
-    "pages/mark-deal/mark-deal",
-    "pages/earnings/earnings",
-    "pages/privacy-tags/privacy-tags",
-    "pages/edit-tag/edit-tag"
+    "pages/mine/mine"
+  ],
+  "subpackages": [
+    {
+      "root": "pages/project-detail",
+      "pages": [
+        "project-detail"
+      ]
+    },
+    {
+      "root": "pages/project-assets",
+      "pages": [
+        "project-assets"
+      ]
+    },
+    {
+      "root": "pages/follow-up",
+      "pages": [
+        "follow-up"
+      ]
+    },
+    {
+      "root": "pages/project-form",
+      "pages": [
+        "project-form"
+      ]
+    },
+    {
+      "root": "pages/share-config",
+      "pages": [
+        "share-config"
+      ]
+    },
+    {
+      "root": "pages/share-card",
+      "pages": [
+        "share-card"
+      ]
+    },
+    {
+      "root": "pages/share-timeline",
+      "pages": [
+        "share-timeline"
+      ]
+    },
+    {
+      "root": "pages/notifications",
+      "pages": [
+        "notifications"
+      ]
+    },
+    {
+      "root": "pages/feedback",
+      "pages": [
+        "feedback"
+      ]
+    },
+    {
+      "root": "pages/referral",
+      "pages": [
+        "referral"
+      ]
+    },
+    {
+      "root": "pages/entitlements",
+      "pages": [
+        "entitlements"
+      ]
+    },
+    {
+      "root": "pages/plans",
+      "pages": [
+        "plans"
+      ]
+    },
+    {
+      "root": "pages/billing-order",
+      "pages": [
+        "billing-order"
+      ]
+    },
+    {
+      "root": "pages/phone-bind",
+      "pages": [
+        "phone-bind"
+      ]
+    },
+    {
+      "root": "pages/contacts",
+      "pages": [
+        "contacts"
+      ]
+    },
+    {
+      "root": "pages/contact-detail",
+      "pages": [
+        "contact-detail"
+      ]
+    },
+    {
+      "root": "pages/mark-deal",
+      "pages": [
+        "mark-deal"
+      ]
+    },
+    {
+      "root": "pages/earnings",
+      "pages": [
+        "earnings"
+      ]
+    },
+    {
+      "root": "pages/privacy-tags",
+      "pages": [
+        "privacy-tags"
+      ]
+    },
+    {
+      "root": "pages/edit-tag",
+      "pages": [
+        "edit-tag"
+      ]
+    }
   ],
   "window": {
     "navigationBarTitleText": "八面成交",
@@ -32,6 +134,39 @@
     "navigationBarTextStyle": "black",
     "backgroundColor": "#F5F3EE",
     "backgroundTextStyle": "light"
+  },
+  "tabBar": {
+    "custom": true,
+    "color": "#7B8793",
+    "selectedColor": "#1C3F57",
+    "backgroundColor": "#FFFCF7",
+    "borderStyle": "white",
+    "list": [
+      {
+        "pagePath": "pages/index/index",
+        "text": "首页",
+        "iconPath": "assets/icons/tabbar-config-icon.png",
+        "selectedIconPath": "assets/icons/tabbar-config-icon-active.png"
+      },
+      {
+        "pagePath": "pages/projects/projects",
+        "text": "项目",
+        "iconPath": "assets/icons/tabbar-config-icon.png",
+        "selectedIconPath": "assets/icons/tabbar-config-icon-active.png"
+      },
+      {
+        "pagePath": "pages/shared-out/shared-out",
+        "text": "外发",
+        "iconPath": "assets/icons/tabbar-config-icon.png",
+        "selectedIconPath": "assets/icons/tabbar-config-icon-active.png"
+      },
+      {
+        "pagePath": "pages/mine/mine",
+        "text": "我的",
+        "iconPath": "assets/icons/tabbar-config-icon.png",
+        "selectedIconPath": "assets/icons/tabbar-config-icon-active.png"
+      }
+    ]
   },
   "style": "v2",
   "lazyCodeLoading": "requiredComponents",

@@ -25,6 +25,14 @@ function getDefaultAppearanceSettings() {
   }
 }
 
+function getDefaultEntryGuideSettings() {
+  return {
+    homeBrandSplashDismissed: false,
+    homeBrandSplashDismissedVersion: '',
+    homeBrandSplashDismissedAt: ''
+  }
+}
+
 function normalizeAdvance(value) {
   const current = String(value || '').trim()
   return current === 'one_day_before' ? 'one_day_before' : 'same_day'
@@ -62,6 +70,18 @@ function normalizeAppearanceSettings(value) {
     festivalThemeEnabled: typeof source.festivalThemeEnabled === 'boolean'
       ? source.festivalThemeEnabled
       : defaults.festivalThemeEnabled
+  }
+}
+
+function normalizeEntryGuideSettings(value) {
+  const source = value && typeof value === 'object' && !Array.isArray(value) ? value : {}
+  const defaults = getDefaultEntryGuideSettings()
+  return {
+    homeBrandSplashDismissed: typeof source.homeBrandSplashDismissed === 'boolean'
+      ? source.homeBrandSplashDismissed
+      : defaults.homeBrandSplashDismissed,
+    homeBrandSplashDismissedVersion: normalizeText(source.homeBrandSplashDismissedVersion || defaults.homeBrandSplashDismissedVersion),
+    homeBrandSplashDismissedAt: normalizeText(source.homeBrandSplashDismissedAt || defaults.homeBrandSplashDismissedAt)
   }
 }
 
@@ -147,6 +167,9 @@ exports.main = async (event) => {
   const appearanceSettings = Object.prototype.hasOwnProperty.call(event || {}, 'appearanceSettings')
     ? normalizeAppearanceSettings(event.appearanceSettings)
     : normalizeAppearanceSettings(currentUser && currentUser.appearanceSettings)
+  const entryGuideSettings = Object.prototype.hasOwnProperty.call(event || {}, 'entryGuideSettings')
+    ? normalizeEntryGuideSettings(event.entryGuideSettings)
+    : normalizeEntryGuideSettings(currentUser && currentUser.entryGuideSettings)
   const customDisplayName = Object.prototype.hasOwnProperty.call(event || {}, 'customDisplayName')
     ? normalizeDisplayName(event.customDisplayName)
     : normalizeDisplayName(currentUser && currentUser.customDisplayName)
@@ -157,6 +180,7 @@ exports.main = async (event) => {
       data: {
         reminderSettings,
         appearanceSettings,
+        entryGuideSettings,
         wechatNickname,
         customDisplayName,
         accountId: accountId || normalizeText(currentUser.accountId),
@@ -175,6 +199,7 @@ exports.main = async (event) => {
         shareTags: [],
         reminderSettings,
         appearanceSettings,
+        entryGuideSettings,
         createdAt: now,
         updatedAt: now
       }
@@ -191,6 +216,7 @@ exports.main = async (event) => {
     ok: true,
     reminderSettings,
     appearanceSettings,
+    entryGuideSettings,
     wechatNickname: displayProfile.wechatNickname,
     customDisplayName: displayProfile.customDisplayName,
     displayName: displayProfile.displayName,

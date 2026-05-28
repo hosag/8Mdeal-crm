@@ -10,11 +10,17 @@ const { buildTaskCompletionFeedback, getTaskCompletionToastTitle } = require('..
 const { buildProjectsEntryContext } = require('../../utils/navigation-context')
 const { touchNotificationSync } = require('../../utils/notification-sync')
 const { syncPageAppearance } = require('../../utils/appearance')
+const { markProjectRelatedCachesDirty } = require('../../utils/core-page-cache')
 const { ensureActionAllowed, getEntitlementSnapshot, buildEntitlementPagePrompt } = require('../../utils/entitlement-guard')
+const { readPageCache, shouldRefreshPageCache, writePageCache } = require('../../utils/page-cache')
 const { startVoiceRecordingTicker, stopVoiceRecordingTicker } = require('../../utils/voice-recording')
+const { openTabPage, consumePendingProjectsTabRequest } = require('../../utils/tab-bar-navigation')
+const { getNavigationSpacerHeight } = require('../../utils/navigation-metrics')
 
 const STAGES = ['全部阶段', '线索', '洽谈', '方案', '商务', '成交', '流失']
 const ACTIVE_STAGES = ['全部阶段', '线索', '洽谈', '方案', '商务']
+const PROJECTS_PAGE_CACHE_KEY = 'projects:list'
+const PROJECTS_PAGE_CACHE_TTL = 45 * 1000
 const STATUS_FILTERS = [
   { key: 'all', label: '全部' },
   { key: 'active', label: '待推进' },
@@ -112,6 +118,42 @@ function normalizeSortMode(value) {
 
 function normalizeStageFilter(value) {
   return STAGES.includes(value) ? value : '全部阶段'
+}
+
+function decodeRouteValue(value, fallback = '') {
+  const text = String(value || '').trim()
+  if (!text) {
+    return fallback
+  }
+
+  try {
+    return decodeURIComponent(text)
+  } catch (error) {
+    return text
+  }
+}
+
+function buildProjectsRouteState(options = {}) {
+  const quickFilter = normalizeQuickFilter(options && options.quickFilter)
+  const sortMode = normalizeSortMode(options && options.sortMode)
+  const rawStageFilter = decodeRouteValue(options && options.stageFilter, '全部阶段') || '全部阶段'
+  const statusFilter = rawStageFilter === '成交'
+    ? 'deal'
+    : (rawStageFilter === '流失' ? 'lost' : normalizeStatusFilter(options && options.statusFilter))
+  const stageFilter = normalizeStageFilter(rawStageFilter)
+
+  return {
+    quickFilter,
+    sortMode,
+    statusFilter,
+    stageFilter: statusFilter === 'deal' || statusFilter === 'lost' ? '全部阶段' : stageFilter,
+    keyword: '',
+    entryContextText: buildProjectsEntryContext(
+      options && options.source,
+      quickFilter,
+      stageFilter
+    )
+  }
 }
 
 function startOfDay(value = new Date()) {
@@ -277,7 +319,7 @@ function normalizeProjectAiSourceMeta(value) {
     sourceDisplayText: sourceType === 'fallback'
       ? '来自：系统基础建议'
       : `来自：云端模型${modelName ? ` · ${modelName}` : ''}`,
-    regenerateLabel: sourceType === 'fallback' ? '获取云端复盘' : 'AI重新复盘'
+    regenerateLabel: '重新生成'
   }
 }
 
@@ -716,7 +758,7 @@ function normalizeProject(project, index) {
     canShareProject,
     canMarkDeal: canMarkDealPermission && !isClosed,
     canReviewProject,
-    reviewActionText: String(project.reviewActionText || (aiReview ? '查看复盘' : 'AI复盘')).trim(),
+    reviewActionText: 'AI复盘',
     dealStatusText: !canMarkDealPermission
       ? '当前只读'
       : (stage === '成交' ? '已成交' : (stage === '流失' ? '已流失' : '登记成交')),
@@ -829,6 +871,7 @@ function normalizeProject(project, index) {
 Page({
   data: {
     appearancePageClass: '',
+    tabNavigationSpacerHeight: getNavigationSpacerHeight(),
     searchKeyword: '',
     quickFilter: 'all',
     sortMode: 'updated',
@@ -860,6 +903,7 @@ Page({
     ],
     showTaskCompleteSheet: false,
     taskCompletionTaskId: '',
+    taskCompletionProjectId: '',
     taskCompletionTaskTitle: '',
     taskCompletionText: '',
     taskCompletionCreateNextTask: false,
@@ -922,6 +966,8 @@ Page({
     projectReviewResultBackup: null,
     taskActionId: '',
     isLoading: true,
+    hasLoadedOnce: false,
+    isRefreshing: false,
     isLoadFailed: false,
     loadError: '',
     dataSource: 'Mock Demo'
@@ -931,44 +977,44 @@ Page({
     this.isPageActive = true
     this.skipNextShowRefresh = true
     this.copyProjectPending = false
+    this.syncTabNavigationMetrics()
     syncPageAppearance(this)
-    const quickFilter = normalizeQuickFilter(options && options.quickFilter)
-    const sortMode = normalizeSortMode(options && options.sortMode)
-    const rawStageFilter = options && options.stageFilter ? decodeURIComponent(options.stageFilter) : '全部阶段'
-    const statusFilter = rawStageFilter === '成交'
-      ? 'deal'
-      : (rawStageFilter === '流失' ? 'lost' : normalizeStatusFilter(options && options.statusFilter))
-    const stageFilter = normalizeStageFilter(rawStageFilter)
-    this.setData({
-      quickFilter,
-      sortMode,
-      statusFilter,
-      stageFilter: statusFilter === 'deal' || statusFilter === 'lost' ? '全部阶段' : stageFilter,
-      entryContextText: buildProjectsEntryContext(
-        options && options.source,
-        quickFilter,
-        stageFilter
-      )
-    })
+    const pendingProjectsRequest = consumePendingProjectsTabRequest()
+    this.setData(buildProjectsRouteState(pendingProjectsRequest || options))
 
     this.initTaskCompletionKeyboard()
+    const restoredProjectsCache = this.restoreProjectsPageCache()
+    const entitlementPromise = this.refreshEntitlementPrompt({ refresh: true })
+    if (restoredProjectsCache) {
+      if (shouldRefreshPageCache(restoredProjectsCache)) {
+        this.fetchProjects({ silent: true }).catch(() => {})
+      }
+      await entitlementPromise
+      return
+    }
+
     await Promise.all([
       this.fetchProjects(),
-      this.refreshEntitlementPrompt({ refresh: true })
+      entitlementPromise
     ])
   },
 
   async onShow() {
     this.isPageActive = true
+    this.syncTabNavigationMetrics()
     syncPageAppearance(this)
     this.initTaskCompletionKeyboard()
+    const pendingProjectsRequest = consumePendingProjectsTabRequest()
+    if (pendingProjectsRequest) {
+      this.setData(buildProjectsRouteState(pendingProjectsRequest))
+    }
     if (this.skipNextShowRefresh) {
       this.skipNextShowRefresh = false
       return
     }
     await this.refreshEntitlementPrompt({ refresh: true })
-    if (!this.data.isLoading) {
-      await this.fetchProjects()
+    if (this.data.hasLoadedOnce && shouldRefreshPageCache(readPageCache(PROJECTS_PAGE_CACHE_KEY))) {
+      await this.fetchProjects({ silent: true })
     }
   },
 
@@ -990,11 +1036,54 @@ Page({
     this.destroyTaskCompletionKeyboard()
   },
 
+  syncTabNavigationMetrics() {
+    const navigationSpacerHeight = getNavigationSpacerHeight()
+    if (navigationSpacerHeight === this.data.tabNavigationSpacerHeight) {
+      return
+    }
+
+    this.setData({
+      tabNavigationSpacerHeight: navigationSpacerHeight
+    })
+  },
+
   clearTaskFeedbackTimer() {
     if (this.taskFeedbackTimer) {
       clearTimeout(this.taskFeedbackTimer)
       this.taskFeedbackTimer = null
     }
+  },
+
+  restoreProjectsPageCache() {
+    const cached = readPageCache(PROJECTS_PAGE_CACHE_KEY)
+    if (!cached || !cached.data) {
+      return null
+    }
+
+    this.setData({
+      projectCards: Array.isArray(cached.data.projectCards) ? cached.data.projectCards : [],
+      dataSource: cached.data.dataSource || this.data.dataSource,
+      isLoading: false,
+      hasLoadedOnce: true,
+      isRefreshing: false,
+      isLoadFailed: false,
+      loadError: ''
+    }, () => this.applyFilters())
+
+    return cached
+  },
+
+  persistProjectsPageCache() {
+    if (!this.data.hasLoadedOnce) {
+      return
+    }
+
+    writePageCache(PROJECTS_PAGE_CACHE_KEY, {
+      projectCards: this.data.projectCards,
+      dataSource: this.data.dataSource
+    }, {
+      ttl: PROJECTS_PAGE_CACHE_TTL
+    })
   },
 
   async refreshEntitlementPrompt(options = {}) {
@@ -1057,9 +1146,13 @@ Page({
     })
   },
 
-  async fetchProjects() {
+  async fetchProjects(options = {}) {
+    const silent = options.silent === true
+    const shouldPreserveContent = silent || this.data.hasLoadedOnce
+
     this.setData({
-      isLoading: true,
+      isLoading: silent ? this.data.isLoading : true,
+      isRefreshing: shouldPreserveContent,
       isLoadFailed: false,
       loadError: ''
     })
@@ -1071,11 +1164,24 @@ Page({
         {
           projectCards,
           isLoading: false,
+          hasLoadedOnce: true,
+          isRefreshing: false,
           dataSource: source
         },
-        () => this.applyFilters()
+        () => {
+          this.persistProjectsPageCache()
+          this.applyFilters()
+        }
       )
     } catch (error) {
+      if (shouldPreserveContent) {
+        this.setData({
+          isLoading: false,
+          isRefreshing: false
+        })
+        return
+      }
+
       const message = error && error.message ? error.message : '当前无法同步云端数据，请稍后重试'
       this.setData({
         projectCards: [],
@@ -1086,6 +1192,7 @@ Page({
         emptyDesc: '请检查网络或云环境连接后重新加载。',
         emptyActionText: '新建项目',
         isLoading: false,
+        isRefreshing: false,
         isLoadFailed: true,
         loadError: message
       })
@@ -1942,6 +2049,10 @@ Page({
         title: '已复制为新项目',
         icon: 'success'
       })
+      markProjectRelatedCachesDirty({
+        includeHome: true,
+        includeProjects: true
+      })
       keepCopyProjectLock = true
       await new Promise((resolve, reject) => {
         wx.navigateTo({
@@ -1988,6 +2099,7 @@ Page({
     this.setData({
       showTaskCompleteSheet: true,
       taskCompletionTaskId: taskId,
+      taskCompletionProjectId: currentProject.id || projectId,
       taskCompletionTaskTitle: currentProject.nextTaskTitle || '当前任务',
       taskCompletionText: '',
       taskCompletionCreateNextTask: false,
@@ -2011,6 +2123,7 @@ Page({
     this.setData({
       showTaskCompleteSheet: false,
       taskCompletionTaskId: '',
+      taskCompletionProjectId: '',
       taskCompletionTaskTitle: '',
       taskCompletionText: '',
       taskCompletionCreateNextTask: false,
@@ -2517,7 +2630,14 @@ Page({
         icon: 'success'
       })
 
+      const completedProjectId = String(this.data.taskCompletionProjectId || '').trim()
       touchNotificationSync('task_completed')
+      markProjectRelatedCachesDirty({
+        projectId: completedProjectId,
+        includeHome: true,
+        includeProjects: true,
+        includeProjectDetail: true
+      })
       this.closeTaskCompleteSheet(true)
       await this.fetchProjects()
       this.showTaskFeedback(feedback)
@@ -2565,13 +2685,15 @@ Page({
       return
     }
 
-    wx.navigateTo({
-      url: '/pages/index/index?openQuickEntry=1&quickEntryStandalone=1'
-    })
+    openTabPage('/pages/index/index?openQuickEntry=1&quickEntryStandalone=1')
   },
 
   openPage(event) {
     const { url } = event.currentTarget.dataset
+    if (openTabPage(url)) {
+      return
+    }
+
     wx.navigateTo({ url })
   }
 })

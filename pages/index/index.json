@@ -1,7 +1,7 @@
 {
   "navigationBarTitleText": "八面成交",
+  "navigationStyle": "custom",
   "usingComponents": {
-    "bottom-nav": "/components/bottom-nav/index",
     "loading-panel": "/components/loading-panel/index",
     "empty-state": "/components/empty-state/index"
   }

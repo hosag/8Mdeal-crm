@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>外部审计对比评估 - 2026-05-26</title>
+  <style>
+    :root {
+      --bg: #f4efe7;
+      --panel: rgba(255, 252, 247, 0.92);
+      --card: #fffdf9;
+      --ink: #1f2c36;
+      --muted: #6a7680;
+      --line: rgba(31, 44, 54, 0.1);
+      --agree: #136f55;
+      --agree-bg: rgba(19, 111, 85, 0.12);
+      --partial: #9a5a00;
+      --partial-bg: rgba(154, 90, 0, 0.12);
+      --disagree: #a12d2d;
+      --disagree-bg: rgba(161, 45, 45, 0.12);
+      --blocker: #8f1d1d;
+      --blocker-bg: rgba(143, 29, 29, 0.1);
+      --high: #8a4d00;
+      --high-bg: rgba(138, 77, 0, 0.1);
+      --medium: #1e5f92;
+      --medium-bg: rgba(30, 95, 146, 0.1);
+      --low: #5d6670;
+      --low-bg: rgba(93, 102, 112, 0.1);
+      --shadow: 0 20px 40px rgba(31, 44, 54, 0.08);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: "PingFang SC", "Helvetica Neue", "Microsoft YaHei", sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at top left, rgba(111, 168, 255, 0.12), transparent 28%),
+        radial-gradient(circle at bottom right, rgba(245, 166, 35, 0.12), transparent 30%),
+        var(--bg);
+    }
+
+    .page {
+      max-width: 1220px;
+      margin: 0 auto;
+      padding: 36px 24px 72px;
+    }
+
+    .hero {
+      padding: 28px 30px;
+      border-radius: 28px;
+      background: linear-gradient(145deg, #183748 0%, #305369 100%);
+      color: #f8fbff;
+      box-shadow: var(--shadow);
+    }
+
+    .hero h1 {
+      margin: 0 0 12px;
+      font-size: 34px;
+      line-height: 1.15;
+    }
+
+    .hero p {
+      margin: 0;
+      max-width: 980px;
+      line-height: 1.75;
+      color: rgba(248, 251, 255, 0.86);
+    }
+
+    .section {
+      margin-top: 22px;
+      padding: 24px 26px;
+      border-radius: 24px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(16px);
+    }
+
+    h2 {
+      margin: 0 0 14px;
+      font-size: 24px;
+      line-height: 1.25;
+    }
+
+    h3 {
+      margin: 0 0 12px;
+      font-size: 18px;
+      line-height: 1.35;
+    }
+
+    p {
+      margin: 0 0 10px;
+      line-height: 1.75;
+    }
+
+    ul {
+      margin: 10px 0 0;
+      padding-left: 18px;
+      line-height: 1.75;
+    }
+
+    li + li {
+      margin-top: 6px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 16px;
+    }
+
+    .metric {
+      padding: 18px 18px 16px;
+      border-radius: 20px;
+      background: var(--card);
+      border: 1px solid var(--line);
+    }
+
+    .metric .label {
+      font-size: 13px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .metric .value {
+      margin-top: 10px;
+      font-size: 28px;
+      font-weight: 700;
+      line-height: 1.1;
+    }
+
+    .metric .desc {
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.65;
+    }
+
+    .table-wrap {
+      overflow-x: auto;
+      border-radius: 20px;
+      border: 1px solid var(--line);
+      background: var(--card);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 1080px;
+    }
+
+    th,
+    td {
+      padding: 14px 16px;
+      vertical-align: top;
+      border-bottom: 1px solid var(--line);
+      text-align: left;
+      line-height: 1.65;
+      font-size: 14px;
+    }
+
+    th {
+      font-size: 13px;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--muted);
+      background: rgba(31, 44, 54, 0.04);
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      padding: 5px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      white-space: nowrap;
+    }
+
+    .chip.agree {
+      color: var(--agree);
+      background: var(--agree-bg);
+    }
+
+    .chip.partial {
+      color: var(--partial);
+      background: var(--partial-bg);
+    }
+
+    .chip.disagree {
+      color: var(--disagree);
+      background: var(--disagree-bg);
+    }
+
+    .chip.blocker {
+      color: var(--blocker);
+      background: var(--blocker-bg);
+    }
+
+    .chip.high {
+      color: var(--high);
+      background: var(--high-bg);
+    }
+
+    .chip.medium {
+      color: var(--medium);
+      background: var(--medium-bg);
+    }
+
+    .chip.low {
+      color: var(--low);
+      background: var(--low-bg);
+    }
+
+    .callout {
+      padding: 18px 20px;
+      border-radius: 18px;
+      border: 1px solid var(--line);
+      background: var(--card);
+    }
+
+    .callout + .callout {
+      margin-top: 12px;
+    }
+
+    .muted {
+      color: var(--muted);
+    }
+
+    code {
+      padding: 2px 6px;
+      border-radius: 8px;
+      background: rgba(31, 44, 54, 0.06);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      font-size: 12px;
+    }
+
+    .footnotes {
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    a {
+      color: #1f5a86;
+      text-decoration: none;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+
+    @media (max-width: 980px) {
+      .page {
+        padding: 20px 14px 48px;
+      }
+
+      .hero {
+        padding: 24px 20px;
+      }
+
+      .hero h1 {
+        font-size: 28px;
+      }
+
+      .section {
+        padding: 18px;
+      }
+
+      .grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <section class="hero">
+      <h1>外部审计报告对比评估</h1>
+      <p>评估时间：2026-05-26。结论基于当前仓库代码快照、关键调用链核对，以及微信官方文档对隐私合规和 <code>project.config.json</code> 字段说明的交叉验证。我不建议把外部报告原样当作发布门槛清单；其中有几项判断方向是对的，但严重级别、根因归因、修复路径并不完全准确，尤其是 <code>P0-1</code>、<code>P0-3</code>、<code>P0-5</code>、<code>P1-1</code>、<code>P2-7</code>。</p>
+    </section>
+
+    <section class="section">
+      <h2>我的总判断</h2>
+      <div class="grid">
+        <div class="metric">
+          <div class="label">Confirmed Blockers</div>
+          <div class="value">3</div>
+          <div class="desc">我明确支持作为上线前阻断项的有 3 类：隐私合规缺口、跨账号缓存泄漏、手机号绑定伪验证。</div>
+        </div>
+        <div class="metric">
+          <div class="label">Conditional Blockers</div>
+          <div class="value">1</div>
+          <div class="desc">外发接手链路存在原子性缺口，我认为必须修，但外部报告给的“指定接收人校验”不是当前产品形态下的正确修法。</div>
+        </div>
+        <div class="metric">
+          <div class="label">Overstated Items</div>
+          <div class="value">5+</div>
+          <div class="desc">至少 5 项被外部报告说重了，或者修复建议偏了方向，不应机械照抄执行。</div>
+        </div>
+      </div>
+      <div class="callout" style="margin-top:16px">
+        <h3>是否应该现在直接提审</h3>
+        <p>我的结论是：<strong>不建议在修完最核心的 4 个问题前提审</strong>，但这个“4 个问题”不是外部报告原样的 5 个 P0。更准确的提审门槛应是：</p>
+        <ul>
+          <li>补齐隐私合规接入与后台声明，不再裸用录音/媒体相关隐私接口。</li>
+          <li>给页面缓存和本地草稿加账号命名空间，并补全账号切换/初始化时的清理机制。</li>
+          <li>把 <code>bindPhone</code> 从“前端自填即验证通过”改成真实手机号授权或等价可信校验。</li>
+          <li>把外发接手流程改成原子 claim，至少消除并发抢占和双写竞争。</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>P0 对比结论</h2>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th style="width:88px">ID</th>
+              <th style="width:130px">我的结论</th>
+              <th style="width:120px">我的优先级</th>
+              <th>判断</th>
+              <th>我建议的正确动作</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>P0-1</strong></td>
+              <td><span class="chip partial">部分赞成</span></td>
+              <td><span class="chip blocker">上线阻断</span></td>
+              <td>
+                方向我赞成，修法我不赞成。当前代码确实调用了 <code>wx.getRecorderManager</code>、<code>wx.chooseMedia</code>、<code>wx.cloud.uploadFile</code>，但项目里没有任何 <code>wx.getPrivacySetting</code>、<code>wx.onNeedPrivacyAuthorization</code>、<code>agreePrivacyAuthorization</code> 接入，也没有看到隐私授权联动逻辑；<code>app.json</code> 里也没有历史上的 <code>__usePrivacyCheck__</code> 配置。微信官方文档明确说明：未在后台《小程序用户隐私保护指引》中声明对应隐私类型，相关接口会被直接禁用，且会出现 <code>api scope is not declared in the privacy agreement</code> / <code>appid privacy api banned</code> 类错误。<br><br>
+                但外部报告把它说成“必须在 <code>app.json</code> 增加 privacy 块、requiredPrivateInfos、permission.scope.record / scope.album / scope.writePhotosAlbum”并不准确。官方文档并没有把这些字段当成当前小程序隐私合规的必需修法，尤其 <code>scope.record</code> / <code>scope.album</code> 不是当前 <code>app.json</code> 权限描述的标准修法。
+              </td>
+              <td>
+                先做两件事：<br>
+                1. 在微信后台补齐《用户隐私保护指引》声明。<br>
+                2. 前端补隐私授权接入，至少在录音/媒体入口前支持 <code>wx.getPrivacySetting</code> + <code>agreePrivacyAuthorization</code> 或被动监听授权事件。<br><br>
+                <span class="muted">参考核对：<code>app.json</code>，<code>pages/index/index.js</code>，<code>pages/follow-up/follow-up.js</code>，微信官方隐私文档。</span>
+              </td>
+            </tr>
+            <tr>
+              <td><strong>P0-2</strong></td>
+              <td><span class="chip agree">赞成</span></td>
+              <td><span class="chip blocker">上线阻断</span></td>
+              <td>
+                这是我明确同意的高风险问题，而且实际情况比报告写得还更糟一点。<code>utils/page-cache.js</code> 的 key 完全没有账号命名空间；<code>restoreHomePageCache</code>、<code>restoreProjectsPageCache</code>、<code>restoreProjectDetailCache</code> 会在账号上下文确认前优先回显旧缓存。只要出现同设备换微信号、应用内身份变化、或旧缓存残留，新账号就有机会先看到��账号的客户、跟进、AI 结果和外发信息。<br><br>
+                另外，报告里说“有 <code>clearPageCache</code> 可调用”还算轻描淡写。当前 <code>clearPageCache</code> 只能删单 key，不是清空整个 store；而且代码里几乎没有任何账号切换、身份切换时的总清理入口。<br><br>
+                本地持久化草稿也确实没有命名空间，比如 <code>follow-up-draft:&lt;projectId&gt;</code>、<code>homeQuickEntryDraftsV1</code>、<code>homeQuickEntryProjectAliasesV1</code>、<code>homeEntryGuideSettings</code>。
+              </td>
+              <td>
+                必须做账号隔离：<br>
+                1. page cache key 加 <code>accountId</code> 或 <code>openid</code> 前缀。<br>
+                2. 本地草稿、项目别名、引导设置等 storage key 全部加账号命名空间。<br>
+                3. 增加统一的“账号上下文切换/初始化清理函数”，清掉旧缓存和旧 storage。<br><br>
+                <span class="muted">参考核对：<code>utils/page-cache.js</code>，<code>utils/core-page-cache.js</code>，<code>pages/index/index.js</code>，<code>pages/follow-up/follow-up.js</code>。</span>
+              </td>
+            </tr>
+            <tr>
+              <td><strong>P0-3</strong></td>
+              <td><span class="chip partial">部分赞成</span></td>
+              <td><span class="chip blocker">条件阻断</span></td>
+              <td>
+                我同意这里有必须收口的接手安全问题，但我不同意外部报告给的核心定性。<br><br>
+                当前产品和文案本身并没有“指定接收人”这个模型。无论 <code>pages/share-config/share-config.js</code>、<code>pages/projects/projects.wxml</code>、<code>docs/项目复制与转交实施方案.md</code>，表达的都是“把卡片发给要接手的人”，而不是“系统只允许预设某个人接手”。因此，要求现在去强制校验 <code>shareRecord.recipientAccountId</code> 是否等于调用方，这会和现有产品形态直接冲突。<br><br>
+                但外部报告指出的另一个点是对的：<code>cloudfunctions/openSharedProject/index.js</code> 先读 <code>shareRecord</code>，后写 <code>shareRecord</code> 和 <code>projects</code>，整个 claim 过程没有事务 compare-and-set。两个接收方并发打开时，确实可能同时通过前置判断，再发生最后写入者覆盖、重复导入、归属竞争的问题。这个必须修。<br><br>
+                所以我的结论是：<strong>不是“缺收件人校验”这个原因导致 P0，而是“claim 不是原子操作”这件事足够危险</strong>。如果产品后续要支持指定接收人，再引入 <code>recipientAccountId</code> 才是正确方向。
+              </td>
+              <td>
+                当前产品形态下的正确修法：<br>
+                1. 对 share claim 做事务化或单文档 CAS。<br>
+                2. claim 成功前，不要提前写源项目归属。<br>
+                3. 明确一张外发卡是否允许“任何持卡人先到先得”；若不允许，另加一次性 token 或显式接收人字段。<br><br>
+                <span class="muted">参考核对：<code>cloudfunctions/openSharedProject/index.js:1058-1263</code>，<code>cloudfunctions/createShareRecord/index.js</code>，相关产品文档与页面文案。</span>
+              </td>
+            </tr>
+            <tr>
+              <td><strong>P0-4</strong></td>
+              <td><span class="chip agree">赞成</span></td>
+              <td><span class="chip blocker">上线阻断</span></td>
+              <td>
+                这是实锤。<code>cloudfunctions/bindPhone/index.js</code> 直接接收前端传入的 <code>phoneNumber</code>，只做正则校验，然后把 <code>accounts.phoneVerified</code> 写成 <code>true</code>。前端页面 <code>pages/phone-bind/phone-bind.js</code> 也明确是“手动输入手机号”。<br><br>
+                但系统其他地方已经把 <code>phoneVerified</code> 当成真实门槛：写入能力、套餐下单、支付准备都依赖它。也就是说，任何客户端都能自报手机号并绕过“先绑定再写入 / 再下单”的约束。这不是体验问题，是信任边界完全放错了。
+              </td>
+              <td>
+                上线前必须改成可信校验链路。最现实的是：<br>
+                1. 用 <code>getPhoneNumber</code> 授权码换取真实号码。<br>
+                2. 绑定动作同时走隐私授权联动。<br>
+                3. 在切换前，临时关闭“手机号绑定后可写 / 可下单”的强门槛，避免伪验证继续放行。<br><br>
+                <span class="muted">参考核对：<code>cloudfunctions/bindPhone/index.js</code>，<code>pages/phone-bind/phone-bind.js</code>，<code>cloudfunctions/createBillingOrder/index.js</code>，<code>cloudfunctions/prepareBillingPayment/index.js</code>。</span>
+              </td>
+            </tr>
+            <tr>
+              <td><strong>P0-5</strong></td>
+              <td><span class="chip disagree">不同意</span></td>
+              <td><span class="chip high">应修但非阻断</span></td>
+              <td>
+                我不同意把这项定为 P0，也不同意其中一部分表述。<code>project.config.json</code> 目前确实带着 demo 信息，且 <code>uploadWithSourceMap: true</code>、<code>minified: false</code>、<code>urlCheck: false</code> 都不适合正式提审前的默认配置。微信官方文档也明确了这些字段的含义：<code>minified</code> 是上传时是否压缩，<code>uploadWithSourceMap</code> 是上传时是否携带 sourcemap，<code>urlCheck</code> 是是否检查安全域名和 TLS。<br><br>
+                但把 <code>urlCheck: false</code> 解释成“任何漏配外域名都会被悄悄发布”是错的。它影响的是开发者工具上传前校验，不是运行时安全域名机制本身。运行时是否可请求，仍然受平台域名白名单约束。<br><br>
+                所以这项更像<strong>提审前的发布卫生项</strong>，不是客户数据泄漏级别的上线阻断。
+              </td>
+              <td>
+                建议提审前顺手改，但不必把它和 P0 安全漏洞混为一谈：<br>
+                1. 改掉 demo 名称和描述。<br>
+                2. 关闭 <code>uploadWithSourceMap</code>。<br>
+                3. 开启 <code>minified</code>。<br>
+                4. 若团队流程允许，打开 <code>urlCheck</code> 作为发布前防呆。<br><br>
+                <span class="muted">参考核对：<code>project.config.json</code>，微信官方 project config 文档。</span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>P1 对比结论</h2>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th style="width:88px">ID</th>
+              <th style="width:130px">我的结论</th>
+              <th style="width:120px">我的优先级</th>
+              <th>判断</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>P1-1</strong></td>
+              <td><span class="chip disagree">不同意</span></td>
+              <td><span class="chip low">按现设计保留</span></td>
+              <td>
+                这个结论和当前产品决策正面冲突。你已经明确决定“点击闪录不做实时权益校验，先弹半窗，再在下一步校验”。当前 <code>openQuickEntrySheet()</code> 的实现就是按这个思路改的：先展示半窗，真正保存时分别在 <code>create_project</code>、<code>save_follow_up</code>、<code>create_task</code> 上做校验。<br><br>
+                所以��不是 bug，而是产品策略。外部报告给的修法会把当前体验优化直接打回去。
+              </td>
+            </tr>
+            <tr>
+              <td><strong>P1-2</strong></td>
+              <td><span class="chip partial">部分赞成</span></td>
+              <td><span class="chip high">本轮应修</span></td>
+              <td>
+                现象方向大概率是对的，但根因不只一层。<code>utils/appearance.js</code> 里 <code>shouldHideCustomTabBar()</code> 只关心 <code>showHomeEntryGuide</code>、<code>showQuickEntrySheet</code>、<code>showTaskCompleteSheet</code>、<code>hideCustomTabBar</code>。<br><br>
+                这意味着：<br>
+                1. 对于任务完成半窗，如果 <code>setData</code> 后不主动同步 tab bar，确实可能浮在上面。<br>
+                2. 对于 <code>showShareSheet</code>、<code>showProjectReviewSheet</code> 这类浮层，单纯“补一次 sync”也不够，因为隐藏规则里根本没把它们算进去。<br><br>
+                所以外部报告的修法只解决了一半。
+              </td>
+            </tr>
+            <tr>
+              <td><strong>P1-3</strong></td>
+              <td><span class="chip agree">赞成</span></td>
+              <td><span class="chip high">本轮应修</span></td>
+              <td>
+                这项我支持。你前面做了缓存第三步“定向失效”，但目前多个 mutator 调用 <code>markProjectRelatedCachesDirty()</code> 时没有带 <code>includeSharedOut: true</code>。<code>mark-deal</code>、<code>follow-up</code>、<code>tasks</code>、<code>project-detail</code> 的几个入口都成立。<br><br>
+                结果是：外发页作为“追踪页”会继续显示旧状态，直到用户自己触发刷新或 TTL 到期。这是现有缓存体系里的真实一致性缺口。
+              </td>
+            </tr>
+            <tr>
+              <td><strong>P1-4</strong></td>
+              <td><span class="chip agree">赞成</span></td>
+              <td><span class="chip high">本轮应修</span></td>
+              <td>
+                这项成立，而且范围比报告写的多一处。目前至少 5 个云函数使用 <code>process.env.CONTACT_CRYPTO_SECRET || 'deal-crm-contact-v1'</code> 作为回退。只要生产环境忘注入 env，就会落到一个仓库里明文可见的固定密钥。<br><br>
+                这不是“加密失效”，而是“所有实例共享已知密钥”，风险主要在代码泄漏、环境误配或多人协作场景下被放大。
+              </td>
+            </tr>
+            <tr>
+              <td><strong>P1-5</strong></td>
+              <td><span class="chip partial">部分赞成</span></td>
+              <td><span class="chip medium">可顺手修</span></td>
+              <td>
+                代码顺序问题确实存在：<code>pages/index/index.js</code> 的 <code>onShow()</code> 里，<code>skipNextShowRefresh</code> 早返回发生在 <code>consumePendingQuickEntryOpen()</code> 之前。<br><br>
+                但我不同意把它定成高优先级故障。因为首页 <code>onLoad()</code> 已经主动消费过一次甚至两次 quick entry 请求，这个问题更像一个边界场景缺陷，不是主链路必现问题。
+              </td>
+            </tr>
+            <tr>
+              <td><strong>P1-6</strong></td>
+              <td><span class="chip agree">赞成</span></td>
+              <td><span class="chip medium">可顺手修</span></td>
+              <td>
+                我认同问题，但不同意它是高危。<code>utils/tab-bar-navigation.js</code> 给 <code>projectsTabRequest</code> / <code>quickEntryRequest</code> 写了 <code>id</code>，但清理时完全不看 id。连续触发时，后一个请求确实可能被前一个失败回调清掉。<br><br>
+                这是典型的“有版本号但没用版本号”的并发小坑，建议修，但不构成提审阻断。
+              </td>
+            </tr>
+            <tr>
+              <td><strong>P1-7</strong></td>
+              <td><span class="chip agree">赞成</span></td>
+              <td><span class="chip medium">建议本轮修</span></td>
+              <td>
+                这项成立。<code>pages/shared-out/shared-out.js</code> 在缓存命中后直接返回，只会在真实拉数成功后执行 <code>syncSharedNotifications()</code>。如果缓存未过期，外发页就不会顺手把相关通知标已读，读态会持续滞后。
+              </td>
+            </tr>
+            <tr>
+              <td><strong>P1-8</strong></td>
+              <td><span class="chip partial">部分赞成</span></td>
+              <td><span class="chip low">后续加固</span></td>
+              <td>
+                我同意 <code>bindReferral</code> 没有频控，不够稳；但我不同意“推荐码无限暴力枚举、很容易批量薅 token”的表述。当前推荐码是 <code>BMC</code> + 9 位高熵字符，暴力撞活码并不现实。<br><br>
+                真正值得防的是：批量机刷、重复错误请求、外挂探测、以及和 <code>bindPhone</code> 这种其他低门槛链路组合时的套利风险。所以这项应作为通用风控增强，而不是把它包装成当下最主要的盈利攻击面。
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>P2 对比结论</h2>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th style="width:88px">ID</th>
+              <th style="width:130px">我的结论</th>
+              <th style="width:120px">我的优先级</th>
+              <th>判断</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>P2-1</strong></td>
+              <td><span class="chip agree">赞成</span></td>
+              <td><span class="chip medium">可跟本轮一起修</span></td>
+              <td>成立。<code>restoreProjectDetailCache()</code> 会把缓存里的 <code>projectAccess</code>、<code>showActionFooter</code> 直接回显，存在权限变化后的瞬时 UI 误导，但后台拦截仍在。</td>
+            </tr>
+            <tr>
+              <td><strong>P2-2</strong></td>
+              <td><span class="chip agree">赞成</span></td>
+              <td><span class="chip medium">可跟本轮一起修</span></td>
+              <td>成立。<code>fetchProjectDetail()</code> 只有拿到新数据才会根据 <code>isReadOnlySharedOut</code> 做 redirect；silent 拉取失败时，这个重定向机会被吞掉。</td>
+            </tr>
+            <tr>
+              <td><strong>P2-3</strong></td>
+              <td><span class="chip agree">赞成</span></td>
+              <td><span class="chip low">后续优化</span></td>
+              <td>成立。<code>markProjectDetailPageCacheDirty()</code> 在 projectId 为空时退化成全量 detail 脏标记，属于过度失效，不是 correctness bug。</td>
+            </tr>
+            <tr>
+              <td><strong>P2-4</strong></td>
+              <td><span class="chip agree">赞成</span></td>
+              <td><span class="chip low">后续优化</span></td>
+              <td>大体成立。<code>app.js</code> 里延后 240ms 的 <code>bootstrapAppearancePreferences()</code> 与首页 <code>syncHomeEntryGuideVisibilityFromCloud()</code> 会在部分时序下造成重复请求 <code>getUserPreferences</code>。</td>
+            </tr>
+            <tr>
+              <td><strong>P2-5</strong></td>
+              <td><span class="chip agree">赞成</span></td>
+              <td><span class="chip low">后续优化</span></td>
+              <td>成立。<code>saveUserPreferences</code> 每次整包回写 <code>entryGuideSettings</code>，存在多端或并发保存时用旧值覆盖新值的竞态。</td>
+            </tr>
+            <tr>
+              <td><strong>P2-6</strong></td>
+              <td><span class="chip agree">赞成</span></td>
+              <td><span class="chip low">保留为技术债</span></td>
+              <td>结论没错，但更像未来扩展提醒。当前 cache payload 主要是 plain object / array / date，短期不会炸；未来如果塞复杂引用结构，<code>cloneValue()</code> 会有问题。</td>
+            </tr>
+            <tr>
+              <td><strong>P2-7</strong></td>
+              <td><span class="chip disagree">不同意</span></td>
+              <td><span class="chip low">无需按此修</span></td>
+              <td>
+                这项我不认。<code>regenerateProjectAiReview()</code> 虽然自身没有 try/catch，但它调用的 <code>fetchProjectAiReview()</code> 已经有完整的 <code>try/catch/finally</code>，而且在 finally 里会把 <code>isProjectReviewLoading</code> 复位。<br><br>
+                所以“弱网下 loading 永远卡住”这个结论与当前代码不符。
+              </td>
+            </tr>
+            <tr>
+              <td><strong>P2-8</strong></td>
+              <td><span class="chip agree">赞成</span></td>
+              <td><span class="chip low">提审前顺手清掉</span></td>
+              <td>成立。<code>pages/share-card/share-card.js</code> 有 <code>console.info</code> 输出 <code>isShareOwner</code> 等上下文信息，虽然不是高危，但正式版本应尽量去掉。</td>
+            </tr>
+            <tr>
+              <td><strong>P2-9</strong></td>
+              <td><span class="chip partial">部分赞成</span></td>
+              <td><span class="chip low">可优化</span></td>
+              <td>
+                这项我只部分认同。当前 <code>app.json</code> 实际引用的是 <code>tabbar-config-icon.png</code> 和 <code>tabbar-config-icon-active.png</code>，不是 68B 的 placeholder；但它们本身也只有 185B / 186B，基本可以判断是接近透明的占位图。<br><br>
+                这更像提审观感风险，不是功能问题。若你要追求更稳，最好换成真正合规、尺寸小但非空白的配置图。
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>我和外部审计的关键分歧</h2>
+      <div class="callout">
+        <h3>1. 隐私合规问题是真的，但不能按错文档字段去修</h3>
+        <p>外部报告把“后台隐私声明 + 用户授权同步”问题，写成了“往 <code>app.json</code> 里堆 privacy 字段”的问题。这个方向会把团队带偏。正确重心是：后台声明、授权同步、接口调用前置，不是机械补几个可疑字段。</p>
+      </div>
+      <div class="callout">
+        <h3>2. 外发接手问题的根因是 claim 原子性，不是现阶段缺了指定接收人</h3>
+        <p>当前产品没有“指定接收人”能力，审计建议直接按 <code>recipientAccountId</code> 强校验，会和现有分享/转交流程冲突。必须坚持正确方向：先修并发 claim 和 ownership 更新原子性，再决定是否升级成真正的定向转交模型。</p>
+      </div>
+      <div class="callout">
+        <h3>3. 闪录先弹半窗后校验，是当前已经确认过的产品策略</h3>
+        <p>外部报告建议把 <code>quick_entry</code> 入口重新加前置拦截，这和你当前已经拍板的交互策略相反。这个点不应该被安全审计反向推翻。</p>
+      </div>
+      <div class="callout">
+        <h3>4. project.config.json 需要收口，但不应被当成和手机号伪验证同等级的 P0</h3>
+        <p>它更像发布卫生和源码暴露面控制，而不是直接的数据越权漏洞。要修，但别错误排序。</p>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>我建议的执行顺序</h2>
+      <div class="callout">
+        <h3>第一组：提审前必须完成</h3>
+        <ul>
+          <li>隐私合规接入：后台声明 + 前端隐私授权同步链路。</li>
+          <li>缓存与本地草稿账号隔离：page cache、flash draft、follow-up draft、guide settings 全部命名空间化。</li>
+          <li><code>bindPhone</code> 改成可信手机号验证，不再接受前端自报即 <code>phoneVerified=true</code>。</li>
+          <li>外发 claim 改成事务或 compare-and-set，避免并发抢占与归属双写。</li>
+        </ul>
+      </div>
+      <div class="callout">
+        <h3>第二组：建议和本轮缓存修复一起做</h3>
+        <ul>
+          <li><code>includeSharedOut: true</code> 补齐到相关 mutator。</li>
+          <li>外发页缓存命中分支补通知同步。</li>
+          <li>tab bar 浮层隐藏机制统一梳理，不只补 sync，还要补 hide 规则。</li>
+          <li><code>CONTACT_CRYPTO_SECRET</code> 去掉硬编码 fallback，env 缺失直接报错。</li>
+        </ul>
+      </div>
+      <div class="callout">
+        <h3>第三组：后续优化，不阻断当前主线</h3>
+        <ul>
+          <li><code>tab-bar-navigation</code> 请求版本号化。</li>
+          <li><code>getUserPreferences</code> 去重请求。</li>
+          <li><code>saveUserPreferences</code> 改成字段级 patch，避免互相覆盖。</li>
+          <li>清理生产环境 <code>console.info</code>。</li>
+          <li>给推荐码绑定增加频控。</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>最终结论</h2>
+      <p>如果只回答一句话：<strong>我不支持把这份外部审计报告原样当作上线标准</strong>。它抓到了几个真正危险的问题，但也混入了若干“问题方向对、修法不对”以及“严重性放大”的项。</p>
+      <p>我会坚持的正确判断是：</p>
+      <ul>
+        <li>隐私合规、跨账号缓存泄漏、手机号伪验证，这三类必须正视，不能带着上线。</li>
+        <li>外发 claim 必须加原子性保护，但不要在当前产品没设计“指定接收人”的情况下，生搬硬套接收人强校验。</li>
+        <li>闪录先弹半窗、下一步再校验权益，这个交互方向可以坚持，不应该被审计意见推翻。</li>
+        <li><code>project.config.json</code> 要收口，但不应该抬到和真实越权漏洞同级的 P0。</li>
+      </ul>
+    </section>
+
+    <section class="section footnotes">
+      <h2>核对依据</h2>
+      <p>代码核对样本包括：<code>app.json</code>、<code>project.config.json</code>、<code>utils/page-cache.js</code>、<code>utils/core-page-cache.js</code>、<code>utils/tab-bar-navigation.js</code>、<code>utils/appearance.js</code>、<code>pages/index/index.js</code>、<code>pages/projects/projects.js</code>、<code>pages/shared-out/shared-out.js</code>、<code>pages/project-detail/project-detail.js</code>、<code>pages/phone-bind/phone-bind.js</code>、<code>cloudfunctions/bindPhone/index.js</code>、<code>cloudfunctions/openSharedProject/index.js</code>、<code>cloudfunctions/createShareRecord/index.js</code>、<code>cloudfunctions/saveProject/index.js</code>、<code>cloudfunctions/bindReferral/index.js</code>、<code>cloudfunctions/getReferralInfo/index.js</code>。</p>
+      <p>官方文档核对：</p>
+      <ul>
+        <li><a href="https://developers.weixin.qq.com/miniprogram/dev/framework/user-privacy/PrivacyAuthorize.html" target="_blank" rel="noopener noreferrer">微信开放文档：小程序隐私协议开发指南</a></li>
+        <li><a href="https://developers.weixin.qq.com/miniprogram/dev/devtools/projectconfig.html" target="_blank" rel="noopener noreferrer">微信开放文档：项目配置文件</a></li>
+      </ul>
+    </section>
+  </div>
+</body>
+</html>

@@ -1,6 +1,7 @@
 const { loadShareConfigData, createShareRecordData, reportSystemFailureData, resolveNotificationData } = require('../../services/data')
 const { buildSharePreview } = require('../../services/share')
 const { syncPageAppearance } = require('../../utils/appearance')
+const { markProjectRelatedCachesDirty } = require('../../utils/core-page-cache')
 const { ensureActionAllowed } = require('../../utils/entitlement-guard')
 
 const SHARE_PURPOSES = {
@@ -215,6 +216,14 @@ Page({
         projectId,
         types: ['save_failed'],
         scenes: ['share_record_create']
+      })
+
+      markProjectRelatedCachesDirty({
+        projectId,
+        includeHome: this.data.activeMode === 'outbound',
+        includeProjects: true,
+        includeSharedOut: this.data.activeMode === 'outbound',
+        includeProjectDetail: true
       })
 
       wx.navigateTo({

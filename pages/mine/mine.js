@@ -13,9 +13,12 @@ const {
   getDefaultAppearanceSettings,
   normalizeAppearanceSettings,
   getAppearancePageClass,
-  syncPageAppearance
+  syncPageAppearance,
+  syncCustomTabBar
 } = require('../../utils/appearance')
 const { ensureActionAllowed, buildEntitlementOverview } = require('../../utils/entitlement-guard')
+const { openTabPage } = require('../../utils/tab-bar-navigation')
+const { getNavigationSpacerHeight } = require('../../utils/navigation-metrics')
 
 const ADVANCE_OPTIONS = [
   { key: 'same_day', label: '当天提醒' },
@@ -158,6 +161,7 @@ Page({
     earnings: {
       summary: []
     },
+    tabNavigationSpacerHeight: getNavigationSpacerHeight(),
     overviewMetrics: [],
     reminderAdvanceOptions: ADVANCE_OPTIONS,
     fontScaleOptions: FONT_SCALE_OPTIONS,
@@ -182,6 +186,7 @@ Page({
   },
 
   async onLoad() {
+    this.syncTabNavigationMetrics()
     syncPageAppearance(this)
     try {
       const [earningsResult, preferencesResult, accountResult, entitlementsResult] = await Promise.all([
@@ -223,6 +228,7 @@ Page({
         isAccessLoading: false,
         ...buildAccessSummaryState(accountSummary, entitlementsSummary)
       })
+      syncCustomTabBar(this, getAppearancePageClass(appearanceSettings))
     } catch (error) {
       this.setData({
         earnings: {
@@ -238,6 +244,7 @@ Page({
         appearancePageClass: getAppearancePageClass(getDefaultAppearanceSettings()),
         ...buildAccessSummaryState(getDefaultAccountSummary(), getDefaultEntitlements())
       })
+      syncCustomTabBar(this, getAppearancePageClass(getDefaultAppearanceSettings()))
       wx.showToast({
         title: '当前无法同步我的数据',
         icon: 'none'
@@ -269,8 +276,20 @@ Page({
   },
 
   onShow() {
+    this.syncTabNavigationMetrics()
     syncPageAppearance(this)
     this.refreshAccessState()
+  },
+
+  syncTabNavigationMetrics() {
+    const navigationSpacerHeight = getNavigationSpacerHeight()
+    if (navigationSpacerHeight === this.data.tabNavigationSpacerHeight) {
+      return
+    }
+
+    this.setData({
+      tabNavigationSpacerHeight: navigationSpacerHeight
+    })
   },
 
   async refreshAccessState() {
@@ -352,6 +371,7 @@ Page({
       appearancePageClass: getAppearancePageClass(normalizedSettings),
       preferenceSavingKey: savingKey || 'appearance'
     })
+    syncCustomTabBar(this, getAppearancePageClass(normalizedSettings))
 
     try {
       const result = await saveUserPreferencesData({
@@ -370,6 +390,7 @@ Page({
         appearancePageClass: getAppearancePageClass(savedSettings),
         preferenceSavingKey: ''
       })
+      syncCustomTabBar(this, getAppearancePageClass(savedSettings))
     } catch (error) {
       if (app && typeof app.applyAppearanceSettings === 'function') {
         app.applyAppearanceSettings(previousSettings)
@@ -382,6 +403,7 @@ Page({
         appearancePageClass: getAppearancePageClass(previousSettings),
         preferenceSavingKey: ''
       })
+      syncCustomTabBar(this, getAppearancePageClass(previousSettings))
       wx.showToast({
         title: error && error.message ? error.message : '保存外观偏好失败',
         icon: 'none'
@@ -538,8 +560,6 @@ Page({
       return
     }
 
-    wx.navigateTo({
-      url: '/pages/index/index?openQuickEntry=1&quickEntryStandalone=1'
-    })
+    openTabPage('/pages/index/index?openQuickEntry=1&quickEntryStandalone=1')
   }
 })

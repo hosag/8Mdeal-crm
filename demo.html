@@ -3,79 +3,82 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>闪录确认态 Demo</title>
+  <title>八面成交 · 品牌引导层 Demo</title>
   <style>
+    @font-face {
+      font-family: "DealCrmSlogan";
+      src: url("assets/brand/slogan-title-subset.ttf") format("truetype");
+      font-display: swap;
+    }
+
     :root {
       --page-bg:
-        radial-gradient(circle at top left, rgba(27, 54, 76, 0.14), transparent 28%),
-        radial-gradient(circle at top right, rgba(133, 113, 77, 0.12), transparent 24%),
-        linear-gradient(180deg, #f6f4ef 0%, #f1eee7 42%, #ebe8df 100%);
-      --hero-bg: linear-gradient(145deg, #162d42 0%, #203d58 54%, #294f67 100%);
-      --hero-shadow: 0 20px 56px rgba(18, 33, 47, 0.2);
-      --title: #17242e;
-      --text-main: #233847;
-      --text-secondary: #3f4f5d;
-      --text-soft: #6a7784;
-      --text-muted: #7a8692;
-      --surface-bg: rgba(255, 252, 247, 0.88);
-      --surface-shadow: 0 18px 38px rgba(30, 39, 45, 0.08);
-      --soft-block-bg: #f4f2ed;
-      --soft-block-strong: rgba(255, 255, 255, 0.7);
-      --project-card-bg: linear-gradient(180deg, rgba(255, 254, 252, 0.98) 0%, rgba(248, 245, 239, 0.96) 100%);
-      --glass-bg: rgba(255, 255, 255, 0.72);
-      --divider: rgba(24, 39, 51, 0.08);
-      --chip-bg: #edf1f3;
-      --chip-text: #40505d;
-      --chip-active-bg: #173347;
-      --chip-active-text: #fff5e8;
-      --status-bg: rgba(177, 139, 86, 0.14);
-      --status-text: #8d6631;
-      --brand-bg: rgba(38, 74, 96, 0.12);
-      --brand-text: #244b61;
-      --button-primary-bg: linear-gradient(145deg, #183447 0%, #2b5369 100%);
-      --button-primary-text: #fff5e5;
-      --button-ghost-bg: rgba(255, 255, 255, 0.78);
-      --button-ghost-text: #516473;
-      --button-shadow: 0 14px 26px rgba(24, 56, 76, 0.16);
-      --link: #315a74;
-      --sheet-bg: rgba(247, 243, 236, 0.98);
-      --sheet-shadow: 0 -16px 46px rgba(20, 34, 45, 0.12);
-      --accent: #a88b61;
-      --accent-strong: #1b3a53;
+        radial-gradient(circle at 12% 12%, rgba(31, 73, 99, 0.18), transparent 26%),
+        radial-gradient(circle at 88% 10%, rgba(196, 155, 94, 0.15), transparent 22%),
+        linear-gradient(180deg, #f5f1e8 0%, #ece7dd 52%, #e7e1d5 100%);
+      --phone-shell: rgba(17, 29, 38, 0.94);
+      --home-bg:
+        radial-gradient(circle at top left, rgba(57, 96, 121, 0.16), transparent 26%),
+        linear-gradient(180deg, #f6f3eb 0%, #eee8de 100%);
+      --hero-bg: linear-gradient(150deg, #183346 0%, #24475f 58%, #31566a 100%);
+      --hero-shadow: 0 24px 54px rgba(16, 27, 36, 0.24);
+      --overlay-bg:
+        radial-gradient(circle at 50% 10%, rgba(255, 236, 203, 0.16), transparent 22%),
+        radial-gradient(circle at 84% 22%, rgba(255, 244, 224, 0.08), transparent 20%),
+        linear-gradient(180deg, rgba(18, 35, 47, 0.92) 0%, rgba(22, 43, 58, 0.97) 100%);
+      --glass-line: rgba(255, 255, 255, 0.12);
+      --brand-gold: #f1d9aa;
+      --brand-cream: #fff5e6;
+      --text-main: #1d2c37;
+      --text-secondary: #435460;
+      --text-soft: #73818b;
+      --action-bg: linear-gradient(145deg, #f2dec0 0%, #fff5e6 100%);
+      --action-text: #1f4156;
+      --chip-bg: rgba(255, 255, 255, 0.1);
+      --chip-border: rgba(255, 233, 197, 0.14);
+      --chip-text: rgba(248, 239, 224, 0.94);
+      --checkbox-bg: rgba(255, 255, 255, 0.12);
+      --checkbox-border: rgba(255, 242, 220, 0.22);
     }
 
     * {
       box-sizing: border-box;
     }
 
-    html, body {
+    html,
+    body {
       margin: 0;
       min-height: 100%;
-      font-family: "Avenir Next", "PingFang SC", "Helvetica Neue", sans-serif;
-      color: var(--title);
       background: var(--page-bg);
+      color: var(--text-main);
+      font-family: "Avenir Next", "PingFang SC", "Helvetica Neue", sans-serif;
     }
 
     body {
-      padding: 28px 18px 40px;
+      padding: 26px 18px 40px;
+    }
+
+    button {
+      font: inherit;
     }
 
     .demo-shell {
-      max-width: 1200px;
+      max-width: 1120px;
       margin: 0 auto;
     }
 
     .demo-head {
       display: flex;
       flex-wrap: wrap;
+      align-items: flex-start;
       justify-content: space-between;
       gap: 18px;
-      margin-bottom: 22px;
+      margin-bottom: 24px;
     }
 
-    .demo-title-block {
+    .demo-copy {
+      flex: 1 1 420px;
       min-width: 280px;
-      flex: 1 1 360px;
     }
 
     .eyebrow {
@@ -84,84 +87,62 @@
       min-height: 34px;
       padding: 0 14px;
       border-radius: 999px;
-      background: rgba(24, 53, 72, 0.08);
-      color: var(--link);
+      background: rgba(26, 57, 76, 0.08);
+      color: #24495f;
       font-size: 13px;
-      font-weight: 700;
+      font-weight: 800;
       letter-spacing: 0.08em;
       text-transform: uppercase;
     }
 
     .demo-title {
       margin: 12px 0 0;
-      font-size: clamp(28px, 4vw, 40px);
-      line-height: 1.1;
-      color: var(--title);
+      font-size: clamp(30px, 4vw, 42px);
+      line-height: 1.08;
+      letter-spacing: -0.04em;
     }
 
     .demo-desc {
-      margin: 12px 0 0;
-      max-width: 640px;
+      max-width: 680px;
+      margin: 14px 0 0;
       font-size: 15px;
-      line-height: 1.7;
+      line-height: 1.8;
       color: var(--text-secondary);
     }
 
-    .demo-toolbar {
+    .demo-actions {
       display: flex;
       flex-wrap: wrap;
-      align-items: flex-start;
-      gap: 12px;
-      min-width: 280px;
-      flex: 0 1 420px;
-      padding: 14px;
-      border-radius: 22px;
-      background: rgba(255, 252, 247, 0.78);
-      box-shadow: var(--surface-shadow);
-      backdrop-filter: blur(14px);
+      gap: 10px;
+      flex: 0 1 320px;
+      justify-content: flex-end;
     }
 
-    .toolbar-group {
-      flex: 1 1 180px;
-      min-width: 0;
-    }
-
-    .toolbar-label {
-      margin-bottom: 10px;
-      font-size: 13px;
-      font-weight: 700;
-      color: var(--text-soft);
-    }
-
-    .toolbar-chips {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-    }
-
-    .toolbar-chip {
+    .demo-chip {
       border: 0;
-      background: var(--chip-bg);
-      color: var(--chip-text);
-      padding: 10px 14px;
+      min-height: 42px;
+      padding: 0 16px;
       border-radius: 999px;
+      background: rgba(255, 252, 246, 0.82);
+      color: #587081;
       font-size: 13px;
-      font-weight: 700;
+      font-weight: 800;
       cursor: pointer;
+      box-shadow: 0 12px 24px rgba(23, 38, 49, 0.08);
       transition: 180ms ease;
     }
 
-    .toolbar-chip.is-active {
-      background: var(--chip-active-bg);
-      color: var(--chip-active-text);
-      box-shadow: 0 8px 18px rgba(23, 51, 71, 0.18);
+    .demo-chip.is-active {
+      background: #183447;
+      color: #fff4e4;
+      box-shadow: 0 14px 28px rgba(24, 52, 71, 0.2);
     }
 
-    .demo-stage {
+    .stage {
       display: grid;
-      grid-template-columns: minmax(0, 440px) minmax(280px, 1fr);
+      grid-template-columns: minmax(0, 440px) minmax(300px, 1fr);
       gap: 28px;
-      align-items: start;
+      align-items: center;
     }
 
     .phone-shell {
@@ -169,757 +150,712 @@
       max-width: 440px;
       margin: 0 auto;
       padding: 14px;
-      border-radius: 34px;
-      background: rgba(18, 31, 43, 0.92);
-      box-shadow: 0 24px 64px rgba(16, 28, 36, 0.28);
+      border-radius: 36px;
+      background: var(--phone-shell);
+      box-shadow: 0 34px 74px rgba(17, 29, 38, 0.28);
     }
 
     .phone-screen {
+      position: relative;
+      overflow: hidden;
       height: min(860px, calc(100vh - 120px));
       min-height: 760px;
-      border-radius: 26px;
-      overflow: hidden;
+      border-radius: 28px;
+      background: var(--home-bg);
+    }
+
+    .home-preview {
+      position: absolute;
+      inset: 0;
+      padding: 18px 16px 98px;
+      filter: blur(8px) saturate(0.9);
+      transform: scale(1.03);
+      transition: 220ms ease;
+    }
+
+    body[data-state="hidden"] .home-preview {
+      filter: none;
+      transform: scale(1);
+    }
+
+    .hero {
+      padding: 18px;
+      border-radius: 28px;
       background: var(--hero-bg);
-      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04);
-    }
-
-    .sheet {
-      display: flex;
-      flex-direction: column;
-      height: 100%;
-      background:
-        radial-gradient(circle at top left, rgba(255, 255, 255, 0.16), transparent 26%),
-        linear-gradient(180deg, rgba(247, 243, 236, 0.94) 0%, rgba(247, 243, 236, 0.99) 18%, var(--sheet-bg) 100%);
-    }
-
-    .sheet-header {
-      flex: 0 0 auto;
-      padding: 16px 18px 14px;
-      color: #f7f3ec;
-      background:
-        radial-gradient(circle at top right, rgba(255, 244, 223, 0.16), transparent 44%),
-        var(--hero-bg);
+      color: rgba(249, 242, 229, 0.96);
       box-shadow: var(--hero-shadow);
     }
 
-    .sheet-handle {
-      width: 52px;
-      height: 5px;
-      margin: 0 auto 14px;
-      border-radius: 999px;
-      background: rgba(255, 255, 255, 0.18);
-    }
-
-    .sheet-head-row {
+    .hero-top {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 12px;
     }
 
-    .sheet-title {
-      font-size: 18px;
-      font-weight: 800;
-      letter-spacing: 0.02em;
-    }
-
-    .sheet-close {
-      font-size: 14px;
-      font-weight: 700;
-      color: rgba(247, 243, 236, 0.84);
-    }
-
-    .sheet-subtitle {
-      margin-top: 10px;
-      font-size: 14px;
-      line-height: 1.6;
-      color: rgba(247, 243, 236, 0.78);
-    }
-
-    .sheet-body {
-      flex: 1 1 auto;
-      overflow: auto;
-      padding: 18px 16px 22px;
-      scrollbar-width: none;
-    }
-
-    .sheet-body::-webkit-scrollbar {
-      display: none;
-    }
-
-    .card {
-      margin-top: 14px;
-      padding: 16px 16px 18px;
-      border-radius: 22px;
-      background: var(--soft-block-bg);
-      box-shadow:
-        inset 0 0 0 1px var(--divider),
-        0 12px 24px rgba(24, 39, 51, 0.04);
-    }
-
-    .card:first-child {
-      margin-top: 0;
-    }
-
-    .card.is-project {
-      background: var(--project-card-bg);
-    }
-
-    .card.is-source {
-      background: rgba(255, 252, 247, 0.6);
-    }
-
-    .card-head,
-    .line-between {
-      display: flex;
-      align-items: flex-start;
-      justify-content: space-between;
-      gap: 12px;
-    }
-
-    .card-title {
-      font-size: 14px;
-      font-weight: 800;
-      color: var(--text-soft);
-      letter-spacing: 0.01em;
-    }
-
-    .card-subhint {
-      margin-top: 6px;
-      font-size: 12px;
-      line-height: 1.55;
-      color: var(--text-muted);
-    }
-
-    .section-link {
-      font-size: 13px;
-      font-weight: 800;
-      color: var(--link);
-      white-space: nowrap;
-    }
-
-    .project-name {
-      margin-top: 10px;
-      font-size: 22px;
-      line-height: 1.25;
-      font-weight: 800;
-      color: var(--title);
-    }
-
-    .project-meta,
-    .followup-meta {
-      margin-top: 6px;
-      font-size: 14px;
-      line-height: 1.6;
-      color: var(--text-secondary);
-    }
-
-    .status-row {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      margin-top: 10px;
-    }
-
-    .status-badge {
+    .avatar,
+    .notify {
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      min-height: 32px;
-      padding: 0 12px;
+      min-height: 34px;
       border-radius: 999px;
-      background: var(--status-bg);
-      color: var(--status-text);
-      font-size: 12px;
+      background: rgba(255, 255, 255, 0.1);
+      font-size: 13px;
       font-weight: 800;
     }
 
-    .status-badge.is-brand {
-      background: var(--brand-bg);
-      color: var(--brand-text);
+    .avatar {
+      width: 34px;
+      height: 34px;
     }
 
-    .summary-text,
-    .next-action {
+    .notify {
+      padding: 0 12px;
+    }
+
+    .brand-lockup {
+      display: flex;
+      align-items: flex-end;
+      gap: 12px;
+      margin-top: 22px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid rgba(255, 231, 194, 0.16);
+    }
+
+    .brand-lockup img {
+      width: 54px;
+      height: 60px;
+      object-fit: contain;
+      opacity: 0.86;
+    }
+
+    .brand-title {
+      color: var(--brand-gold);
+      font-size: 30px;
+      font-weight: 900;
+      letter-spacing: -0.05em;
+    }
+
+    .hero-title {
+      margin-top: 18px;
+      font-size: 28px;
+      line-height: 1.2;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+    }
+
+    .hero-subtitle {
       margin-top: 10px;
-      font-size: 16px;
+      font-size: 14px;
       line-height: 1.7;
+      color: rgba(246, 239, 227, 0.82);
+    }
+
+    .surface {
+      margin-top: 16px;
+      padding: 16px;
+      border-radius: 24px;
+      background: rgba(255, 252, 246, 0.78);
+      box-shadow:
+        inset 0 0 0 1px rgba(20, 34, 45, 0.06),
+        0 12px 24px rgba(24, 37, 47, 0.05);
+    }
+
+    .surface-title {
+      font-size: 16px;
+      font-weight: 800;
+    }
+
+    .surface-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 12px 0;
+      border-top: 1px solid rgba(20, 34, 45, 0.06);
+    }
+
+    .surface-row:first-of-type {
+      border-top: 0;
+      padding-top: 10px;
+    }
+
+    .surface-main {
+      min-width: 0;
+      flex: 1 1 auto;
+    }
+
+    .surface-headline {
+      font-size: 14px;
+      line-height: 1.55;
+      font-weight: 800;
       color: var(--text-main);
     }
 
-    .weak-link {
-      margin-top: 12px;
-      font-size: 13px;
-      font-weight: 800;
-      color: var(--link);
-    }
-
-    .draft-head-main {
-      min-width: 0;
-      flex: 1 1 auto;
-    }
-
-    .draft-status-row {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      margin-top: 8px;
-    }
-
-    .draft-note {
-      margin-top: 8px;
-      font-size: 13px;
+    .surface-meta {
+      margin-top: 4px;
+      font-size: 12px;
       line-height: 1.6;
       color: var(--text-soft);
     }
 
-    .grid-two {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 10px;
-      margin-top: 14px;
-    }
-
-    .info-block {
-      padding: 12px 13px;
-      border-radius: 18px;
-      background: var(--soft-block-strong);
-      box-shadow: inset 0 0 0 1px var(--divider);
-    }
-
-    .info-label {
-      font-size: 12px;
-      color: var(--text-muted);
-    }
-
-    .info-value {
-      margin-top: 6px;
-      font-size: 15px;
-      line-height: 1.5;
-      font-weight: 700;
-      color: var(--title);
-    }
-
-    .field-group {
-      margin-top: 14px;
-    }
-
-    .field-label {
-      display: block;
-      margin-bottom: 8px;
-      font-size: 13px;
-      font-weight: 800;
-      color: var(--text-soft);
-    }
-
-    .input,
-    .textarea,
-    .picker {
-      width: 100%;
-      border: 0;
-      outline: 0;
-      border-radius: 18px;
-      background: rgba(255, 255, 255, 0.72);
-      box-shadow: inset 0 0 0 1px rgba(24, 39, 51, 0.08);
-      color: var(--title);
-      font: inherit;
-    }
-
-    .input,
-    .picker {
-      min-height: 52px;
-      padding: 0 15px;
-      display: flex;
-      align-items: center;
-      font-size: 15px;
-      font-weight: 600;
-    }
-
-    .textarea {
-      min-height: 92px;
-      padding: 14px 15px;
-      font-size: 15px;
-      line-height: 1.7;
-      resize: none;
-    }
-
-    .chips {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-    }
-
-    .chip {
+    .surface-tag {
+      flex: 0 0 auto;
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      min-height: 42px;
+      min-width: 58px;
+      height: 28px;
+      padding: 0 10px;
+      border-radius: 999px;
+      background: rgba(181, 139, 78, 0.12);
+      color: #8f6732;
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .nav {
+      position: absolute;
+      left: 18px;
+      right: 18px;
+      bottom: 18px;
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 8px;
+      padding: 14px 12px 12px;
+      border-radius: 28px;
+      background: rgba(255, 252, 246, 0.9);
+      box-shadow: 0 16px 32px rgba(20, 34, 42, 0.12);
+    }
+
+    .nav-item,
+    .nav-flash {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      font-weight: 800;
+      color: #7f8a92;
+    }
+
+    .nav-dot {
+      width: 28px;
+      height: 28px;
+      border-radius: 12px;
+      background: #ebe7df;
+    }
+
+    .nav-item.is-active {
+      color: #24495f;
+    }
+
+    .nav-item.is-active .nav-dot,
+    .nav-flash .nav-dot {
+      background: linear-gradient(145deg, #173447 0%, #31586d 100%);
+    }
+
+    .nav-flash .nav-dot {
+      width: 44px;
+      height: 44px;
+      margin-top: -20px;
+      border-radius: 999px;
+      box-shadow: 0 12px 22px rgba(24, 53, 72, 0.24);
+    }
+
+    .brand-overlay {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 32px 24px 28px;
+      background: var(--overlay-bg);
+      color: var(--brand-cream);
+      transition: opacity 220ms ease, transform 220ms ease;
+    }
+
+    body[data-state="hidden"] .brand-overlay {
+      opacity: 0;
+      transform: translateY(10px);
+      pointer-events: none;
+    }
+
+    .overlay-topline {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      align-self: center;
+      min-height: 30px;
+      padding: 0 12px;
+      border-radius: 999px;
+      border: 1px solid var(--glass-line);
+      background: rgba(255, 255, 255, 0.06);
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: rgba(248, 238, 222, 0.76);
+    }
+
+    .overlay-main {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 100%;
+      max-width: 336px;
+      align-self: center;
+      text-align: center;
+      margin-top: auto;
+      margin-bottom: auto;
+    }
+
+    .overlay-logo-shell {
+      width: 96px;
+      height: 96px;
+      border-radius: 32px;
+      background:
+        radial-gradient(circle at 50% 20%, rgba(255, 238, 206, 0.2), transparent 42%),
+        rgba(255, 255, 255, 0.04);
+      box-shadow:
+        inset 0 0 0 1px rgba(255, 255, 255, 0.08),
+        0 18px 34px rgba(11, 21, 29, 0.22);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      backdrop-filter: blur(10px);
+    }
+
+    .overlay-logo {
+      width: 60px;
+      height: 68px;
+      object-fit: contain;
+      opacity: 0.94;
+    }
+
+    .overlay-brand {
+      margin-top: 18px;
+      font-size: 16px;
+      font-weight: 900;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: rgba(247, 237, 222, 0.72);
+    }
+
+    .overlay-slogan {
+      margin-top: 16px;
+      font-family: "DealCrmSlogan", "PingFang SC", sans-serif;
+      font-size: clamp(38px, 8vw, 54px);
+      line-height: 0.98;
+      letter-spacing: -0.05em;
+      color: var(--brand-gold);
+    }
+
+    .overlay-slogan-tail {
+      display: block;
+      margin-top: 8px;
+      font-family: "Avenir Next", "PingFang SC", sans-serif;
+      font-size: 18px;
+      font-weight: 800;
+      letter-spacing: 0.16em;
+      color: rgba(246, 237, 223, 0.74);
+      text-transform: uppercase;
+    }
+
+    .overlay-title {
+      width: 100%;
+      max-width: 320px;
+      margin: 22px 0 0;
+      font-size: 34px;
+      line-height: 1.06;
+      letter-spacing: -0.06em;
+      font-weight: 900;
+      color: var(--brand-cream);
+    }
+
+    .value-row {
+      display: flex;
+      flex-wrap: wrap;
+      width: 100%;
+      max-width: 336px;
+      justify-content: center;
+      gap: 10px;
+      margin-top: 24px;
+    }
+
+    .value-chip {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 38px;
       padding: 0 14px;
       border-radius: 999px;
       background: var(--chip-bg);
+      border: 1px solid var(--chip-border);
       color: var(--chip-text);
       font-size: 13px;
       font-weight: 800;
-      cursor: pointer;
-      user-select: none;
-      transition: 180ms ease;
+      letter-spacing: 0.01em;
+      backdrop-filter: blur(8px);
     }
 
-    .chip.is-active {
-      background: var(--chip-active-bg);
-      color: var(--chip-active-text);
-      box-shadow: 0 10px 22px rgba(23, 51, 71, 0.16);
-    }
-
-    .split-row {
-      display: grid;
-      grid-template-columns: 1fr 132px;
-      gap: 10px;
-    }
-
-    .source-preview {
-      margin-top: 8px;
-      font-size: 14px;
-      line-height: 1.7;
-      color: var(--text-secondary);
-    }
-
-    .source-editor {
-      margin-top: 12px;
-      display: none;
-    }
-
-    .source-actions {
+    .overlay-bottom {
       display: flex;
-      justify-content: flex-end;
-      gap: 12px;
-      margin-top: 12px;
-    }
-
-    .body-spacer {
-      height: 18px;
-    }
-
-    .sheet-footer {
-      flex: 0 0 auto;
-      padding: 14px 16px calc(16px + env(safe-area-inset-bottom));
-      border-top: 1px solid var(--divider);
-      background:
-        linear-gradient(180deg, rgba(255, 255, 255, 0) 0%, var(--sheet-bg) 22%, var(--sheet-bg) 100%);
-      backdrop-filter: blur(14px);
-    }
-
-    .footer-hint {
-      margin-bottom: 12px;
-      font-size: 13px;
-      line-height: 1.6;
-      color: var(--text-soft);
-    }
-
-    .dual-actions {
-      display: flex;
-      align-items: flex-start;
-      gap: 12px;
-    }
-
-    .btn {
-      border: 0;
-      cursor: pointer;
-      font: inherit;
-      transition: 180ms ease;
-    }
-
-    .btn-ghost {
-      flex: 0 0 134px;
-      min-height: 52px;
-      border-radius: 20px;
-      background: var(--button-ghost-bg);
-      color: var(--button-ghost-text);
-      box-shadow: inset 0 0 0 1px rgba(24, 39, 51, 0.08);
-      font-size: 15px;
-      font-weight: 800;
-    }
-
-    .btn-primary {
-      min-height: 52px;
-      border-radius: 20px;
-      background: var(--button-primary-bg);
-      color: var(--button-primary-text);
-      box-shadow: var(--button-shadow);
-      font-size: 15px;
-      font-weight: 800;
-    }
-
-    .primary-group {
-      flex: 1 1 auto;
-      min-width: 0;
-    }
-
-    .primary-group .btn-primary {
+      flex-direction: column;
       width: 100%;
+      max-width: 336px;
+      align-self: center;
+      margin-top: 24px;
+      gap: 14px;
     }
 
-    .primary-meta {
-      margin-top: 8px;
-      text-align: right;
-      font-size: 12px;
-      line-height: 1.5;
-      color: var(--text-soft);
-    }
-
-    .demo-notes {
-      padding: 18px;
-      border-radius: 28px;
-      background: rgba(255, 252, 247, 0.78);
-      box-shadow: var(--surface-shadow);
-      backdrop-filter: blur(14px);
-    }
-
-    .notes-title {
-      margin: 0;
-      font-size: 18px;
-      line-height: 1.3;
-    }
-
-    .notes-list {
-      margin: 14px 0 0;
-      padding-left: 18px;
-      color: var(--text-secondary);
-      font-size: 14px;
-      line-height: 1.8;
-    }
-
-    .notes-list li + li {
-      margin-top: 6px;
-    }
-
-    .notes-block {
-      margin-top: 18px;
-      padding: 14px 15px;
+    .primary-action {
+      min-height: 56px;
+      border: 0;
       border-radius: 20px;
-      background: rgba(255, 255, 255, 0.66);
-      box-shadow: inset 0 0 0 1px var(--divider);
+      background: var(--action-bg);
+      color: var(--action-text);
+      font-size: 16px;
+      font-weight: 900;
+      letter-spacing: 0.01em;
+      box-shadow: 0 18px 32px rgba(11, 22, 30, 0.22);
+      cursor: pointer;
     }
 
-    .notes-block-title {
-      margin: 0 0 8px;
-      font-size: 14px;
+    .skip-line {
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+      width: 100%;
+      gap: 10px;
+      text-align: left;
+      color: rgba(244, 235, 220, 0.82);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .skip-line input {
+      position: absolute;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .skip-box {
+      position: relative;
+      width: 22px;
+      height: 22px;
+      border-radius: 8px;
+      background: var(--checkbox-bg);
+      box-shadow: inset 0 0 0 1px var(--checkbox-border);
+      flex: 0 0 auto;
+    }
+
+    .skip-box::after {
+      content: "";
+      position: absolute;
+      left: 7px;
+      top: 4px;
+      width: 6px;
+      height: 10px;
+      border-right: 2px solid #173447;
+      border-bottom: 2px solid #173447;
+      transform: rotate(45deg) scale(0);
+      transform-origin: center;
+      transition: transform 160ms ease;
+    }
+
+    .skip-line input:checked + .skip-box {
+      background: #f6e7ca;
+      box-shadow: inset 0 0 0 1px rgba(246, 231, 202, 0.18);
+    }
+
+    .skip-line input:checked + .skip-box::after {
+      transform: rotate(45deg) scale(1);
+    }
+
+    .state-toast {
+      position: absolute;
+      left: 50%;
+      top: 22px;
+      transform: translateX(-50%);
+      min-height: 36px;
+      padding: 0 14px;
+      border-radius: 999px;
+      background: rgba(29, 44, 55, 0.86);
+      color: #fff4e5;
+      font-size: 12px;
       font-weight: 800;
-      color: var(--text-soft);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      transition: opacity 220ms ease;
+      pointer-events: none;
     }
 
-    .notes-block p {
-      margin: 0;
+    body[data-state="hidden"] .state-toast {
+      opacity: 1;
+    }
+
+    .notes {
+      display: grid;
+      gap: 14px;
+    }
+
+    .note-card {
+      padding: 18px 18px 20px;
+      border-radius: 26px;
+      background: rgba(255, 252, 246, 0.82);
+      box-shadow: 0 18px 38px rgba(23, 38, 49, 0.08);
+      backdrop-filter: blur(12px);
+    }
+
+    .note-title {
+      font-size: 16px;
+      font-weight: 900;
+      color: var(--text-main);
+    }
+
+    .note-desc {
+      margin-top: 8px;
       font-size: 14px;
-      line-height: 1.7;
+      line-height: 1.82;
       color: var(--text-secondary);
     }
 
-    @media (max-width: 980px) {
-      .demo-stage {
+    .tag-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 36px;
+      padding: 0 14px;
+      border-radius: 999px;
+      background: rgba(24, 52, 71, 0.08);
+      color: #254b62;
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    .mini-list {
+      display: grid;
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .mini-item {
+      padding: 12px 13px;
+      border-radius: 18px;
+      background: rgba(255, 255, 255, 0.72);
+      box-shadow: inset 0 0 0 1px rgba(20, 34, 45, 0.06);
+      font-size: 13px;
+      line-height: 1.72;
+      color: var(--text-secondary);
+    }
+
+    .mini-item strong {
+      color: var(--text-main);
+    }
+
+    @media (max-width: 1020px) {
+      .stage {
         grid-template-columns: 1fr;
       }
 
-      .demo-notes {
-        order: -1;
+      .notes {
+        max-width: 760px;
+        margin: 0 auto;
       }
     }
 
-    @media (max-width: 520px) {
+    @media (max-width: 560px) {
       body {
-        padding: 18px 10px 28px;
+        padding: 18px 12px 28px;
       }
 
       .phone-shell {
         padding: 10px;
-        border-radius: 24px;
+        border-radius: 28px;
       }
 
       .phone-screen {
         min-height: 720px;
+        height: auto;
       }
 
-      .sheet-header {
-        padding: 14px 14px 12px;
+      .overlay-title {
+        font-size: 30px;
       }
 
-      .sheet-body,
-      .sheet-footer {
-        padding-left: 12px;
-        padding-right: 12px;
-      }
-
-      .dual-actions {
-        flex-direction: column;
-      }
-
-      .btn-ghost {
-        flex-basis: auto;
-        width: 100%;
+      .overlay-slogan {
+        font-size: 44px;
       }
     }
   </style>
 </head>
-<body>
+<body data-state="visible">
   <div class="demo-shell">
     <header class="demo-head">
-      <div class="demo-title-block">
-        <div class="eyebrow">成交 CRM CodeX 版</div>
-        <h1 class="demo-title">闪录确认态 Demo</h1>
+      <div class="demo-copy">
+        <div class="eyebrow">Brand Splash Demo</div>
+        <h1 class="demo-title">首页引导层改成品牌宣传感</h1>
         <p class="demo-desc">
-          这份页面按你们当前小程序的卡片、chip、badge、fixed 底部动作风格来做，
-          重点验证 AI 整理完成后是否已经从“录入页”切到“确认页”。
+          这版只保留品牌识别和核心价值，不再让用户“阅读介绍”，而是让用户扫一眼就知道：这是一个默认私密、自己的项目自己做主、支持商机转发、AI 辅助推进的私人 CRM。
         </p>
       </div>
-      <div class="demo-toolbar">
-        <div class="toolbar-group">
-          <div class="toolbar-label">原始记录</div>
-          <div class="toolbar-chips">
-            <button class="toolbar-chip is-active" data-toggle-source="collapsed">折叠态</button>
-            <button class="toolbar-chip" data-toggle-source="expanded">展开态</button>
-          </div>
-        </div>
-        <div class="toolbar-group">
-          <div class="toolbar-label">执行时间</div>
-          <div class="toolbar-chips">
-            <button class="toolbar-chip is-active" data-toggle-time="preset">候选时间</button>
-            <button class="toolbar-chip" data-toggle-time="custom">自定义时间</button>
-          </div>
-        </div>
+      <div class="demo-actions">
+        <button class="demo-chip is-active" type="button" data-state-trigger="visible">显示引导层</button>
+        <button class="demo-chip" type="button" data-state-trigger="hidden">模拟直接进首页</button>
       </div>
     </header>
 
-    <main class="demo-stage">
-      <section class="phone-shell">
+    <section class="stage">
+      <div class="phone-shell">
         <div class="phone-screen">
-          <div class="sheet">
-            <div class="sheet-header">
-              <div class="sheet-handle"></div>
-              <div class="sheet-head-row">
-                <div class="sheet-title">快速录入</div>
-                <div class="sheet-close">关闭</div>
+          <div class="home-preview">
+            <div class="hero">
+              <div class="hero-top">
+                <div class="avatar">我</div>
+                <div class="notify">消息中心</div>
               </div>
-              <div class="sheet-subtitle">AI 已整理完成，当前页面是确认态而不是录入态。</div>
+              <div class="brand-lockup">
+                <img src="assets/brand/logo-home-export-4-transparent-cropped.png" alt="八面成交">
+                <div class="brand-title">私人CRM</div>
+              </div>
+              <div class="hero-title">今天先处理 8 条推进动作</div>
+              <div class="hero-subtitle">把项目动态、推进动作和关键节点都收进八面成交，先看动作，再看项目。</div>
             </div>
 
-            <div class="sheet-body">
-              <section class="card is-project">
-                <div class="line-between">
-                  <div>
-                    <div class="card-title">本次跟进</div>
-                    <div class="card-subhint">项目已确认，可直接保存，也可先确认任务草案</div>
-                  </div>
-                  <div class="section-link">更换项目</div>
+            <div class="surface">
+              <div class="surface-title">推进动作优先</div>
+              <div class="surface-row">
+                <div class="surface-main">
+                  <div class="surface-headline">嘉禾项目 · 跟进最终报价反馈</div>
+                  <div class="surface-meta">AI 已整理通话要点，并补齐建议执行时间</div>
                 </div>
-                <div class="project-name">华大基因数据库改造</div>
-                <div class="project-meta">华大基因科技有限公司 · 商机推进</div>
-                <div class="followup-meta">2026-05-20 14:30 · 面谈</div>
-                <div class="status-row">
-                  <div class="status-badge is-brand">AI 已整理完成</div>
+                <div class="surface-tag">今日</div>
+              </div>
+              <div class="surface-row">
+                <div class="surface-main">
+                  <div class="surface-headline">华南设计院 · 商机转发已被对方查看</div>
+                  <div class="surface-meta">你发出的协作商机，后续进展继续可追踪</div>
                 </div>
-              </section>
-
-              <section class="card">
-                <div class="line-between">
-                  <div class="card-title">AI摘要</div>
-                  <div class="section-link">调整</div>
-                </div>
-                <div class="summary-text">
-                  客户计划本周五完成内部方案评审，下周一上午确认预算口径。
-                  当前阶段重点是预算确认后是否进入报价锁定。
-                </div>
-                <div class="weak-link">重新AI整理</div>
-              </section>
-
-              <section class="card">
-                <div class="card-head">
-                  <div class="draft-head-main">
-                    <div class="card-title">AI建议的下一步</div>
-                    <div class="draft-status-row">
-                      <div class="status-badge is-brand">任务草案</div>
-                      <div class="status-badge">未创建</div>
-                    </div>
-                  </div>
-                  <div class="section-link">调整</div>
-                </div>
-
-                <div class="next-action">联系王总确认预算口径，并推进报价确认</div>
-                <div class="draft-note">这是 AI 生成的建议动作，创建任务前可先调整。</div>
-
-                <div class="grid-two">
-                  <div class="info-block">
-                    <div class="info-label">对象</div>
-                    <div class="info-value">客户决策人</div>
-                  </div>
-                  <div class="info-block">
-                    <div class="info-label">建议触达时间</div>
-                    <div class="info-value">05-26 10:00</div>
-                  </div>
-                </div>
-
-                <div class="field-group">
-                  <label class="field-label" for="task-title">任务标题</label>
-                  <div class="input" id="task-title">联系王总确认预算口径，并推进报价确认</div>
-                </div>
-
-                <div class="field-group">
-                  <div class="field-label">建议执行时间</div>
-                  <div class="chips" id="time-chips">
-                    <div class="chip is-active">05-26 10:00</div>
-                    <div class="chip">05-26 15:30</div>
-                    <div class="chip">05-27 09:30</div>
-                    <div class="chip" id="custom-time-chip">自定义</div>
-                  </div>
-                </div>
-
-                <div class="field-group" id="custom-time-group" hidden>
-                  <div class="field-label">自定义时间</div>
-                  <div class="split-row">
-                    <div class="picker">2026-05-26</div>
-                    <div class="picker">14:00</div>
-                  </div>
-                </div>
-
-                <div class="field-group">
-                  <label class="field-label" for="task-desc">任务说明</label>
-                  <div class="textarea" id="task-desc">
-                    预算口径确认后，再决定是否同步更新正式报价版本。
-                  </div>
-                </div>
-              </section>
-
-              <section class="card is-source" id="source-card">
-                <div class="line-between">
-                  <div class="card-title">原始记录</div>
-                  <div class="section-link" id="source-toggle-text">展开修改</div>
-                </div>
-                <div class="source-preview" id="source-preview">
-                  客户说本周五内部过方案，下周一上午确认预算口径，预算没问题就直接推进报价。
-                </div>
-                <div class="source-editor" id="source-editor">
-                  <div class="textarea">
-                    客户说本周五内部过方案，下周一上午确认预算口径，预算没问题就直接推进报价。
-                  </div>
-                  <div class="source-actions">
-                    <div class="section-link">切回语音录入</div>
-                    <div class="section-link">重新AI整理</div>
-                  </div>
-                </div>
-              </section>
-
-              <div class="body-spacer"></div>
+                <div class="surface-tag">协作</div>
+              </div>
             </div>
 
-            <div class="sheet-footer">
-              <div class="footer-hint">AI 已生成任务草案，请选择保存方式。</div>
-              <div class="dual-actions">
-                <button class="btn btn-ghost">仅保存跟进</button>
-                <div class="primary-group">
-                  <button class="btn btn-primary">保存并创建任务</button>
-                  <div class="primary-meta" id="create-meta">将创建：05-26 10:00</div>
+            <div class="surface">
+              <div class="surface-title">动态时间线</div>
+              <div class="surface-row">
+                <div class="surface-main">
+                  <div class="surface-headline">朗映科技 · 新增电话跟进</div>
+                  <div class="surface-meta">识别到昨晚电话交流，并建议了下一步推进</div>
                 </div>
               </div>
+              <div class="surface-row">
+                <div class="surface-main">
+                  <div class="surface-headline">星澜项目 · 对方正式接手商机</div>
+                  <div class="surface-meta">转出后仍能看到协作状态与收益链路</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="nav">
+              <div class="nav-item is-active"><div class="nav-dot"></div><div>首页</div></div>
+              <div class="nav-item"><div class="nav-dot"></div><div>项目</div></div>
+              <div class="nav-flash"><div class="nav-dot"></div><div>闪录</div></div>
+              <div class="nav-item"><div class="nav-dot"></div><div>外发</div></div>
+              <div class="nav-item"><div class="nav-dot"></div><div>我的</div></div>
+            </div>
+          </div>
+
+          <div class="state-toast">已勾选“下次不再显示”，后续直接进入首页</div>
+
+          <div class="brand-overlay">
+            <div class="overlay-topline">首次进入</div>
+
+            <div class="overlay-main">
+              <div class="overlay-logo-shell">
+                <img class="overlay-logo" src="assets/brand/logo-home-export-4-transparent-cropped.png" alt="八面成交">
+              </div>
+              <div class="overlay-brand">BAMIAN DEAL CRM</div>
+              <div class="overlay-slogan">私人CRM</div>
+              <div class="overlay-title">你的项目，你做主</div>
+              <div class="value-row">
+                <div class="value-chip">默认私密</div>
+                <div class="value-chip">商机转发</div>
+                <div class="value-chip">AI辅助推进</div>
+              </div>
+            </div>
+
+            <div class="overlay-bottom">
+              <button class="primary-action" type="button">进入八面成交</button>
+              <label class="skip-line">
+                <input id="skipToggle" type="checkbox">
+                <span class="skip-box"></span>
+                <span>我已熟悉，下次不再显示</span>
+              </label>
             </div>
           </div>
         </div>
-      </section>
+      </div>
 
-      <aside class="demo-notes">
-        <h2 class="notes-title">这版主要看 4 件事</h2>
-        <ol class="notes-list">
-          <li>顶部先建立上下文，不再让大录入框占据首屏主视觉。</li>
-          <li>AI摘要先于任务草案出现，先解释“发生了什么”，再进入“接下来做什么”。</li>
-          <li>对象、建议触达时间、任务标题、执行时间、任务说明全部收进一张任务草案卡，不再散成很多同级字段。</li>
-          <li>原始记录默认折叠，确认页默认可读，不默认可写。</li>
-        </ol>
-
-        <div class="notes-block">
-          <h3 class="notes-block-title">建议审核点</h3>
-          <p>
-            重点看“扫一眼是否能按 概览卡 → AI摘要 → 任务草案 → 底部动作 的顺序理解页面”，
-            而不是继续把它当成长表单来读。
-          </p>
+      <aside class="notes">
+        <div class="note-card">
+          <div class="note-title">这版更接近你要的方向</div>
+          <div class="note-desc">
+            它不是 onboarding，也不是功能说明页，而是一个带品牌气质的开屏引导层。用户不需要读很多内容，只要一眼记住这几个点。
+          </div>
+          <div class="tag-row">
+            <div class="tag">Logo</div>
+            <div class="tag">Slogan</div>
+            <div class="tag">品牌主张</div>
+            <div class="tag">价值标签</div>
+          </div>
         </div>
 
-        <div class="notes-block">
-          <h3 class="notes-block-title">交互开关</h3>
-          <p>
-            顶部工具栏可以切换“原始记录折叠/展开”和“候选时间/自定义时间”，
-            用来检查这两个状态下版面是否依然稳定。
-          </p>
+        <div class="note-card">
+          <div class="note-title">信息被压缩成 3 个记忆点</div>
+          <div class="mini-list">
+            <div class="mini-item"><strong>默认私密：</strong>先立住“这是私人项目空间”，不是公共 CRM。</div>
+            <div class="mini-item"><strong>商机转发：</strong>不用写成复杂功能，靠一个词先让用户知道“可以转出去协作”。</div>
+            <div class="mini-item"><strong>AI辅助推进：</strong>传达的是“少手输、少遗漏、少靠记忆”。</div>
+          </div>
         </div>
       </aside>
-    </main>
+    </section>
   </div>
 
   <script>
-    const sourceButtons = document.querySelectorAll("[data-toggle-source]");
-    const timeButtons = document.querySelectorAll("[data-toggle-time]");
-    const sourceToggleText = document.getElementById("source-toggle-text");
-    const sourceEditor = document.getElementById("source-editor");
-    const sourcePreview = document.getElementById("source-preview");
-    const customTimeGroup = document.getElementById("custom-time-group");
-    const customTimeChip = document.getElementById("custom-time-chip");
-    const createMeta = document.getElementById("create-meta");
-    const timeChips = Array.from(document.querySelectorAll("#time-chips .chip"));
+    const body = document.body
+    const buttons = Array.from(document.querySelectorAll('[data-state-trigger]'))
+    const skipToggle = document.getElementById('skipToggle')
 
-    function setToolbarActive(buttons, value, attributeName) {
+    function setState(nextState) {
+      const state = nextState === 'hidden' ? 'hidden' : 'visible'
+      body.dataset.state = state
       buttons.forEach((button) => {
-        button.classList.toggle("is-active", button.dataset[attributeName] === value);
-      });
+        button.classList.toggle('is-active', button.dataset.stateTrigger === state)
+      })
+      skipToggle.checked = state === 'hidden'
     }
 
-    function updateSourceMode(mode) {
-      const expanded = mode === "expanded";
-      sourceEditor.style.display = expanded ? "block" : "none";
-      sourcePreview.style.display = expanded ? "none" : "block";
-      sourceToggleText.textContent = expanded ? "收起" : "展开修改";
-      setToolbarActive(sourceButtons, mode, "toggleSource");
-    }
+    buttons.forEach((button) => {
+      button.addEventListener('click', () => {
+        setState(button.dataset.stateTrigger)
+      })
+    })
 
-    function activateTimeChip(indexToActivate) {
-      timeChips.forEach((chip, index) => {
-        chip.classList.toggle("is-active", index === indexToActivate);
-      });
-    }
+    skipToggle.addEventListener('change', (event) => {
+      setState(event.target.checked ? 'hidden' : 'visible')
+    })
 
-    function updateTimeMode(mode) {
-      const custom = mode === "custom";
-      customTimeGroup.hidden = !custom;
-      if (custom) {
-        activateTimeChip(timeChips.length - 1);
-        createMeta.textContent = "将创建：05-26 14:00";
-      } else {
-        activateTimeChip(0);
-        createMeta.textContent = "将创建：05-26 10:00";
-      }
-      setToolbarActive(timeButtons, mode, "toggleTime");
-    }
-
-    sourceButtons.forEach((button) => {
-      button.addEventListener("click", () => updateSourceMode(button.dataset.toggleSource));
-    });
-
-    sourceToggleText.addEventListener("click", () => {
-      const nextMode = sourceEditor.style.display === "block" ? "collapsed" : "expanded";
-      updateSourceMode(nextMode);
-    });
-
-    timeButtons.forEach((button) => {
-      button.addEventListener("click", () => updateTimeMode(button.dataset.toggleTime));
-    });
-
-    customTimeChip.addEventListener("click", () => updateTimeMode("custom"));
-    timeChips.slice(0, 3).forEach((chip, index) => {
-      chip.addEventListener("click", () => {
-        updateTimeMode("preset");
-        activateTimeChip(index);
-        createMeta.textContent = "将创建：" + chip.textContent;
-      });
-    });
-
-    updateSourceMode("collapsed");
-    updateTimeMode("preset");
+    setState(body.dataset.state)
   </script>
 </body>
 </html>

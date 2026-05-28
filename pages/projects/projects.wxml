@@ -1,5 +1,6 @@
 <view class="page-shell projects-page {{appearancePageClass}}">
-  <view wx:if="{{isLoading}}" class="rise-in">
+  <view class="custom-nav-spacer" style="height: {{tabNavigationSpacerHeight}}px;"></view>
+  <view wx:if="{{isLoading && !hasLoadedOnce}}" class="rise-in">
     <loading-panel rows="3" appearance-page-class="{{appearancePageClass}}" />
   </view>
 
@@ -130,7 +131,7 @@
           <view class="helper-text">{{item.footerMetaText}}</view>
           <view wx:if="{{!item.isClosedProject && item.showAiWakeAction && item.canAdvanceProject}}" class="project-ai-wake-entry" data-project-id="{{item.id}}" catchtap="openDormantWakeSheet">
             <view class="helper-text project-ai-wake-meta">沉默 {{item.dormantDays}} 天 · 最近 {{item.lastActiveText}}</view>
-            <view class="section-link section-link-brand ai-entry ai-entry-chip">
+            <view class="section-link section-link-brand ai-entry ai-entry-link project-ai-sheet-entry project-ai-wake-action">
               <image class="ai-entry-icon" src="/assets/icons/ai-agent-dark.svg" mode="aspectFit" />
               <view class="ai-entry-text">AI唤醒</view>
             </view>
@@ -144,7 +145,7 @@
             <text>{{item.taskActionText}}</text>
             <text wx:if="{{item.taskActionBadgeText}}" class="project-task-action-badge">{{item.taskActionBadgeText}}</text>
           </view>
-          <view wx:if="{{item.canReviewProject}}" class="btn-secondary ai-entry ai-entry-button project-review-action-btn" data-project-id="{{item.id}}" catchtap="openProjectReviewSheet">
+          <view wx:if="{{item.canReviewProject}}" class="section-link section-link-brand ai-entry ai-entry-link project-ai-sheet-entry project-review-action-btn" data-project-id="{{item.id}}" catchtap="openProjectReviewSheet">
             <image class="ai-entry-icon" src="/assets/icons/ai-agent-dark.svg" mode="aspectFit" />
             <view class="ai-entry-text">{{item.reviewActionText}}</view>
           </view>
@@ -232,7 +233,7 @@
           <view class="project-review-result-head">
             <view class="project-review-origin">{{projectReviewResult.sourceMetaText}}</view>
             <view class="inline-actions project-review-actions project-review-head-actions">
-              <view class="btn-ghost ai-entry ai-entry-button" bindtap="regenerateProjectReview">
+              <view class="btn-ghost ai-entry ai-entry-button {{isProjectReviewLoading ? 'is-loading is-disabled' : ''}}" bindtap="regenerateProjectReview">
                 <image wx:if="{{!isProjectReviewLoading}}" class="ai-entry-icon" src="/assets/icons/ai-agent-dark.svg" mode="aspectFit" />
                 <view wx:else class="ai-agent-loader">
                   <view class="ai-agent-loader-antenna is-left"><view class="ai-agent-loader-dot"></view></view>
@@ -246,7 +247,7 @@
                     <view class="ai-agent-loader-mouth"></view>
                   </view>
                 </view>
-                <view class="ai-entry-text">{{isProjectReviewLoading ? '生成中...' : projectReviewResult.regenerateLabel}}</view>
+                <view class="ai-entry-text">{{isProjectReviewLoading ? '生成中...' : '重新生成'}}</view>
               </view>
               <view wx:if="{{projectReviewResultBackup}}" class="btn-ghost" bindtap="restoreProjectReviewVersion">恢复上一版</view>
             </view>
@@ -363,7 +364,7 @@
           </view>
 
           <view class="inline-actions project-wake-actions">
-            <view class="btn-ghost ai-entry ai-entry-button" bindtap="regenerateDormantWake">
+            <view class="btn-ghost ai-entry ai-entry-button {{isProjectWakeLoading ? 'is-loading is-disabled' : ''}}" bindtap="regenerateDormantWake">
               <image wx:if="{{!isProjectWakeLoading}}" class="ai-entry-icon" src="/assets/icons/ai-agent-dark.svg" mode="aspectFit" />
               <view wx:else class="ai-agent-loader">
                 <view class="ai-agent-loader-antenna is-left"><view class="ai-agent-loader-dot"></view></view>
@@ -377,7 +378,7 @@
                   <view class="ai-agent-loader-mouth"></view>
                 </view>
               </view>
-              <view class="ai-entry-text">{{isProjectWakeLoading ? '生成中...' : projectWakeResult.regenerateLabel}}</view>
+              <view class="ai-entry-text">{{isProjectWakeLoading ? '生成中...' : '重新生成'}}</view>
             </view>
             <view wx:if="{{projectWakeResultBackup}}" class="btn-ghost" bindtap="restoreDormantWakeVersion">恢复上一版</view>
             <view class="btn-ghost" bindtap="openWakeProjectDetail">查看项目</view>
@@ -551,5 +552,3 @@
     </view>
   </view>
 </view>
-
-<bottom-nav current="projects" appearance-page-class="{{appearancePageClass}}" bind:quickentry="handleQuickEntryTap" />

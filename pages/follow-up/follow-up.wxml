@@ -60,7 +60,7 @@
               <text wx:if="{{isVoiceRecording && voiceRecordingElapsedText}}" class="voice-button-timer">{{voiceRecordingElapsedText}}</text>
             </view>
           </view>
-          <view class="btn-secondary content-action ai-entry ai-entry-button" bindtap="handleAiSummary">
+          <view class="btn-secondary content-action ai-entry ai-entry-button {{isAiLoading ? 'is-loading' : ''}} {{(!content || isAiLoading) ? 'is-disabled' : ''}}" bindtap="handleAiSummary">
             <image wx:if="{{!isAiLoading}}" class="ai-entry-icon" src="/assets/icons/ai-agent-dark.svg" mode="aspectFit" />
             <view wx:else class="ai-agent-loader">
               <view class="ai-agent-loader-antenna is-left"><view class="ai-agent-loader-dot"></view></view>
@@ -74,7 +74,7 @@
                 <view class="ai-agent-loader-mouth"></view>
               </view>
             </view>
-            <view class="ai-entry-text">{{isAiLoading ? '生成中...' : 'AI整理'}}</view>
+            <view class="ai-entry-text">{{isAiLoading ? 'AI整理中...' : 'AI整理'}}</view>
           </view>
         </view>
       </view>
@@ -205,7 +205,7 @@
 
       <view class="inline-actions follow-result-actions">
         <view class="btn-primary result-action-btn" bindtap="applyAiSummary">{{aiResult.isAdopted ? '已采用整理' : '采用整理'}}</view>
-        <view class="btn-ghost result-action-btn ai-entry ai-entry-button" bindtap="handleAiNextSuggestion">
+        <view class="btn-ghost result-action-btn ai-entry ai-entry-button {{isAiNextLoading ? 'is-loading' : ''}} {{(!aiResult || !aiResult.summary || isAiNextLoading) ? 'is-disabled' : ''}}" bindtap="handleAiNextSuggestion">
           <image wx:if="{{!isAiNextLoading}}" class="ai-entry-icon" src="/assets/icons/ai-agent-dark.svg" mode="aspectFit" />
           <view wx:else class="ai-agent-loader">
             <view class="ai-agent-loader-antenna is-left"><view class="ai-agent-loader-dot"></view></view>
@@ -219,7 +219,7 @@
               <view class="ai-agent-loader-mouth"></view>
             </view>
           </view>
-          <view class="ai-entry-text">{{isAiNextLoading ? '生成中...' : (aiNextSuggestion ? aiNextSuggestion.regenerateLabel : 'AI建议下一步')}}</view>
+          <view class="ai-entry-text">{{isAiNextLoading ? (aiNextSuggestion ? '生成中...' : 'AI建议中...') : (aiNextSuggestion ? '重新生成' : 'AI建议下一步')}}</view>
         </view>
         <view wx:if="{{aiResultBackup}}" class="btn-ghost result-action-btn" bindtap="restoreAiSummaryVersion">恢复上一版</view>
       </view>

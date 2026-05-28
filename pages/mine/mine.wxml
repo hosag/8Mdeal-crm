@@ -1,4 +1,5 @@
 <view class="page-shell mine-page {{appearancePageClass}}">
+  <view class="custom-nav-spacer" style="height: {{tabNavigationSpacerHeight}}px;"></view>
   <view wx:if="{{isLoading}}" class="rise-in">
     <loading-panel rows="2" appearance-page-class="{{appearancePageClass}}" />
   </view>
@@ -247,5 +248,3 @@
     </view>
   </view>
 </block>
-
-<bottom-nav current="mine" appearance-page-class="{{appearancePageClass}}" bind:quickentry="handleQuickEntryTap" />

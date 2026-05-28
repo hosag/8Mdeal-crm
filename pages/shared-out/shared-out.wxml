@@ -1,5 +1,6 @@
 <view class="page-shell shared-page {{appearancePageClass}}">
-  <view wx:if="{{isLoading}}" class="rise-in">
+  <view class="custom-nav-spacer" style="height: {{tabNavigationSpacerHeight}}px;"></view>
+  <view wx:if="{{isLoading && !hasLoadedOnce}}" class="rise-in">
     <loading-panel rows="2" appearance-page-class="{{appearancePageClass}}" />
   </view>
 
@@ -105,5 +106,3 @@
     </view>
   </block>
 </view>
-
-<bottom-nav current="shared" appearance-page-class="{{appearancePageClass}}" bind:quickentry="handleQuickEntryTap" />
