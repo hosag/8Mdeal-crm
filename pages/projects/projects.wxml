@@ -552,3 +552,4 @@
     </view>
   </view>
 </view>
+<privacy-authorization showPrivacyAuthorization="{{showPrivacyAuthorization}}" privacyContractName="{{privacyContractName}}" />

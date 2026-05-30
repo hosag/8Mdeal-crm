@@ -216,6 +216,7 @@ Page({
         projectId: this.data.isEdit ? result.projectId : '',
         includeHome: true,
         includeProjects: true,
+        includeSharedOut: this.data.isEdit,
         includeProjectDetail: this.data.isEdit
       })
 

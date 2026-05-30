@@ -1,5 +1,6 @@
 const { getDefaultAccountSummary, getDefaultEntitlements } = require('../services/data')
 const { formatAiQuotaRange } = require('./quota-format')
+const { ensurePrivacyAuthorization } = require('./privacy-authorization')
 
 function getAppInstance() {
   return typeof getApp === 'function' ? getApp() : null
@@ -448,6 +449,21 @@ function evaluateAction(action, snapshot, options = {}) {
 }
 
 async function ensureActionAllowed(action, options = {}) {
+  if (action === 'speech') {
+    const privacyAllowed = await ensurePrivacyAuthorization({
+      page: options.page,
+      showToast: options.toast !== false
+    })
+    if (!privacyAllowed) {
+      return {
+        allowed: false,
+        reason: 'PRIVACY_NOT_AUTHORIZED',
+        message: '需同意隐私保护指引后使用语音录入',
+        snapshot: getStateSnapshot()
+      }
+    }
+  }
+
   const snapshot = await getEntitlementSnapshot(options)
   const decision = evaluateAction(action, snapshot, options)
   if (!decision.allowed) {

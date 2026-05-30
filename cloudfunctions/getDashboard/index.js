@@ -3,6 +3,7 @@ const cloud = require('wx-server-sdk')
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 
 const db = cloud.database()
+const _ = db.command
 
 function extractErrorMessage(error) {
   if (!error) {
@@ -40,6 +41,139 @@ async function safeGetOpenidList(collectionName, openid, options = {}) {
 
     throw error
   }
+}
+
+async function safeGetList(collectionName, query, options = {}) {
+  try {
+    let request = db.collection(collectionName).where(query)
+
+    if (options.orderByField && options.orderByDirection) {
+      request = request.orderBy(options.orderByField, options.orderByDirection)
+    }
+
+    if (options.limit) {
+      request = request.limit(options.limit)
+    }
+
+    const result = await request.get()
+    return Array.isArray(result.data) ? result.data : []
+  } catch (error) {
+    if (isMissingCollectionError(error)) {
+      return []
+    }
+
+    throw error
+  }
+}
+
+function normalizeText(value) {
+  return String(value || '').trim()
+}
+
+function uniqueValues(values) {
+  return [...new Set((Array.isArray(values) ? values : [])
+    .map((value) => normalizeText(value))
+    .filter(Boolean))]
+}
+
+function chunkList(values, size = 20) {
+  const list = Array.isArray(values) ? values : []
+  const chunks = []
+  for (let index = 0; index < list.length; index += size) {
+    chunks.push(list.slice(index, index + size))
+  }
+  return chunks
+}
+
+function getSortableTime(value) {
+  const date = parseDateTime(value)
+  return date ? date.getTime() : 0
+}
+
+async function resolveAccountScope(openid) {
+  const identity = (await safeGetList('accountIdentities', {
+    provider: 'wechat_mp',
+    openid
+  }, {
+    limit: 1
+  }))[0] || null
+  const primaryAccountId = normalizeText(identity && identity.accountId)
+  const accountIds = primaryAccountId ? [primaryAccountId] : []
+  const account = primaryAccountId
+    ? (await safeGetList('accounts', { accountId: primaryAccountId }, { limit: 1 }))[0] || null
+    : null
+  const phone = normalizeText(account && account.phone)
+
+  if (phone && account && account.phoneVerified === true) {
+    ;(await safeGetList('accounts', {
+      phone,
+      phoneVerified: true
+    }, {
+      limit: 100
+    })).forEach((item) => {
+      accountIds.push(item && item.accountId)
+    })
+  }
+
+  return {
+    primaryAccountId,
+    accountIds: uniqueValues(accountIds)
+  }
+}
+
+async function loadScopedProjects(openid, accountIds) {
+  const projectMap = {}
+  const lists = []
+
+  if (openid) {
+    lists.push(await safeGetList('projects', {
+      _openid: openid
+    }, {
+      limit: 1000
+    }))
+  }
+
+  if (accountIds.length) {
+    lists.push(await safeGetList('projects', {
+      ownerAccountId: _.in(accountIds)
+    }, {
+      limit: 1000
+    }))
+    lists.push(await safeGetList('projects', {
+      accountId: _.in(accountIds)
+    }, {
+      limit: 1000
+    }))
+  }
+
+  lists.forEach((list) => {
+    ;(Array.isArray(list) ? list : []).forEach((item) => {
+      const key = normalizeText(item && item._id)
+      if (key && !projectMap[key]) {
+        projectMap[key] = item
+      }
+    })
+  })
+
+  return Object.values(projectMap).sort((left, right) => {
+    return getSortableTime(right.updatedAt || right.createdAt) - getSortableTime(left.updatedAt || left.createdAt)
+  })
+}
+
+async function safeGetProjectRelatedList(collectionName, projectIds, options = {}) {
+  const ids = uniqueValues(projectIds)
+  if (!ids.length) {
+    return []
+  }
+
+  const results = []
+  for (const chunk of chunkList(ids)) {
+    results.push(...await safeGetList(collectionName, {
+      projectId: _.in(chunk)
+    }, options))
+  }
+
+  return results
 }
 
 function startOfDay(date = new Date()) {
@@ -391,10 +525,8 @@ exports.main = async () => {
   const prevMonthStart = startOfPrevMonth(now)
   const prevMonthEnd = endOfPrevMonth(now)
 
-  const projectItems = await safeGetOpenidList('projects', openid, {
-    orderByField: 'updatedAt',
-    orderByDirection: 'desc'
-  })
+  const accountScope = await resolveAccountScope(openid)
+  const projectItems = await loadScopedProjects(openid, accountScope.accountIds)
 
   const visibleProjects = projectItems.filter((item) => !(item.handoverStatus === 'handed_over' && !item.isSharedProject))
   const activeProjects = visibleProjects.filter((item) => !isClosedProject(item))
@@ -406,7 +538,7 @@ exports.main = async () => {
 
   let followUps = []
   if (projectIds.length) {
-    followUps = (await safeGetOpenidList('followUps', openid, {
+    followUps = (await safeGetProjectRelatedList('followUps', projectIds, {
       orderByField: 'followUpTime',
       orderByDirection: 'desc'
     })).filter((item) => projectMap[item.projectId])
@@ -414,7 +546,7 @@ exports.main = async () => {
 
   const taskMap = {}
   if (projectIds.length) {
-    ;(await safeGetOpenidList('tasks', openid)).forEach((task) => {
+    ;(await safeGetProjectRelatedList('tasks', projectIds)).forEach((task) => {
       if (!task || !task.projectId || !projectMap[task.projectId]) {
         return
       }
@@ -438,7 +570,7 @@ exports.main = async () => {
 
   let deals = []
   if (projectIds.length) {
-    deals = (await safeGetOpenidList('deals', openid, {
+    deals = (await safeGetProjectRelatedList('deals', projectIds, {
       orderByField: 'contractDate',
       orderByDirection: 'desc'
     })).filter((item) => projectMap[item.projectId])

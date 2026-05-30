@@ -18,4 +18,5 @@ pnpm-debug.log*
 # Local env files
 .env
 .env.*
+!admin-web-bridge/.env.example
 tengxuninfo.txt

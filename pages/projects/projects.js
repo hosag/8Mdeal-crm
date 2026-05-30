@@ -9,7 +9,7 @@ const {
 const { buildTaskCompletionFeedback, getTaskCompletionToastTitle } = require('../../services/task-feedback')
 const { buildProjectsEntryContext } = require('../../utils/navigation-context')
 const { touchNotificationSync } = require('../../utils/notification-sync')
-const { syncPageAppearance } = require('../../utils/appearance')
+const { syncCustomTabBar, syncPageAppearance } = require('../../utils/appearance')
 const { markProjectRelatedCachesDirty } = require('../../utils/core-page-cache')
 const { ensureActionAllowed, getEntitlementSnapshot, buildEntitlementPagePrompt } = require('../../utils/entitlement-guard')
 const { readPageCache, shouldRefreshPageCache, writePageCache } = require('../../utils/page-cache')
@@ -19,7 +19,7 @@ const { getNavigationSpacerHeight } = require('../../utils/navigation-metrics')
 
 const STAGES = ['全部阶段', '线索', '洽谈', '方案', '商务', '成交', '流失']
 const ACTIVE_STAGES = ['全部阶段', '线索', '洽谈', '方案', '商务']
-const PROJECTS_PAGE_CACHE_KEY = 'projects:list'
+const PROJECTS_PAGE_CACHE_KEY = 'projects:list:v2'
 const PROJECTS_PAGE_CACHE_TTL = 45 * 1000
 const STATUS_FILTERS = [
   { key: 'all', label: '全部' },
@@ -105,7 +105,7 @@ function normalizeQuickFilter(value) {
 }
 
 function normalizeStatusFilter(value) {
-  return STATUS_FILTERS.some((item) => item.key === value) ? value : 'active'
+  return STATUS_FILTERS.some((item) => item.key === value) ? value : 'all'
 }
 
 function normalizeSortMode(value) {
@@ -875,7 +875,7 @@ Page({
     searchKeyword: '',
     quickFilter: 'all',
     sortMode: 'updated',
-    statusFilter: 'active',
+    statusFilter: 'all',
     stageFilter: '全部阶段',
     stages: STAGES,
     activeStages: ACTIVE_STAGES,
@@ -984,7 +984,7 @@ Page({
 
     this.initTaskCompletionKeyboard()
     const restoredProjectsCache = this.restoreProjectsPageCache()
-    const entitlementPromise = this.refreshEntitlementPrompt({ refresh: true })
+    const entitlementPromise = this.refreshEntitlementPrompt()
     if (restoredProjectsCache) {
       if (shouldRefreshPageCache(restoredProjectsCache)) {
         this.fetchProjects({ silent: true }).catch(() => {})
@@ -1012,7 +1012,7 @@ Page({
       this.skipNextShowRefresh = false
       return
     }
-    await this.refreshEntitlementPrompt({ refresh: true })
+    await this.refreshEntitlementPrompt()
     if (this.data.hasLoadedOnce && shouldRefreshPageCache(readPageCache(PROJECTS_PAGE_CACHE_KEY))) {
       await this.fetchProjects({ silent: true })
     }
@@ -1084,6 +1084,53 @@ Page({
     }, {
       ttl: PROJECTS_PAGE_CACHE_TTL
     })
+  },
+
+  handleAccountStorageScopeReady() {
+    if (this.data.hasLoadedOnce) {
+      this.persistProjectsPageCache()
+    }
+  },
+
+  handleAccountStorageScopeChanged() {
+    this.releaseCopyProjectLock()
+    this.stopTaskCompletionVoiceInput({ silent: true })
+    stopVoiceRecordingTicker(this, 'taskCompletionVoiceTimer', 'taskCompletionVoiceElapsedText')
+    this.clearTaskFeedbackTimer()
+    this.setData({
+      projectCards: [],
+      filteredProjects: [],
+      summaryCards: [],
+      resultSummaryText: '正在整理项目数据',
+      showShareSheet: false,
+      selectedShareProjectId: '',
+      selectedShareProjectName: '',
+      selectedShareProjectMeta: null,
+      showTransferSheet: false,
+      transferProjectName: '',
+      showTaskCompleteSheet: false,
+      taskCompletionTaskId: '',
+      taskCompletionProjectId: '',
+      taskCompletionTaskTitle: '',
+      taskCompletionText: '',
+      showProjectWakeSheet: false,
+      selectedWakeProjectId: '',
+      selectedWakeProjectName: '',
+      projectWakeResult: null,
+      showProjectReviewSheet: false,
+      selectedReviewProjectId: '',
+      selectedReviewProjectName: '',
+      projectReviewResult: null,
+      taskActionId: '',
+      isLoading: true,
+      hasLoadedOnce: false,
+      isRefreshing: false,
+      isLoadFailed: false,
+      loadError: ''
+    }, () => {
+      syncCustomTabBar(this, this.data.appearancePageClass)
+    })
+    this.fetchProjects().catch(() => {})
   },
 
   async refreshEntitlementPrompt(options = {}) {
@@ -1398,7 +1445,7 @@ Page({
       { label: '已成交', value: String(dealCount), note: `已流失 ${lostCount}` }
     ]
 
-    const hasCustomFilter = Boolean(keyword) || statusFilter !== 'active' || quickFilter !== 'all' || effectiveStageFilter !== '全部阶段'
+    const hasCustomFilter = Boolean(keyword) || statusFilter !== 'all' || quickFilter !== 'all' || effectiveStageFilter !== '全部阶段'
     let emptyTitle = '当前筛选下暂无项目'
     let emptyDesc = '你可以调整筛选条件，或直接新建项目。'
     if (keyword) {
@@ -1439,7 +1486,7 @@ Page({
     this.setData({
       searchKeyword: '',
       quickFilter: 'all',
-      statusFilter: 'active',
+      statusFilter: 'all',
       stageFilter: '全部阶段',
       sortMode: 'task'
     }, () => this.applyFilters())
@@ -1559,6 +1606,8 @@ Page({
             nextDisplay: currentProject.nextDisplay || ''
           }
         : null
+    }, () => {
+      syncCustomTabBar(this, this.data.appearancePageClass)
     })
   },
 
@@ -1594,6 +1643,8 @@ Page({
       projectWakeError: '',
       projectWakeResult: null,
       projectWakeResultBackup: null
+    }, () => {
+      syncCustomTabBar(this, this.data.appearancePageClass)
     })
 
     this.generateDormantWake(projectId)
@@ -1615,6 +1666,8 @@ Page({
       projectWakeError: '',
       projectWakeResult: null,
       projectWakeResultBackup: null
+    }, () => {
+      syncCustomTabBar(this, this.data.appearancePageClass)
     })
   },
 
@@ -1756,6 +1809,8 @@ Page({
       projectReviewError: '',
       projectReviewResult: cachedReview,
       projectReviewResultBackup: null
+    }, () => {
+      syncCustomTabBar(this, this.data.appearancePageClass)
     })
 
     if (!cachedReview) {
@@ -1778,6 +1833,8 @@ Page({
       projectReviewError: '',
       projectReviewResult: null,
       projectReviewResultBackup: null
+    }, () => {
+      syncCustomTabBar(this, this.data.appearancePageClass)
     })
   },
 
@@ -1881,6 +1938,8 @@ Page({
       transferMode: 'transfer_original',
       transferProjectName: '',
       isTransferOpening: false
+    }, () => {
+      syncCustomTabBar(this, this.data.appearancePageClass)
     })
   },
 
@@ -1907,6 +1966,8 @@ Page({
         showTransferSheet: true,
         transferMode: 'transfer_original',
         transferProjectName: clientName ? `${clientName} · 新需求` : '新需求项目'
+      }, () => {
+        syncCustomTabBar(this, this.data.appearancePageClass)
       })
       return
     }
@@ -1916,6 +1977,8 @@ Page({
       selectedShareProjectId: '',
       selectedShareProjectName: '',
       selectedShareProjectMeta: null
+    }, () => {
+      syncCustomTabBar(this, this.data.appearancePageClass)
     })
 
     const decision = await ensureActionAllowed(mode === 'outbound' ? 'share_out' : 'share_record', {
@@ -1953,6 +2016,8 @@ Page({
       transferMode: 'transfer_original',
       transferProjectName: '',
       isTransferOpening: false
+    }, () => {
+      syncCustomTabBar(this, this.data.appearancePageClass)
     })
   },
 
@@ -2003,6 +2068,8 @@ Page({
         selectedShareProjectMeta: null,
         transferMode: 'transfer_original',
         transferProjectName: ''
+      }, () => {
+        syncCustomTabBar(this, this.data.appearancePageClass)
       })
 
       wx.navigateTo({
@@ -2051,7 +2118,8 @@ Page({
       })
       markProjectRelatedCachesDirty({
         includeHome: true,
-        includeProjects: true
+        includeProjects: true,
+        includeSharedOut: true
       })
       keepCopyProjectLock = true
       await new Promise((resolve, reject) => {
@@ -2109,6 +2177,8 @@ Page({
       taskCompletionNextTaskTime: defaultNextTaskDraft.dueTime,
       taskCompletionNextTaskDescription: '',
       isTaskCompletionVoiceRecognizing: false
+    }, () => {
+      syncCustomTabBar(this, this.data.appearancePageClass)
     })
     this.syncTaskCompletionLayout(0, false)
     this.initTaskCompletionVoiceRecognition()
@@ -2134,6 +2204,8 @@ Page({
       taskCompletionNextTaskDescription: '',
       isTaskCompletionVoiceRecording: false,
       isTaskCompletionVoiceRecognizing: false
+    }, () => {
+      syncCustomTabBar(this, this.data.appearancePageClass)
     })
     this.syncTaskCompletionLayout(0, false)
   },
@@ -2594,6 +2666,11 @@ Page({
       }
     }
 
+    const decision = await ensureActionAllowed('create_task', { refresh: true, guide: true })
+    if (!decision.allowed) {
+      return
+    }
+
     this.setData({
       taskActionId: taskId
     })
@@ -2636,6 +2713,7 @@ Page({
         projectId: completedProjectId,
         includeHome: true,
         includeProjects: true,
+        includeSharedOut: true,
         includeProjectDetail: true
       })
       this.closeTaskCompleteSheet(true)

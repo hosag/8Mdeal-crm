@@ -23,11 +23,13 @@ const {
   resolvePreferredFollowUpOccurredMeta
 } = require('../../utils/follow-up-meta')
 const { startVoiceRecordingTicker, stopVoiceRecordingTicker } = require('../../utils/voice-recording')
+const { buildAccountScopedStorageKey } = require('../../utils/account-scope')
+const { ensurePrivacyAuthorization } = require('../../utils/privacy-authorization')
 
 const MAX_RECORD_DURATION = 60000
 
 function getDraftStorageKey(projectId) {
-  return `follow-up-draft:${projectId || 'default'}`
+  return buildAccountScopedStorageKey(`follow-up-draft:${projectId || 'default'}`)
 }
 
 function padNumber(value) {
@@ -484,7 +486,7 @@ Page({
       projectId,
       entryHintText
     })
-    await this.refreshEntitlementPrompt({ refresh: true })
+    await this.refreshEntitlementPrompt()
 
     if (!projectId) {
       const app = getApp()
@@ -517,7 +519,7 @@ Page({
   async onShow() {
     syncPageAppearance(this)
     this.isPageActive = true
-    await this.refreshEntitlementPrompt({ refresh: true })
+    await this.refreshEntitlementPrompt()
   },
 
   onHide() {
@@ -542,6 +544,63 @@ Page({
       silent: true
     })
     stopVoiceRecordingTicker(this, 'voiceRecordingTimer', 'voiceRecordingElapsedText')
+  },
+
+  async handleAccountStorageScopeChanged() {
+    if (this.submitRedirectTimer) {
+      clearTimeout(this.submitRedirectTimer)
+      this.submitRedirectTimer = null
+    }
+    this.stopVoiceInput({
+      silent: true
+    })
+    stopVoiceRecordingTicker(this, 'voiceRecordingTimer', 'voiceRecordingElapsedText')
+
+    const dates = createDefaultDates()
+    this.setData({
+      projectTitle: '未指定项目',
+      projectStage: '线索',
+      currentMethod: '',
+      methodTouched: false,
+      followUpDateTouched: false,
+      followUpClockTouched: false,
+      followUpDate: dates.followUpDate,
+      followUpClock: dates.followUpClock,
+      nextFollowUpDate: dates.nextFollowUpDate,
+      nextFollowUpClock: dates.nextFollowUpClock,
+      content: '',
+      attachments: [],
+      aiResult: null,
+      aiResultBackup: null,
+      adoptedAiSummaryVersionKey: '',
+      aiNextSuggestion: null,
+      adoptedAiNextVersionKey: '',
+      aiError: '',
+      aiNextError: '',
+      isAiNextLoading: false,
+      showAiDialog: false,
+      draftUpdatedAt: '',
+      isVoiceRecording: false,
+      isVoiceRecognizing: false,
+      voiceRecordingElapsedText: '',
+      voiceStatusText: '点击语音录入，可把口述内容自动追加到记录框',
+      voicePreviewText: '',
+      taskDrafts: []
+    })
+
+    if (this.data.projectId) {
+      try {
+        const { data, source } = await loadProjectDetailData(this.data.projectId)
+        this.setData({
+          dataSource: source,
+          projectTitle: data.projectDetail.name,
+          projectStage: data.projectDetail.stage
+        })
+      } catch (error) {
+        // Keep the form blank when the new account cannot load the old project context.
+      }
+    }
+    this.restoreDraft()
   },
 
   async refreshEntitlementPrompt(options = {}) {
@@ -616,7 +675,8 @@ Page({
 
   restoreDraft() {
     try {
-      const draft = wx.getStorageSync(getDraftStorageKey(this.data.projectId))
+      const storageKey = getDraftStorageKey(this.data.projectId)
+      const draft = storageKey ? wx.getStorageSync(storageKey) : null
       if (!draft || typeof draft !== 'object') {
         return
       }
@@ -651,7 +711,10 @@ Page({
 
   clearDraft() {
     try {
-      wx.removeStorageSync(getDraftStorageKey(this.data.projectId))
+      const storageKey = getDraftStorageKey(this.data.projectId)
+      if (storageKey) {
+        wx.removeStorageSync(storageKey)
+      }
     } catch (error) {
       // Ignore local draft cleanup errors.
     }
@@ -695,7 +758,15 @@ Page({
     }
 
     try {
-      wx.setStorageSync(getDraftStorageKey(this.data.projectId), draft)
+      const storageKey = getDraftStorageKey(this.data.projectId)
+      if (!storageKey) {
+        wx.showToast({
+          title: '账号初始化后再暂存',
+          icon: 'none'
+        })
+        return
+      }
+      wx.setStorageSync(storageKey, draft)
       this.setData({
         draftUpdatedAt: draft.draftUpdatedAt
       })
@@ -845,6 +916,13 @@ Page({
   },
 
   async chooseImages() {
+    const privacyAllowed = await ensurePrivacyAuthorization({
+      page: this
+    })
+    if (!privacyAllowed) {
+      return
+    }
+
     if (!wx.cloud || !wx.cloud.uploadFile) {
       wx.showToast({
         title: '当前环境未连接云存储',
@@ -1849,6 +1927,7 @@ Page({
         projectId: this.data.projectId,
         includeHome: true,
         includeProjects: true,
+        includeSharedOut: true,
         includeProjectDetail: true
       })
       wx.showToast({

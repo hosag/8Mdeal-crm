@@ -43,7 +43,7 @@ function ensureShareOutAccess(context) {
     throw new Error('ACCOUNT_DISABLED: 当前账号已被禁用')
   }
 
-  if (entitlements && entitlements.bindRequiredForWrite) {
+  if (account.phoneVerified !== true || (entitlements && entitlements.bindRequiredForWrite)) {
     throw new Error('ACCOUNT_PHONE_REQUIRED: 保存正式数据前需要先绑定手机号')
   }
 
@@ -273,6 +273,12 @@ exports.main = async (event) => {
     lastViewedAt: existingRecord && existingRecord.lastViewedAt ? existingRecord.lastViewedAt : null,
     importedAt: existingRecord && existingRecord.importedAt ? existingRecord.importedAt : null,
     importedProjectId: existingRecord && existingRecord.importedProjectId ? existingRecord.importedProjectId : '',
+    claimStatus: existingRecord && existingRecord.claimStatus
+      ? existingRecord.claimStatus
+      : (existingRecord && existingRecord.importedProjectId ? 'claimed' : ''),
+    claimToken: existingRecord && existingRecord.claimToken ? existingRecord.claimToken : '',
+    claimStartedAt: existingRecord && existingRecord.claimStartedAt ? existingRecord.claimStartedAt : null,
+    claimCompletedAt: existingRecord && existingRecord.claimCompletedAt ? existingRecord.claimCompletedAt : null,
     lastCollaboratorFollowAt: existingRecord && existingRecord.lastCollaboratorFollowAt ? existingRecord.lastCollaboratorFollowAt : null,
     updatedAt: now
   }

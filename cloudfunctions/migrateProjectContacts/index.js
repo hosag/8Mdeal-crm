@@ -5,7 +5,10 @@ cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 
 const db = cloud.database()
 const _ = db.command
-const CONTACT_CRYPTO_SECRET = process.env.CONTACT_CRYPTO_SECRET || 'deal-crm-contact-v1'
+const CONTACT_CRYPTO_SECRET = String(process.env.CONTACT_CRYPTO_SECRET || '').trim()
+if (!CONTACT_CRYPTO_SECRET) {
+  throw new Error('CONTACT_CRYPTO_SECRET is required')
+}
 const CONTACT_CRYPTO_PREFIX = 'enc:v1'
 const CONTACT_CRYPTO_KEY = crypto.createHash('sha256').update(CONTACT_CRYPTO_SECRET).digest()
 const PAGE_SIZE = 100

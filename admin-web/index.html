@@ -3,16 +3,38 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>成交 CRM 管理台</title>
+  <title>八面成交CRM 管理台</title>
   <link rel="stylesheet" href="./styles.css">
 </head>
 <body>
+  <section id="adminLoginOverlay" class="login-shell" hidden>
+    <form id="adminLoginForm" class="login-panel">
+      <div class="login-brand-row">
+        <div class="brand-mark"><img src="./assets/logo-home-export-4-transparent-cropped.png" alt="八面成交CRM"></div>
+        <div>
+          <div class="login-title">八面成交CRM 管理台</div>
+          <div class="login-subtitle">管理员登录</div>
+        </div>
+      </div>
+      <label class="login-field">
+        <span>用户名</span>
+        <input id="adminLoginUsername" type="text" autocomplete="username" placeholder="admin" required>
+      </label>
+      <label class="login-field">
+        <span>密码</span>
+        <input id="adminLoginPassword" type="password" autocomplete="current-password" required>
+      </label>
+      <div id="adminLoginError" class="login-error" hidden></div>
+      <button class="primary-btn login-submit" type="submit">登录</button>
+    </form>
+  </section>
+
   <div class="admin-shell">
     <aside class="sidebar">
       <div class="brand-block">
-        <div class="brand-mark">八</div>
+        <div class="brand-mark"><img src="./assets/logo-home-export-4-transparent-cropped.png" alt="八面成交CRM"></div>
         <div>
-          <div class="brand-title">成交 CRM 管理台</div>
+          <div class="brand-title">八面成交CRM</div>
           <div class="brand-subtitle">第一版最小可运营后台</div>
         </div>
       </div>
@@ -76,6 +98,7 @@
           </div>
           <button id="refreshDataBtn" class="ghost-btn" type="button">刷新数据</button>
           <button id="resetStateBtn" class="ghost-btn" type="button">重置演示数据</button>
+          <button id="adminLogoutBtn" class="ghost-btn" type="button" hidden>退出登录</button>
         </div>
       </header>
       <div id="runtimeNotice" class="runtime-note" hidden></div>

@@ -18,6 +18,15 @@ const {
   getDefaultHomeEntryGuideSettings,
   normalizeHomeEntryGuideSettings
 } = require('./utils/home-entry-guide')
+const { clearAllPageCache } = require('./utils/page-cache')
+const {
+  getAccountScopeFromAccount,
+  cleanupLegacySensitiveStorage,
+  cleanupAccountScopedStorage,
+  readLastAccountScope,
+  writeLastAccountScope
+} = require('./utils/account-scope')
+const { registerPrivacyAuthorizationListener } = require('./utils/privacy-authorization')
 
 App({
   onLaunch(options) {
@@ -34,6 +43,7 @@ App({
       cloudConfig,
       dataSourceLabel: cloudStatus.label,
       account: getDefaultAccountSummary(),
+      accountStorageScope: '',
       entitlements: getDefaultEntitlements(),
       entitlementsVersion: 0,
       appearanceSettings: defaultAppearanceSettings,
@@ -53,6 +63,7 @@ App({
     }
 
     this.captureReferralCode(options)
+    registerPrivacyAuthorizationListener()
     this.bootstrapSessionState()
     setTimeout(() => {
       this.bootstrapAppearancePreferences()
@@ -127,7 +138,80 @@ App({
       ...getDefaultAccountSummary(),
       ...source
     }
+    this.syncAccountStorageScope(this.globalData.account)
     return this.globalData.account
+  },
+
+  syncAccountStorageScope(account) {
+    if (!this.globalData) {
+      return ''
+    }
+
+    const nextScope = getAccountScopeFromAccount(account)
+    if (!nextScope) {
+      return ''
+    }
+
+    const currentScope = String(this.globalData.accountStorageScope || '').trim()
+    const lastScope = readLastAccountScope()
+    const previousScope = currentScope || lastScope
+    const hasScopeChanged = !!previousScope && previousScope !== nextScope
+    const shouldInitializeScopeStorage = !previousScope
+
+    cleanupLegacySensitiveStorage()
+
+    if (hasScopeChanged || shouldInitializeScopeStorage) {
+      clearAllPageCache()
+      if (hasScopeChanged) {
+        cleanupAccountScopedStorage(previousScope)
+      }
+    }
+
+    this.globalData.accountStorageScope = nextScope
+    writeLastAccountScope(nextScope)
+    if (hasScopeChanged) {
+      this.notifyAccountStorageScopeChanged(previousScope, nextScope)
+    } else {
+      this.notifyAccountStorageScopeReady(nextScope)
+    }
+    return nextScope
+  },
+
+  notifyAccountStorageScopeReady(nextScope) {
+    if (typeof getCurrentPages !== 'function') {
+      return
+    }
+
+    try {
+      getCurrentPages().forEach((page) => {
+        if (page && typeof page.handleAccountStorageScopeReady === 'function') {
+          page.handleAccountStorageScopeReady({
+            nextScope
+          })
+        }
+      })
+    } catch (error) {
+      // Page-cache rebinding should not block login/session refresh.
+    }
+  },
+
+  notifyAccountStorageScopeChanged(previousScope, nextScope) {
+    if (typeof getCurrentPages !== 'function') {
+      return
+    }
+
+    try {
+      getCurrentPages().forEach((page) => {
+        if (page && typeof page.handleAccountStorageScopeChanged === 'function') {
+          page.handleAccountStorageScopeChanged({
+            previousScope,
+            nextScope
+          })
+        }
+      })
+    } catch (error) {
+      // Account cleanup should not block login/session refresh.
+    }
   },
 
   async refreshAccount() {

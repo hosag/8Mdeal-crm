@@ -421,6 +421,8 @@ Page({
     this.setData({
       showDisplayNameSheet: true,
       displayNameInput: String(this.data.accountSummary.customDisplayName || '').trim()
+    }, () => {
+      syncCustomTabBar(this, this.data.appearancePageClass)
     })
   },
 
@@ -432,6 +434,8 @@ Page({
     this.setData({
       showDisplayNameSheet: false,
       displayNameInput: String(this.data.accountSummary.customDisplayName || '').trim()
+    }, () => {
+      syncCustomTabBar(this, this.data.appearancePageClass)
     })
   },
 
@@ -444,6 +448,8 @@ Page({
     if (normalizedDisplayName === String(this.data.accountSummary.customDisplayName || '').trim()) {
       this.setData({
         showDisplayNameSheet: false
+      }, () => {
+        syncCustomTabBar(this, this.data.appearancePageClass)
       })
       return
     }
@@ -465,6 +471,8 @@ Page({
       await this.refreshAccessState()
       this.setData({
         showDisplayNameSheet: false
+      }, () => {
+        syncCustomTabBar(this, this.data.appearancePageClass)
       })
       wx.showToast({
         title: normalizedDisplayName ? '显示名已保存' : '已恢复默认显示',

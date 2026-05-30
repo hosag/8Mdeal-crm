@@ -1,0 +1,16 @@
+<view wx:if="{{showPrivacyAuthorization}}" class="privacy-auth-mask" catchtouchmove="noop">
+  <view class="privacy-auth-panel">
+    <view class="privacy-auth-title">隐私保护提示</view>
+    <view class="privacy-auth-desc">为了使用语音录入、图片附件上传等功能，需要你先阅读并同意{{privacyContractName}}。</view>
+    <view class="privacy-auth-link" bindtap="openPrivacyContract">查看完整隐私保护指引</view>
+    <view class="privacy-auth-actions">
+      <view class="privacy-auth-cancel" bindtap="handleRejectPrivacyAuthorization">暂不同意</view>
+      <button
+        id="privacy-agree-btn"
+        class="privacy-auth-confirm"
+        open-type="agreePrivacyAuthorization"
+        bindagreeprivacyauthorization="handleAgreePrivacyAuthorization"
+      >同意并继续</button>
+    </view>
+  </view>
+</view>

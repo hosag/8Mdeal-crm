@@ -27,7 +27,15 @@ Component({
       if (key === this.data.current) {
         return
       }
-      wx.reLaunch({ url: path })
+      wx.switchTab({
+        url: path,
+        fail: () => {
+          wx.showToast({
+            title: '暂时无法切换页面',
+            icon: 'none'
+          })
+        }
+      })
     },
 
     onQuickEntry() {
@@ -52,9 +60,12 @@ Component({
         }
       }
 
-      wx.reLaunch({
-        url: '/pages/index/index?openQuickEntry=1&quickEntryStandalone=1',
+      wx.switchTab({
+        url: '/pages/index/index',
         fail: () => {
+          if (app && app.globalData) {
+            app.globalData.quickEntryRequest = null
+          }
           wx.showToast({
             title: '暂时无法打开闪录',
             icon: 'none'

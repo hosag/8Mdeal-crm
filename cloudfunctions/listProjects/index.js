@@ -3,6 +3,7 @@ const cloud = require('wx-server-sdk')
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 
 const db = cloud.database()
+const _ = db.command
 
 function extractErrorMessage(error) {
   if (!error) {
@@ -42,8 +43,159 @@ async function safeGetOpenidList(collectionName, openid, options = {}) {
   }
 }
 
+async function safeGetList(collectionName, query, options = {}) {
+  try {
+    let request = db.collection(collectionName).where(query)
+
+    if (options.orderByField && options.orderByDirection) {
+      request = request.orderBy(options.orderByField, options.orderByDirection)
+    }
+
+    if (options.limit) {
+      request = request.limit(options.limit)
+    }
+
+    const result = await request.get()
+    return Array.isArray(result.data) ? result.data : []
+  } catch (error) {
+    if (isMissingCollectionError(error)) {
+      return []
+    }
+
+    throw error
+  }
+}
+
 function normalizeText(value) {
   return String(value || '').trim()
+}
+
+function maskOpenid(value) {
+  const text = normalizeText(value)
+  if (!text) {
+    return ''
+  }
+
+  return text.length <= 8 ? text : `${text.slice(0, 4)}...${text.slice(-4)}`
+}
+
+function uniqueValues(values) {
+  return [...new Set((Array.isArray(values) ? values : [])
+    .map((value) => normalizeText(value))
+    .filter(Boolean))]
+}
+
+function getSortableTime(value) {
+  const date = parseDateTime(value)
+  return date ? date.getTime() : 0
+}
+
+function chunkList(values, size = 20) {
+  const list = Array.isArray(values) ? values : []
+  const chunks = []
+  for (let index = 0; index < list.length; index += size) {
+    chunks.push(list.slice(index, index + size))
+  }
+  return chunks
+}
+
+async function resolveAccountScope(openid) {
+  const identity = await safeGetList('accountIdentities', {
+    provider: 'wechat_mp',
+    openid
+  }, {
+    limit: 1
+  }).then((items) => items[0] || null)
+  const primaryAccountId = normalizeText(identity && identity.accountId)
+  const accountIds = primaryAccountId ? [primaryAccountId] : []
+
+  const account = primaryAccountId
+    ? (await safeGetList('accounts', { accountId: primaryAccountId }, { limit: 1 }))[0] || null
+    : null
+  const phone = normalizeText(account && account.phone)
+
+  if (phone && account && account.phoneVerified === true) {
+    const phoneAccounts = await safeGetList('accounts', {
+      phone,
+      phoneVerified: true
+    }, {
+      limit: 100
+    })
+
+    phoneAccounts.forEach((item) => {
+      accountIds.push(item && item.accountId)
+    })
+  }
+
+  return {
+    primaryAccountId,
+    accountIds: uniqueValues(accountIds)
+  }
+}
+
+async function loadScopedProjects(openid, accountIds, debugMeta = null) {
+  const projectMap = {}
+  const lists = []
+
+  if (openid) {
+    const projectsByOpenid = await safeGetList('projects', {
+      _openid: openid
+    }, {
+      limit: 1000
+    })
+    if (debugMeta) {
+      debugMeta.projectsByOpenid = projectsByOpenid.length
+    }
+    lists.push(projectsByOpenid)
+  }
+
+  if (accountIds.length) {
+    const projectsByOwnerAccount = await safeGetList('projects', {
+      ownerAccountId: _.in(accountIds)
+    }, {
+      limit: 1000
+    })
+    const projectsByAccount = await safeGetList('projects', {
+      accountId: _.in(accountIds)
+    }, {
+      limit: 1000
+    })
+    if (debugMeta) {
+      debugMeta.projectsByOwnerAccount = projectsByOwnerAccount.length
+      debugMeta.projectsByAccount = projectsByAccount.length
+    }
+    lists.push(projectsByOwnerAccount)
+    lists.push(projectsByAccount)
+  }
+
+  lists.forEach((list) => {
+    ;(Array.isArray(list) ? list : []).forEach((item) => {
+      const key = normalizeText(item && item._id)
+      if (key && !projectMap[key]) {
+        projectMap[key] = item
+      }
+    })
+  })
+
+  return Object.values(projectMap).sort((left, right) => {
+    return getSortableTime(right.updatedAt || right.createdAt) - getSortableTime(left.updatedAt || left.createdAt)
+  })
+}
+
+async function safeGetProjectRelatedList(collectionName, projectIds, options = {}) {
+  const ids = uniqueValues(projectIds)
+  if (!ids.length) {
+    return []
+  }
+
+  const results = []
+  for (const chunk of chunkList(ids)) {
+    results.push(...await safeGetList(collectionName, {
+      projectId: _.in(chunk)
+    }, options))
+  }
+
+  return results
 }
 
 function startOfDay(value = new Date()) {
@@ -267,22 +419,38 @@ exports.main = async (event = {}) => {
   const wxContext = cloud.getWXContext()
   const now = new Date()
   const includeReadonlySharedOut = parseBoolean(event.includeReadonlySharedOut)
+  const debugEnabled = parseBoolean(event.debug)
+  const debugMeta = debugEnabled
+    ? {
+        openidMasked: maskOpenid(wxContext.OPENID),
+        accountIds: [],
+        projectsByOpenid: 0,
+        projectsByOwnerAccount: 0,
+        projectsByAccount: 0,
+        mergedProjectCount: 0,
+        visibleProjectCount: 0
+      }
+    : null
 
-  const result = await db.collection('projects')
-    .where({
-      _openid: wxContext.OPENID
-    })
-    .orderBy('updatedAt', 'desc')
-    .get()
+  const accountScope = await resolveAccountScope(wxContext.OPENID)
+  if (debugMeta) {
+    debugMeta.primaryAccountId = accountScope.primaryAccountId
+    debugMeta.accountIds = accountScope.accountIds
+  }
+  const projectItems = await loadScopedProjects(wxContext.OPENID, accountScope.accountIds, debugMeta)
 
   const visibleProjects = includeReadonlySharedOut
-    ? result.data
-    : result.data.filter((item) => !(item.handoverStatus === 'handed_over' && !item.isSharedProject))
+    ? projectItems
+    : projectItems.filter((item) => !(item.handoverStatus === 'handed_over' && !item.isSharedProject))
+  if (debugMeta) {
+    debugMeta.mergedProjectCount = projectItems.length
+    debugMeta.visibleProjectCount = visibleProjects.length
+  }
   const projectIds = visibleProjects.map((item) => item._id)
   const latestFollowMap = {}
 
   if (projectIds.length) {
-    ;(await safeGetOpenidList('followUps', wxContext.OPENID, {
+    ;(await safeGetProjectRelatedList('followUps', projectIds, {
       orderByField: 'followUpTime',
       orderByDirection: 'desc'
     })).forEach((followUp) => {
@@ -296,7 +464,7 @@ exports.main = async (event = {}) => {
 
   const taskStatsMap = {}
   if (projectIds.length) {
-    ;(await safeGetOpenidList('tasks', wxContext.OPENID)).forEach((task) => {
+    ;(await safeGetProjectRelatedList('tasks', projectIds)).forEach((task) => {
       if (!task || !task.projectId || projectIds.indexOf(task.projectId) === -1) {
         return
       }
@@ -311,6 +479,7 @@ exports.main = async (event = {}) => {
 
   return {
     ok: true,
+    debug: debugMeta,
     projects: visibleProjects.map((item) => {
       const updatedAt = parseDateTime(item.updatedAt || item.createdAt)
       const contactNames = Array.isArray(item.contacts)

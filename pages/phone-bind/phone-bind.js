@@ -5,6 +5,7 @@ const {
   getDefaultAccountSummary
 } = require('../../services/data')
 const { syncPageAppearance } = require('../../utils/appearance')
+const { getDefaultPrivacyState } = require('../../utils/privacy-authorization')
 
 function normalizeReturnTo(value) {
   const current = String(value || '').trim()
@@ -77,11 +78,11 @@ function buildReturnHint(returnTo = '', focus = '', reason = '') {
 Page({
   data: {
     appearancePageClass: '',
-    phoneNumber: '',
     consentChecked: true,
+    ...getDefaultPrivacyState(),
     isSaving: false,
     account: getDefaultAccountSummary(),
-    helperText: '当前内测版先用手动绑定手机号，后续可替换为微信手机号授权。',
+    helperText: '使用微信手机号授权完成验证，手机号仅用于账号识别、权益与支付归属。',
     isLoading: true,
     returnTo: '',
     returnFocus: '',
@@ -122,12 +123,6 @@ Page({
     }
   },
 
-  onPhoneInput(event) {
-    this.setData({
-      phoneNumber: String(event.detail.value || '').replace(/[^\d]/g, '').slice(0, 11)
-    })
-  },
-
   onConsentChange(event) {
     const values = Array.isArray(event.detail && event.detail.value) ? event.detail.value : []
     this.setData({
@@ -135,17 +130,8 @@ Page({
     })
   },
 
-  async handleBind() {
-    const phoneNumber = String(this.data.phoneNumber || '').trim()
+  async handleGetPhoneNumber(event) {
     if (this.data.isSaving) {
-      return
-    }
-
-    if (!/^1\d{10}$/.test(phoneNumber)) {
-      wx.showToast({
-        title: '请输入有效的 11 位手机号',
-        icon: 'none'
-      })
       return
     }
 
@@ -157,13 +143,27 @@ Page({
       return
     }
 
+    const detail = event && event.detail ? event.detail : {}
+    const errMsg = String(detail.errMsg || '')
+    const code = String(detail.code || '').trim()
+
+    if (!code) {
+      wx.showToast({
+        title: errMsg.indexOf('deny') > -1 || errMsg.indexOf('fail') > -1
+          ? '需要授权手机号后继续'
+          : '当前微信版本暂不支持手机号授权',
+        icon: 'none'
+      })
+      return
+    }
+
     this.setData({
       isSaving: true
     })
 
     try {
       const result = await bindPhoneData({
-        phoneNumber,
+        code,
         consentChecked: this.data.consentChecked,
         consentVersion: 'p0_phone_bind_v1'
       })

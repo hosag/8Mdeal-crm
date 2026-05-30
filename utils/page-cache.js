@@ -1,4 +1,5 @@
 const FALLBACK_STORE = Object.create(null)
+const { getAccountPageCacheNamespace } = require('./account-scope')
 
 function getAppInstance() {
   return typeof getApp === 'function' ? getApp() : null
@@ -18,6 +19,20 @@ function getCacheStore() {
 
 function normalizeKey(value) {
   return String(value || '').trim()
+}
+
+function buildScopedCacheKey(key) {
+  const cacheKey = normalizeKey(key)
+  if (!cacheKey) {
+    return ''
+  }
+
+  const namespace = getAccountPageCacheNamespace()
+  if (!namespace) {
+    return ''
+  }
+
+  return `${namespace}|${cacheKey}`
 }
 
 function cloneValue(value) {
@@ -41,7 +56,7 @@ function cloneValue(value) {
 }
 
 function trimCacheEntries(prefix, maxEntries) {
-  const currentPrefix = normalizeKey(prefix)
+  const currentPrefix = prefix ? buildScopedCacheKey(prefix) : ''
   const limit = Number(maxEntries)
   if (!currentPrefix || !Number.isFinite(limit) || limit < 1) {
     return
@@ -60,7 +75,7 @@ function trimCacheEntries(prefix, maxEntries) {
 }
 
 function readPageCache(key, options = {}) {
-  const cacheKey = normalizeKey(key)
+  const cacheKey = buildScopedCacheKey(key)
   if (!cacheKey) {
     return null
   }
@@ -100,7 +115,7 @@ function shouldRefreshPageCache(entry) {
 }
 
 function writePageCache(key, data, options = {}) {
-  const cacheKey = normalizeKey(key)
+  const cacheKey = buildScopedCacheKey(key)
   if (!cacheKey) {
     return null
   }
@@ -115,11 +130,11 @@ function writePageCache(key, data, options = {}) {
   }
 
   trimCacheEntries(options.prefix, options.maxEntries)
-  return readPageCache(cacheKey)
+  return readPageCache(key)
 }
 
 function markPageCacheDirty(key) {
-  const cacheKey = normalizeKey(key)
+  const cacheKey = buildScopedCacheKey(key)
   if (!cacheKey) {
     return
   }
@@ -131,7 +146,7 @@ function markPageCacheDirty(key) {
 }
 
 function markPageCacheDirtyByPrefix(prefix) {
-  const currentPrefix = normalizeKey(prefix)
+  const currentPrefix = buildScopedCacheKey(prefix)
   if (!currentPrefix) {
     return
   }
@@ -145,7 +160,7 @@ function markPageCacheDirtyByPrefix(prefix) {
 }
 
 function clearPageCache(key) {
-  const cacheKey = normalizeKey(key)
+  const cacheKey = buildScopedCacheKey(key)
   if (!cacheKey) {
     return
   }
@@ -154,11 +169,19 @@ function clearPageCache(key) {
   delete store[cacheKey]
 }
 
+function clearAllPageCache() {
+  const store = getCacheStore()
+  Object.keys(store).forEach((key) => {
+    delete store[key]
+  })
+}
+
 module.exports = {
   readPageCache,
   shouldRefreshPageCache,
   writePageCache,
   markPageCacheDirty,
   markPageCacheDirtyByPrefix,
-  clearPageCache
+  clearPageCache,
+  clearAllPageCache
 }

@@ -90,3 +90,28 @@ http://127.0.0.1:8732/?provider=cloud&bridgeBase=http://127.0.0.1:8788&operatorK
 - bridge 只负责把浏览器请求转到云函数，不替代云函数里的 `operatorKey` 鉴权
 - `operatorKey` 仍由管理云函数自行校验
 - 浏览器 query 里带密钥只适合本地内测，正式商用前必须改成后台登录态 + 服务端会话
+
+
+## 管理员登录模式
+
+bridge 现在会同时托管 `admin-web` 静态页面和同源 API。推荐只启动一个服务：
+
+```bash
+cd /Users/shaominhe/8Mdeal-crm/admin-web-bridge
+cp .env.example .env.local
+npm start
+```
+
+然后访问：
+
+```text
+http://127.0.0.1:8788/
+```
+
+浏览器只提交管理员用户名和密码。CloudBase 的 `CLOUDBASE_SECRET_ID / CLOUDBASE_SECRET_KEY` 以及云函数内部 `ADMIN_OPERATOR_KEY` 都只保存在 `.env.local`，不会出现在 URL、localStorage 或浏览器请求体里。
+
+密码只配置哈希，不配置明文。生成哈希示例：
+
+```bash
+node -e "const crypto=require('crypto');const p=process.argv[1];const s=crypto.randomBytes(16).toString('hex');const i=100000;const h=crypto.pbkdf2Sync(p,Buffer.from(s,'hex'),i,32,'sha256').toString('hex');console.log('pbkdf2sha256:'+i+':'+s+':'+h)" "你的管理员密码"
+```

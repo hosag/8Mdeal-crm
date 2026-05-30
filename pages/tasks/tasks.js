@@ -5,7 +5,7 @@ const {
 } = require('../../services/data')
 const { buildTaskCompletionFeedback, getTaskCompletionToastTitle } = require('../../services/task-feedback')
 const { touchNotificationSync } = require('../../utils/notification-sync')
-const { syncPageAppearance } = require('../../utils/appearance')
+const { syncCustomTabBar, syncPageAppearance } = require('../../utils/appearance')
 const { markProjectRelatedCachesDirty } = require('../../utils/core-page-cache')
 const { ensureActionAllowed } = require('../../utils/entitlement-guard')
 const { startVoiceRecordingTicker, stopVoiceRecordingTicker } = require('../../utils/voice-recording')
@@ -403,6 +403,8 @@ Page({
       taskCompletionNextTaskTime: defaultNextTaskDraft.dueTime,
       taskCompletionNextTaskDescription: '',
       isTaskCompletionVoiceRecognizing: false
+    }, () => {
+      syncCustomTabBar(this, this.data.appearancePageClass)
     })
     this.syncTaskCompletionLayout(0, false)
     this.initTaskCompletionVoiceRecognition()
@@ -428,6 +430,8 @@ Page({
       taskCompletionNextTaskDescription: '',
       isTaskCompletionVoiceRecording: false,
       isTaskCompletionVoiceRecognizing: false
+    }, () => {
+      syncCustomTabBar(this, this.data.appearancePageClass)
     })
     this.syncTaskCompletionLayout(0, false)
   },
@@ -888,6 +892,11 @@ Page({
       }
     }
 
+    const decision = await ensureActionAllowed('create_task', { refresh: true, guide: true })
+    if (!decision.allowed) {
+      return
+    }
+
     this.setData({
       taskActionId: taskId
     })
@@ -930,6 +939,7 @@ Page({
         projectId: completedProjectId,
         includeHome: true,
         includeProjects: true,
+        includeSharedOut: true,
         includeProjectDetail: true
       })
       this.closeTaskCompleteSheet(true)

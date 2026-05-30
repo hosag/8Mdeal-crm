@@ -20,7 +20,7 @@ const { buildTaskCompletionFeedback, getTaskCompletionToastTitle } = require('..
 const { appendQueryParams } = require('../../utils/navigation-context')
 const { getNotificationPrimaryActionLabel } = require('../../utils/notification-meta')
 const { getNotificationSyncVersion, touchNotificationSync } = require('../../utils/notification-sync')
-const { syncPageAppearance } = require('../../utils/appearance')
+const { setGlobalCustomTabBarHidden, syncCustomTabBar, syncPageAppearance } = require('../../utils/appearance')
 const { ensureActionAllowed, getEntitlementSnapshot, buildEntitlementPagePrompt, buildEntitlementOverview } = require('../../utils/entitlement-guard')
 const {
   normalizeFollowUpMethod,
@@ -40,18 +40,67 @@ const { readPageCache, shouldRefreshPageCache, writePageCache } = require('../..
 const { openTabPage } = require('../../utils/tab-bar-navigation')
 const { getNavigationSpacerHeight } = require('../../utils/navigation-metrics')
 const {
-  HOME_ENTRY_GUIDE_STORAGE_KEY,
+  getHomeEntryGuideStorageKey,
   normalizeHomeEntryGuideSettings,
   buildDismissedHomeEntryGuideSettings,
   isHomeBrandSplashDismissed
 } = require('../../utils/home-entry-guide')
+const { buildAccountScopedStorageKey } = require('../../utils/account-scope')
 
 function getAppInstance() {
   return typeof getApp === 'function' ? getApp() : null
 }
 
-const HOME_PAGE_CACHE_KEY = 'home:dashboard'
-const HOME_PAGE_CACHE_TTL = 30 * 1000
+function schedule(callback, delay = 0) {
+  if (typeof setTimeout === 'function') {
+    return setTimeout(callback, delay)
+  }
+  callback()
+  return null
+}
+
+function showPlatformTabBar() {
+  if (typeof wx === 'undefined' || typeof wx.showTabBar !== 'function') {
+    return
+  }
+
+  wx.showTabBar({
+    animation: false,
+    fail: () => {}
+  })
+}
+
+function shouldShowHomeFallbackTabBar(data = {}) {
+  return data.showHomeEntryGuide !== true
+    && data.showQuickEntrySheet !== true
+    && data.showTaskCompleteSheet !== true
+}
+
+function syncTabBarAfterGuideClosed(page) {
+  if (!page) {
+    return
+  }
+
+  setGlobalCustomTabBarHidden(true)
+  showPlatformTabBar()
+  syncPageAppearance(page)
+  syncCustomTabBar(page, page.data.appearancePageClass)
+
+  if (typeof page.getTabBar === 'function') {
+    const tabBar = page.getTabBar()
+    if (tabBar && typeof tabBar.setData === 'function') {
+      tabBar.setData({
+        hidden: true,
+        current: 'home',
+        appearancePageClass: page.data.appearancePageClass || ''
+      })
+    }
+  }
+}
+
+const HOME_PAGE_CACHE_KEY = 'home:dashboard:v2'
+const HOME_PAGE_STORAGE_SNAPSHOT_KEY = 'homeDashboardSnapshotV2'
+const HOME_PAGE_CACHE_TTL = 2 * 60 * 1000
 const QUICK_ENTRY_ACCESS_CHECK_TTL = 30 * 1000
 
 const NEXT_TASK_TEMPLATES = [
@@ -168,6 +217,52 @@ const QUICK_ENTRY_ALIAS_BLOCK_WORDS = [
   '这个单子',
   '那个单子'
 ]
+
+function getQuickEntryStorageKey(key) {
+  return buildAccountScopedStorageKey(key)
+}
+
+function buildEmptyHomeDashboard() {
+  return {
+    metrics: [],
+    taskBoard: {
+      summary: {
+        openCount: 0,
+        overdueCount: 0,
+        todayCount: 0
+      },
+      cards: []
+    },
+    todos: [],
+    timeline: [],
+    hasContent: false,
+    overdueCount: 0
+  }
+}
+
+function isSamePlainData(left, right) {
+  try {
+    return JSON.stringify(left || null) === JSON.stringify(right || null)
+  } catch (error) {
+    return left === right
+  }
+}
+
+function shouldRefreshHomePageCacheOnShow(entry) {
+  return !!(entry && entry.dirty === true)
+}
+
+function clonePlainData(value) {
+  if (!value || typeof value !== 'object') {
+    return value
+  }
+
+  try {
+    return JSON.parse(JSON.stringify(value))
+  } catch (error) {
+    return value
+  }
+}
 
 const QUICK_ENTRY_HOMOPHONE_CHAR_MAP = QUICK_ENTRY_HOMOPHONE_GROUPS.reduce((result, group) => {
   const chars = String(group || '').split('').filter(Boolean)
@@ -3078,8 +3173,12 @@ Page({
     },
     homeAvatarText: '我',
     homeNavigationSpacerHeight: getNavigationSpacerHeight(),
-    showHomeEntryGuide: false,
+    hideCustomTabBar: true,
+    showHomeEntryGuide: true,
+    showHomeFallbackTabBar: false,
     homeEntryGuideSkipNext: false,
+    homeSuppressEntryAnimation: false,
+    homeInitialLoadingVisible: false,
     taskActionId: '',
     isLoading: true,
     hasLoadedOnce: false,
@@ -3094,6 +3193,10 @@ Page({
     this.skipNextShowRefresh = true
     this.quickEntryStandalone = String(options && options.quickEntryStandalone || '').trim() === '1'
     this.quickEntryProjectCloudAliasMemory = {}
+    const restoredHomeCache = this.restoreHomePageCache()
+    if (!restoredHomeCache) {
+      this.scheduleHomeInitialLoading()
+    }
     this.initHomeNavigationMetrics()
     this.loadQuickEntryProjectAliases()
     syncPageAppearance(this)
@@ -3105,27 +3208,33 @@ Page({
     })
     this.applyInitialHomeEntryGuideVisibility(options)
     this.syncHomeEntryGuideVisibilityFromCloud(options)
-    const restoredHomeCache = this.restoreHomePageCache()
     await this.consumePendingQuickEntryOpen()
-    if (restoredHomeCache) {
-      if (shouldRefreshPageCache(restoredHomeCache)) {
-        this.fetchDashboard({ silent: true }).catch(() => {})
-      }
-    } else {
-      await this.fetchDashboard()
+    if (!restoredHomeCache) {
+      await this.fetchDashboard({ reason: 'on_load_no_cache' })
     }
-    this.refreshEntitlementPrompt({ refresh: true })
+    this.refreshEntitlementPrompt()
     await this.consumePendingQuickEntryOpen()
+  },
+
+  onReady() {
+    this.syncHomeOverlayTabBar()
   },
 
   async onShow() {
     this.isPageActive = true
+    this.homeShownAt = Date.now()
+    const isInitialShow = this.skipNextShowRefresh
+    if (!isInitialShow && !this.data.homeSuppressEntryAnimation) {
+      this.setData({
+        homeSuppressEntryAnimation: true
+      })
+    }
     this.initHomeNavigationMetrics()
     this.loadQuickEntryProjectAliases()
     syncPageAppearance(this)
     this.applyHomeSloganFont()
     this.initTaskCompletionKeyboard()
-    if (this.skipNextShowRefresh) {
+    if (isInitialShow) {
       this.skipNextShowRefresh = false
       return
     }
@@ -3137,17 +3246,32 @@ Page({
         notificationSyncVersion: currentSyncVersion
       })
     }
-    if (this.data.hasLoadedOnce && (
-      shouldRefreshFromSync
-      || shouldRefreshPageCache(readPageCache(HOME_PAGE_CACHE_KEY))
-    )) {
-      await this.fetchDashboard({ silent: true })
+    if (!this.data.hasLoadedOnce) {
+      await this.fetchDashboard({ reason: 'on_show_not_loaded' })
+      this.refreshEntitlementPrompt()
+      await this.consumePendingQuickEntryOpen()
+      return
     }
-    this.refreshEntitlementPrompt({ refresh: true })
+    const shouldRefreshFromScopeChange = this.pendingAccountScopeDashboardRefresh === true
+    this.pendingAccountScopeDashboardRefresh = false
+    const homeCache = readPageCache(HOME_PAGE_CACHE_KEY)
+    if (this.data.hasLoadedOnce && !homeCache) {
+      this.persistHomePageCache()
+    } else if (this.data.hasLoadedOnce && (shouldRefreshFromScopeChange || shouldRefreshHomePageCacheOnShow(homeCache))) {
+      await this.fetchDashboard({ silent: true, reason: shouldRefreshFromScopeChange ? 'on_show_scope_changed' : 'on_show_cache_dirty' })
+    } else if (shouldRefreshFromSync) {
+      this.persistHomePageCache()
+    }
+    this.refreshEntitlementPrompt()
     await this.consumePendingQuickEntryOpen()
   },
 
   onHide() {
+    if (this.data.hasLoadedOnce && !this.data.homeSuppressEntryAnimation) {
+      this.setData({
+        homeSuppressEntryAnimation: true
+      })
+    }
     this.isPageActive = false
     this.stopQuickEntryVoiceInput({ silent: true })
     this.stopTaskCompletionVoiceInput({ silent: true })
@@ -3162,6 +3286,7 @@ Page({
 
   onUnload() {
     this.isPageActive = false
+    this.clearHomeInitialLoadingTimer()
     this.stopQuickEntryVoiceInput({ silent: true })
     this.stopTaskCompletionVoiceInput({ silent: true })
     stopVoiceRecordingTicker(this, 'quickEntryVoiceTimer', 'quickEntryVoiceElapsedText')
@@ -3174,6 +3299,27 @@ Page({
   },
 
   noop() {},
+
+  scheduleHomeInitialLoading() {
+    this.clearHomeInitialLoadingTimer()
+    this.homeInitialLoadingTimer = schedule(() => {
+      this.homeInitialLoadingTimer = null
+      if (!this.isPageActive || this.data.hasLoadedOnce || this.data.homeInitialLoadingVisible) {
+        return
+      }
+
+      this.setData({
+        homeInitialLoadingVisible: true
+      })
+    }, 700)
+  },
+
+  clearHomeInitialLoadingTimer() {
+    if (this.homeInitialLoadingTimer) {
+      clearTimeout(this.homeInitialLoadingTimer)
+      this.homeInitialLoadingTimer = null
+    }
+  },
 
   initHomeNavigationMetrics() {
     const navigationSpacerHeight = getNavigationSpacerHeight()
@@ -3204,7 +3350,8 @@ Page({
     }
 
     try {
-      return normalizeHomeEntryGuideSettings(wx.getStorageSync(HOME_ENTRY_GUIDE_STORAGE_KEY))
+      const storageKey = getHomeEntryGuideStorageKey()
+      return storageKey ? normalizeHomeEntryGuideSettings(wx.getStorageSync(storageKey)) : normalizeHomeEntryGuideSettings()
     } catch (error) {
       return normalizeHomeEntryGuideSettings()
     }
@@ -3216,7 +3363,10 @@ Page({
     }
 
     try {
-      wx.setStorageSync(HOME_ENTRY_GUIDE_STORAGE_KEY, normalizeHomeEntryGuideSettings(settings))
+      const storageKey = getHomeEntryGuideStorageKey()
+      if (storageKey) {
+        wx.setStorageSync(storageKey, normalizeHomeEntryGuideSettings(settings))
+      }
     } catch (error) {
       // Ignore storage failures so the homepage remains usable.
     }
@@ -3243,11 +3393,20 @@ Page({
       return
     }
 
+    setGlobalCustomTabBarHidden(true)
+
     this.setData({
       showHomeEntryGuide: shouldShow,
+      showHomeFallbackTabBar: shouldShowHomeFallbackTabBar({
+        ...this.data,
+        showHomeEntryGuide: shouldShow
+      }),
       homeEntryGuideSkipNext: false
     }, () => {
+      setGlobalCustomTabBarHidden(true)
       syncPageAppearance(this)
+      schedule(() => this.syncHomeOverlayTabBar(), 0)
+      schedule(() => this.syncHomeOverlayTabBar(), 80)
     })
   },
 
@@ -3280,9 +3439,15 @@ Page({
 
       this.setData({
         showHomeEntryGuide: false,
+        showHomeFallbackTabBar: shouldShowHomeFallbackTabBar({
+          ...this.data,
+          showHomeEntryGuide: false
+        }),
         homeEntryGuideSkipNext: false
       }, () => {
+        setGlobalCustomTabBarHidden(true)
         syncPageAppearance(this)
+        schedule(() => this.syncHomeOverlayTabBar(), 0)
       })
     } catch (error) {
       // Keep local experience stable when preference sync is unavailable.
@@ -3311,9 +3476,13 @@ Page({
       app.globalData.homeEntryGuideSessionDismissed = true
     }
     this.setData({
-      showHomeEntryGuide: false
+      showHomeEntryGuide: false,
+      showHomeFallbackTabBar: true
     }, () => {
-      syncPageAppearance(this)
+      syncTabBarAfterGuideClosed(this)
+      schedule(() => syncTabBarAfterGuideClosed(this), 0)
+      schedule(() => syncTabBarAfterGuideClosed(this), 80)
+      schedule(() => syncTabBarAfterGuideClosed(this), 220)
     })
 
     if (!shouldSkipNext) {
@@ -3354,7 +3523,16 @@ Page({
   },
 
   syncHomeOverlayTabBar() {
+    const showHomeFallbackTabBar = shouldShowHomeFallbackTabBar(this.data)
+
+    setGlobalCustomTabBarHidden(true)
+    if (this.data.showHomeFallbackTabBar !== showHomeFallbackTabBar) {
+      this.setData({
+        showHomeFallbackTabBar
+      })
+    }
     syncPageAppearance(this)
+    syncCustomTabBar(this, this.data.appearancePageClass)
   },
 
   clearQuickEntryDraftTimer() {
@@ -3486,19 +3664,104 @@ Page({
 
   restoreHomePageCache() {
     const cached = readPageCache(HOME_PAGE_CACHE_KEY)
-    if (!cached || !cached.data) {
+    const snapshot = cached && cached.data
+      ? cached
+      : (this.readHomeRuntimeSnapshot() || this.readHomeStorageSnapshot())
+
+    if (!snapshot || !snapshot.data) {
       return null
     }
 
     this.setData({
-      ...cached.data,
+      ...snapshot.data,
       isLoading: false,
       hasLoadedOnce: true,
       isRefreshing: false,
       isLoadFailed: false,
+      loadError: '',
+      homeInitialLoadingVisible: false
+    })
+    this.clearHomeInitialLoadingTimer()
+    this.lastHomeCacheRestoreSource = snapshot.key
+    return snapshot
+  },
+
+  readHomeRuntimeSnapshot() {
+    const app = getAppInstance()
+    const snapshot = app && app.globalData ? app.globalData.homePageRuntimeSnapshot : null
+    if (!snapshot || !snapshot.data) {
+      return null
+    }
+
+    return {
+      key: 'runtime:home:dashboard',
+      data: clonePlainData(snapshot.data),
+      updatedAt: Number(snapshot.updatedAt || 0),
+      ttl: 0,
+      expired: false,
+      dirty: false
+    }
+  },
+
+  readHomeStorageSnapshot() {
+    if (typeof wx === 'undefined' || typeof wx.getStorageSync !== 'function') {
+      return null
+    }
+
+    try {
+      const storageKey = buildAccountScopedStorageKey(HOME_PAGE_STORAGE_SNAPSHOT_KEY)
+      const snapshot = storageKey ? wx.getStorageSync(storageKey) : null
+      if (!snapshot || !snapshot.data) {
+        return null
+      }
+
+      return {
+        key: 'storage:home:dashboard',
+        data: clonePlainData(snapshot.data),
+        updatedAt: Number(snapshot.updatedAt || 0),
+        ttl: 0,
+        expired: false,
+        dirty: false
+      }
+    } catch (error) {
+      return null
+    }
+  },
+
+  handleAccountStorageScopeChanged() {
+    this.quickEntryProjectCloudAliasMemory = {}
+    setQuickEntryProjectAliasMemoryCache({})
+
+    if (!this.isPageActive) {
+      this.pendingAccountScopeDashboardRefresh = true
+      return
+    }
+
+    this.setData({
+      dashboard: buildEmptyHomeDashboard(),
+      notificationUnreadCount: 0,
+      notificationPendingCount: 0,
+      notificationHeadlineId: '',
+      notificationHeadlineType: '',
+      notificationHeadlineTitle: '站内提醒',
+      notificationHeadlineDesc: '当前提醒都已收口，可以继续按首页任务和跟进节奏推进。',
+      notificationHeadlineProjectName: '',
+      notificationHeadlineActionText: '查看',
+      notificationHeadlineUrl: '',
+      notificationHeadlineAutoResolve: false,
+      notificationHeadlineToneClass: 'is-success',
+      notificationHeadlineBadgeText: '已收口',
+      showQuickEntrySheet: false,
+      quickEntryProjects: [],
+      ...buildQuickEntryEmptyState(this.data.quickEntryMode || 'follow_up', []),
+      isLoading: true,
+      hasLoadedOnce: false,
+      isRefreshing: false,
+      isLoadFailed: false,
       loadError: ''
     })
-    return cached
+    this.loadQuickEntryProjectAliases()
+    this.fetchDashboard({ reason: 'account_scope_changed_active' }).catch(() => {})
   },
 
   persistHomePageCache() {
@@ -3506,7 +3769,7 @@ Page({
       return
     }
 
-    writePageCache(HOME_PAGE_CACHE_KEY, {
+    const cacheData = {
       dashboard: this.data.dashboard,
       notificationUnreadCount: this.data.notificationUnreadCount,
       notificationPendingCount: this.data.notificationPendingCount,
@@ -3520,12 +3783,49 @@ Page({
       notificationHeadlineAutoResolve: this.data.notificationHeadlineAutoResolve,
       notificationHeadlineToneClass: this.data.notificationHeadlineToneClass,
       notificationHeadlineBadgeText: this.data.notificationHeadlineBadgeText,
+      notificationSyncVersion: this.data.notificationSyncVersion,
       homeAccessCard: this.data.homeAccessCard,
       homeAvatarText: this.data.homeAvatarText,
       dataSource: this.data.dataSource
-    }, {
+    }
+
+    const app = getAppInstance()
+    if (app && app.globalData) {
+      app.globalData.homePageRuntimeSnapshot = {
+        data: clonePlainData(cacheData),
+        updatedAt: Date.now()
+      }
+    }
+
+    this.persistHomeStorageSnapshot(cacheData)
+
+    writePageCache(HOME_PAGE_CACHE_KEY, cacheData, {
       ttl: HOME_PAGE_CACHE_TTL
     })
+  },
+
+  persistHomeStorageSnapshot(cacheData) {
+    if (typeof wx === 'undefined' || typeof wx.setStorageSync !== 'function') {
+      return
+    }
+
+    try {
+      const storageKey = buildAccountScopedStorageKey(HOME_PAGE_STORAGE_SNAPSHOT_KEY)
+      if (storageKey) {
+        wx.setStorageSync(storageKey, {
+          data: clonePlainData(cacheData),
+          updatedAt: Date.now()
+        })
+      }
+    } catch (error) {
+      // Storage snapshots are a best-effort page restore fallback.
+    }
+  },
+
+  handleAccountStorageScopeReady() {
+    if (this.data.hasLoadedOnce) {
+      this.persistHomePageCache()
+    }
   },
 
   async consumePendingQuickEntryOpen() {
@@ -3567,10 +3867,21 @@ Page({
       this.quickEntryEntitlementRefreshedAt = Date.now()
     }
 
-    this.setData({
-      homeAccessCard: buildHomeAccessCard(snapshot),
-      homeAvatarText: buildHomeAvatarText(snapshot.account)
-    })
+    const nextHomeAccessCard = buildHomeAccessCard(snapshot)
+    const nextHomeAvatarText = buildHomeAvatarText(snapshot.account)
+    const patch = {}
+
+    if (!isSamePlainData(this.data.homeAccessCard, nextHomeAccessCard)) {
+      patch.homeAccessCard = nextHomeAccessCard
+    }
+
+    if (this.data.homeAvatarText !== nextHomeAvatarText) {
+      patch.homeAvatarText = nextHomeAvatarText
+    }
+
+    if (Object.keys(patch).length) {
+      this.setData(patch)
+    }
     this.applyDefaultHeadlineFromEntitlements(snapshot)
     this.persistHomePageCache()
   },
@@ -3589,7 +3900,7 @@ Page({
     }
 
     const headline = buildHomeEntitlementHeadline(currentSnapshot)
-    this.setData({
+    const patch = {
       notificationHeadlineTitle: headline.title,
       notificationHeadlineDesc: headline.desc,
       notificationHeadlineProjectName: '',
@@ -3598,7 +3909,11 @@ Page({
       notificationHeadlineAutoResolve: false,
       notificationHeadlineToneClass: headline.toneClass,
       notificationHeadlineBadgeText: headline.badgeText
-    })
+    }
+    const hasChanged = Object.keys(patch).some((key) => this.data[key] !== patch[key])
+    if (hasChanged) {
+      this.setData(patch)
+    }
   },
 
   handleEntitlementPromptAction() {
@@ -3662,6 +3977,7 @@ Page({
   async fetchDashboard(options = {}) {
     const silent = options.silent === true
     const shouldPreserveContent = silent || this.data.hasLoadedOnce
+    this.lastHomeFetchReason = String(options.reason || '').trim() || (silent ? 'silent_refresh' : 'direct_refresh')
 
     this.setData({
       isLoading: silent ? this.data.isLoading : true,
@@ -3679,8 +3995,10 @@ Page({
         isLoading: false,
         hasLoadedOnce: true,
         isRefreshing: false,
+        homeInitialLoadingVisible: false,
         dataSource: dashboardResult.source
       }, () => {
+        this.clearHomeInitialLoadingTimer()
         this.persistHomePageCache()
       })
       this.applyDefaultHeadlineFromEntitlements()
@@ -3812,7 +4130,7 @@ Page({
   },
 
   retryFetch() {
-    this.fetchDashboard()
+    this.fetchDashboard({ reason: 'manual_retry' })
   },
 
   openProjectDetail(event) {
@@ -3861,6 +4179,7 @@ Page({
 
     const defaultNextTaskDraft = buildDefaultNextTaskDraft()
     this.setData({
+      showHomeFallbackTabBar: false,
       showTaskCompleteSheet: true,
       taskCompletionTaskId: taskId,
       taskCompletionProjectId: currentTask.projectId || '',
@@ -4373,6 +4692,11 @@ Page({
       }
     }
 
+    const decision = await ensureActionAllowed('create_task', { refresh: true, guide: true })
+    if (!decision.allowed) {
+      return
+    }
+
     this.setData({
       taskActionId: taskId
     })
@@ -4415,10 +4739,11 @@ Page({
         projectId: completedProjectId,
         includeHome: true,
         includeProjects: true,
+        includeSharedOut: true,
         includeProjectDetail: true
       })
       this.closeTaskCompleteSheet(true)
-      await this.fetchDashboard()
+      await this.fetchDashboard({ reason: 'task_complete_success' })
       this.showTaskFeedback(feedback)
     } catch (error) {
       wx.showToast({
@@ -4490,7 +4815,8 @@ Page({
     }
 
     try {
-      const drafts = wx.getStorageSync(QUICK_ENTRY_DRAFT_STORAGE_KEY)
+      const storageKey = getQuickEntryStorageKey(QUICK_ENTRY_DRAFT_STORAGE_KEY)
+      const drafts = storageKey ? wx.getStorageSync(storageKey) : null
       return drafts && typeof drafts === 'object' ? drafts : {}
     } catch (error) {
       return {}
@@ -4503,7 +4829,10 @@ Page({
     }
 
     try {
-      wx.setStorageSync(QUICK_ENTRY_DRAFT_STORAGE_KEY, drafts && typeof drafts === 'object' ? drafts : {})
+      const storageKey = getQuickEntryStorageKey(QUICK_ENTRY_DRAFT_STORAGE_KEY)
+      if (storageKey) {
+        wx.setStorageSync(storageKey, drafts && typeof drafts === 'object' ? drafts : {})
+      }
     } catch (error) {
       // ignore draft persistence failures in quick entry flow
     }
@@ -4515,7 +4844,8 @@ Page({
     }
 
     try {
-      const aliases = wx.getStorageSync(QUICK_ENTRY_PROJECT_ALIAS_STORAGE_KEY)
+      const storageKey = getQuickEntryStorageKey(QUICK_ENTRY_PROJECT_ALIAS_STORAGE_KEY)
+      const aliases = storageKey ? wx.getStorageSync(storageKey) : null
       return normalizeQuickEntryProjectAliasMemory(aliases)
     } catch (error) {
       return {}
@@ -4528,10 +4858,13 @@ Page({
     }
 
     try {
-      wx.setStorageSync(
-        QUICK_ENTRY_PROJECT_ALIAS_STORAGE_KEY,
-        normalizeQuickEntryProjectAliasMemory(aliases)
-      )
+      const storageKey = getQuickEntryStorageKey(QUICK_ENTRY_PROJECT_ALIAS_STORAGE_KEY)
+      if (storageKey) {
+        wx.setStorageSync(
+          storageKey,
+          normalizeQuickEntryProjectAliasMemory(aliases)
+        )
+      }
     } catch (error) {
       // ignore alias persistence failures in quick entry flow
     }
@@ -4543,7 +4876,8 @@ Page({
     }
 
     try {
-      const payload = wx.getStorageSync(QUICK_ENTRY_PROJECT_ALIAS_HIT_HISTORY_STORAGE_KEY)
+      const storageKey = getQuickEntryStorageKey(QUICK_ENTRY_PROJECT_ALIAS_HIT_HISTORY_STORAGE_KEY)
+      const payload = storageKey ? wx.getStorageSync(storageKey) : null
       return normalizeQuickEntryAliasHitHistory(payload)
     } catch (error) {
       return {}
@@ -4556,10 +4890,13 @@ Page({
     }
 
     try {
-      wx.setStorageSync(
-        QUICK_ENTRY_PROJECT_ALIAS_HIT_HISTORY_STORAGE_KEY,
-        normalizeQuickEntryAliasHitHistory(history)
-      )
+      const storageKey = getQuickEntryStorageKey(QUICK_ENTRY_PROJECT_ALIAS_HIT_HISTORY_STORAGE_KEY)
+      if (storageKey) {
+        wx.setStorageSync(
+          storageKey,
+          normalizeQuickEntryAliasHitHistory(history)
+        )
+      }
     } catch (error) {
       // ignore hit history persistence failures in quick entry flow
     }
@@ -4769,7 +5106,8 @@ Page({
     }
 
     try {
-      return !!wx.getStorageSync(QUICK_ENTRY_VOICE_HINT_STORAGE_KEY)
+      const storageKey = getQuickEntryStorageKey(QUICK_ENTRY_VOICE_HINT_STORAGE_KEY)
+      return storageKey ? !!wx.getStorageSync(storageKey) : false
     } catch (error) {
       return false
     }
@@ -4781,7 +5119,8 @@ Page({
     }
 
     try {
-      return !!wx.getStorageSync(QUICK_ENTRY_LEARNING_DEBUG_STORAGE_KEY)
+      const storageKey = getQuickEntryStorageKey(QUICK_ENTRY_LEARNING_DEBUG_STORAGE_KEY)
+      return storageKey ? !!wx.getStorageSync(storageKey) : false
     } catch (error) {
       return false
     }
@@ -4793,7 +5132,10 @@ Page({
     }
 
     try {
-      wx.setStorageSync(QUICK_ENTRY_VOICE_HINT_STORAGE_KEY, 1)
+      const storageKey = getQuickEntryStorageKey(QUICK_ENTRY_VOICE_HINT_STORAGE_KEY)
+      if (storageKey) {
+        wx.setStorageSync(storageKey, 1)
+      }
     } catch (error) {
       // ignore storage failures in onboarding hint flow
     }
@@ -5222,6 +5564,7 @@ Page({
     const draftState = this.buildQuickEntryStateFromDraft(mode, draft, this.data.quickEntryProjects)
     const accessPrompt = this.getQuickEntryAccessPromptState(mode)
     this.setData({
+      showHomeFallbackTabBar: false,
       showQuickEntrySheet: true,
       showQuickEntrySuccessPanel: false,
       quickEntrySuccessState: buildQuickEntrySuccessState(),
@@ -5752,6 +6095,7 @@ Page({
 
     this.clearQuickEntryDraftTimer()
     this.setData({
+      showHomeFallbackTabBar: false,
       showQuickEntrySheet: true,
       showQuickEntrySuccessPanel: true,
       quickEntrySuccessState: successState
@@ -7382,10 +7726,11 @@ Page({
 
       markProjectRelatedCachesDirty({
         includeHome: true,
-        includeProjects: true
+        includeProjects: true,
+        includeSharedOut: true
       })
       this.clearQuickEntryDraft('project')
-      await this.fetchDashboard()
+      await this.fetchDashboard({ reason: 'quick_project_success' })
       this.showQuickEntrySuccess({
         mode: 'project',
         title: '项目已创建',
@@ -7512,10 +7857,11 @@ Page({
         projectId,
         includeHome: true,
         includeProjects: true,
+        includeSharedOut: true,
         includeProjectDetail: true
       })
       this.clearQuickEntryDraft('follow_up')
-      await this.fetchDashboard()
+      await this.fetchDashboard({ reason: 'quick_follow_up_success' })
       this.closeQuickEntrySheet({
         force: true,
         discard: true,
@@ -7635,10 +7981,11 @@ Page({
         projectId,
         includeHome: true,
         includeProjects: true,
+        includeSharedOut: true,
         includeProjectDetail: true
       })
       this.clearQuickEntryDraft('task')
-      await this.fetchDashboard()
+      await this.fetchDashboard({ reason: 'quick_task_success' })
       this.showTaskFeedback({
         title: '下一步动作已加入推进清单',
         detail: `${taskTitle} 已进入首页“推进动作优先”，后续可直接完成并回填结果。`
@@ -7714,6 +8061,10 @@ Page({
   },
 
   async openHeadlineNotification() {
+    if (this.homeShownAt && Date.now() - this.homeShownAt < 500) {
+      return
+    }
+
     const notificationId = String(this.data.notificationHeadlineId || '').trim()
     const actionUrl = String(this.data.notificationHeadlineUrl || '').trim()
     const notificationType = String(this.data.notificationHeadlineType || '').trim()

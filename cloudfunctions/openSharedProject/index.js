@@ -5,10 +5,14 @@ cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 
 const db = cloud.database()
 const _ = db.command
-const CONTACT_CRYPTO_SECRET = process.env.CONTACT_CRYPTO_SECRET || 'deal-crm-contact-v1'
+const CONTACT_CRYPTO_SECRET = String(process.env.CONTACT_CRYPTO_SECRET || '').trim()
+if (!CONTACT_CRYPTO_SECRET) {
+  throw new Error('CONTACT_CRYPTO_SECRET is required')
+}
 const CONTACT_CRYPTO_PREFIX = 'enc:v1'
 const CONTACT_CRYPTO_KEY = crypto.createHash('sha256').update(CONTACT_CRYPTO_SECRET).digest()
 const REFERRAL_REWARD_AI_TOKENS = 100000
+const OUTBOUND_CLAIM_STALE_MS = 5 * 60 * 1000
 
 const defaultShareTags = [
   {
@@ -598,6 +602,235 @@ function upsertShareViewLog(viewLogs, payload = {}) {
   }
 }
 
+function getUpdateCount(result) {
+  if (result && result.stats && Number.isFinite(Number(result.stats.updated))) {
+    return Number(result.stats.updated)
+  }
+  if (result && Number.isFinite(Number(result.updated))) {
+    return Number(result.updated)
+  }
+  return 0
+}
+
+function buildClaimToken(receiverOpenid, now = new Date()) {
+  const randomPart = crypto.randomBytes(8).toString('hex')
+  return `${normalizeText(receiverOpenid) || 'anonymous'}:${now.getTime()}:${randomPart}`
+}
+
+function resolveClaimReceiverName(record, viewMeta, fallbackName = '') {
+  return normalizeText(record && record.receiverName)
+    || normalizeText(viewMeta && viewMeta.latestViewerName)
+    || normalizeText(fallbackName)
+    || '其他接手方'
+}
+
+function buildShareClaimBlockedResult(record, receiverOpenid, fallbackName = '') {
+  const currentRecord = record && typeof record === 'object' && !Array.isArray(record) ? record : {}
+  const viewMeta = buildShareViewMeta(getShareViewLogs(currentRecord))
+  const receiverName = resolveClaimReceiverName(currentRecord, viewMeta, fallbackName)
+  return {
+    ok: false,
+    blocked: true,
+    blockedReason: 'already_taken_over',
+    blockedReceiverName: receiverName,
+    blockedMessage: `${receiverName} 已接手这个项目`,
+    importedProjectId: normalizeText(currentRecord.importedProjectId) || normalizeText(viewMeta.latestImportedProjectId),
+    receiverOpenid: normalizeText(currentRecord.receiverOpenid) || normalizeText(viewMeta.latestViewerOpenid) || normalizeText(receiverOpenid)
+  }
+}
+
+function buildShareClaimInProgressResult(record, receiverOpenid, fallbackName = '') {
+  const currentRecord = record && typeof record === 'object' && !Array.isArray(record) ? record : {}
+  const viewMeta = buildShareViewMeta(getShareViewLogs(currentRecord))
+  const receiverName = resolveClaimReceiverName(currentRecord, viewMeta, fallbackName)
+  return {
+    ok: false,
+    blocked: true,
+    blockedReason: 'takeover_in_progress',
+    blockedReceiverName: receiverName,
+    blockedMessage: `${receiverName} 正在接手这个项目，请稍后刷新`,
+    importedProjectId: normalizeText(currentRecord.importedProjectId) || normalizeText(viewMeta.latestImportedProjectId),
+    receiverOpenid: normalizeText(currentRecord.receiverOpenid) || normalizeText(viewMeta.latestViewerOpenid) || normalizeText(receiverOpenid)
+  }
+}
+
+function isShareClaimStale(record, now = new Date()) {
+  const claimStartedAt = parseDate(record && record.claimStartedAt)
+  if (!claimStartedAt) {
+    return false
+  }
+
+  return now.getTime() - claimStartedAt.getTime() > OUTBOUND_CLAIM_STALE_MS
+}
+
+async function loadShareRecord(shareRecordId) {
+  const result = await db.collection('shareRecords').doc(shareRecordId).get()
+  return result && result.data ? result.data : null
+}
+
+async function tryClaimOutboundShareRecord(options = {}) {
+  const shareRecordId = normalizeText(options.shareRecordId)
+  const shareRecord = options.shareRecord || {}
+  const receiverOpenid = normalizeText(options.receiverOpenid)
+  const receiverAccountId = normalizeText(options.receiverAccountId)
+  const receiverName = normalizeText(options.receiverName) || '微信用户'
+  const now = options.now instanceof Date ? options.now : new Date()
+  const existingViewLogs = Array.isArray(options.existingViewLogs) ? options.existingViewLogs : getShareViewLogs(shareRecord)
+  const existingViewMeta = buildShareViewMeta(existingViewLogs)
+  const currentClaimStatus = normalizeText(shareRecord.claimStatus)
+  const currentReceiverOpenid = normalizeText(shareRecord.receiverOpenid) || normalizeText(existingViewMeta.latestViewerOpenid)
+  const currentImportedProjectId = normalizeText(shareRecord.importedProjectId) || normalizeText(existingViewMeta.latestImportedProjectId)
+
+  if (!shareRecordId || !receiverOpenid) {
+    return {
+      ok: false,
+      blocked: false,
+      message: 'claim context is required'
+    }
+  }
+
+  if (currentImportedProjectId || currentClaimStatus === 'claimed') {
+    if (currentReceiverOpenid && currentReceiverOpenid !== receiverOpenid) {
+      return buildShareClaimBlockedResult(shareRecord, receiverOpenid)
+    }
+    return {
+      ok: true,
+      alreadyClaimedByCurrentReceiver: true,
+      claimToken: normalizeText(shareRecord.claimToken),
+      viewLogs: existingViewLogs,
+      viewMeta: existingViewMeta
+    }
+  }
+
+  if (currentClaimStatus === 'claiming') {
+    if (!isShareClaimStale(shareRecord, now)) {
+      return buildShareClaimInProgressResult(shareRecord, receiverOpenid, receiverName)
+    }
+  }
+
+  const shouldReplaceClaimReceiver = currentClaimStatus === 'claiming' && isShareClaimStale(shareRecord, now)
+  const claimToken = buildClaimToken(receiverOpenid, now)
+  const viewUpdate = upsertShareViewLog(existingViewLogs, {
+    viewerOpenid: receiverOpenid,
+    viewerName: receiverName,
+    viewedAt: now
+  })
+  const nextViewMeta = buildShareViewMeta(viewUpdate.viewLogs)
+  const claimData = {
+    claimStatus: 'claiming',
+    claimToken,
+    claimStartedAt: now,
+    receiverOpenid: shouldReplaceClaimReceiver ? receiverOpenid : (shareRecord.receiverOpenid || receiverOpenid),
+    recipientAccountId: shouldReplaceClaimReceiver ? receiverAccountId : (shareRecord.recipientAccountId || receiverAccountId),
+    receiverName: shouldReplaceClaimReceiver ? receiverName : (shareRecord.receiverName || receiverName),
+    receiverLockedAt: shouldReplaceClaimReceiver ? now : (shareRecord.receiverLockedAt || now),
+    firstOpenedAt: nextViewMeta.firstOpenedAt || shareRecord.firstOpenedAt || now,
+    lastViewedAt: nextViewMeta.lastViewedAt || now,
+    viewCount: nextViewMeta.viewCount,
+    viewerCount: nextViewMeta.viewerCount,
+    viewLogs: serializeShareViewLogs(viewUpdate.viewLogs),
+    updatedAt: now
+  }
+
+  const query = currentClaimStatus === 'claiming'
+    ? {
+        _id: shareRecordId,
+        claimStatus: 'claiming',
+        claimStartedAt: _.lte(new Date(now.getTime() - OUTBOUND_CLAIM_STALE_MS)),
+        importedProjectId: _.in(['', null])
+      }
+    : {
+        _id: shareRecordId,
+        claimStatus: _.nin(['claiming', 'claimed']),
+        importedProjectId: _.in(['', null])
+      }
+
+  const claimResult = await db.collection('shareRecords').where(query).update({
+    data: claimData
+  })
+
+  if (getUpdateCount(claimResult) > 0) {
+    return {
+      ok: true,
+      claimToken,
+      viewLogs: viewUpdate.viewLogs,
+      viewMeta: nextViewMeta
+    }
+  }
+
+  const latestRecord = await loadShareRecord(shareRecordId)
+  const latestReceiverOpenid = normalizeText(latestRecord && latestRecord.receiverOpenid)
+  const latestClaimStatus = normalizeText(latestRecord && latestRecord.claimStatus)
+  const latestImportedProjectId = normalizeText(latestRecord && latestRecord.importedProjectId)
+
+  if (latestRecord && latestReceiverOpenid === receiverOpenid && (latestClaimStatus === 'claimed' || latestImportedProjectId)) {
+    return {
+      ok: true,
+      alreadyClaimedByCurrentReceiver: latestClaimStatus === 'claimed' || !!latestImportedProjectId,
+      claimToken: normalizeText(latestRecord.claimToken),
+      viewLogs: getShareViewLogs(latestRecord),
+      viewMeta: buildShareViewMeta(getShareViewLogs(latestRecord))
+    }
+  }
+
+  if (latestRecord && latestReceiverOpenid === receiverOpenid && latestClaimStatus === 'claiming') {
+    return buildShareClaimInProgressResult(latestRecord, receiverOpenid, receiverName)
+  }
+
+  return buildShareClaimBlockedResult(latestRecord || shareRecord, receiverOpenid)
+}
+
+async function finalizeOutboundShareClaim(options = {}) {
+  const shareRecordId = normalizeText(options.shareRecordId)
+  const claimToken = normalizeText(options.claimToken)
+  const shareRecord = options.shareRecord || {}
+  const receiverOpenid = normalizeText(options.receiverOpenid)
+  const receiverAccountId = normalizeText(options.receiverAccountId)
+  const receiverName = normalizeText(options.receiverName) || '微信用户'
+  const importedProjectId = normalizeText(options.importedProjectId)
+  const now = options.now instanceof Date ? options.now : new Date()
+  const importedAt = options.importedAt instanceof Date ? options.importedAt : now
+  const viewUpdate = upsertShareViewLog(options.viewLogs || getShareViewLogs(shareRecord), {
+    viewerOpenid: receiverOpenid,
+    viewerName: receiverName,
+    viewedAt: now,
+    importedProjectId,
+    importedAt
+  })
+  const nextViewMeta = buildShareViewMeta(viewUpdate.viewLogs)
+  const data = {
+    claimStatus: 'claimed',
+    claimCompletedAt: now,
+    receiverOpenid: shareRecord.receiverOpenid || receiverOpenid,
+    recipientAccountId: shareRecord.recipientAccountId || receiverAccountId,
+    receiverName: shareRecord.receiverName || receiverName,
+    receiverLockedAt: shareRecord.receiverLockedAt || importedAt,
+    firstOpenedAt: nextViewMeta.firstOpenedAt || shareRecord.firstOpenedAt || now,
+    lastViewedAt: nextViewMeta.lastViewedAt || now,
+    importedProjectId,
+    importedAt,
+    viewCount: nextViewMeta.viewCount,
+    viewerCount: nextViewMeta.viewerCount,
+    viewLogs: serializeShareViewLogs(viewUpdate.viewLogs),
+    updatedAt: now
+  }
+
+  if (claimToken) {
+    const result = await db.collection('shareRecords').where({
+      _id: shareRecordId,
+      claimToken
+    }).update({
+      data
+    })
+    return getUpdateCount(result) > 0
+  }
+
+  await db.collection('shareRecords').doc(shareRecordId).update({
+    data
+  })
+  return true
+}
+
 function buildTimelineItem(followUp, extra = {}) {
   const method = normalizeText(followUp.method) || '跟进'
   const stageChange = normalizeText(followUp.stageChange)
@@ -1141,6 +1374,8 @@ exports.main = async (event) => {
       && sourceOutboundShareRecordId === shareRecord._id
       && handedOverToOpenid
       && handedOverToOpenid !== receiverOpenid
+    const staleClaimCanBeReclaimed = normalizeText(shareRecord.claimStatus) === 'claiming'
+      && isShareClaimStale(shareRecord, now)
 
     if (projectLockedByAnotherRecord || projectLockedByAnotherReceiver) {
       blocked = true
@@ -1148,13 +1383,36 @@ exports.main = async (event) => {
       blockedReceiverName = normalizeText(sourceProject.handoverToName) || lockedReceiverName || '其他接手方'
       blockedMessage = `${blockedReceiverName} 已接手这个项目`
       importedProjectId = normalizeText(shareRecord.importedProjectId)
-    } else if (lockedReceiverOpenid && lockedReceiverOpenid !== receiverOpenid) {
+    } else if (!staleClaimCanBeReclaimed && lockedReceiverOpenid && lockedReceiverOpenid !== receiverOpenid) {
       blocked = true
       blockedReason = 'already_taken_over'
       blockedReceiverName = lockedReceiverName || '其他接手方'
       blockedMessage = `${blockedReceiverName} 已接手这个项目`
       importedProjectId = normalizeText(shareRecord.importedProjectId)
     } else {
+      const claimResult = await tryClaimOutboundShareRecord({
+        shareRecordId,
+        shareRecord,
+        receiverOpenid,
+        receiverAccountId,
+        receiverName,
+        existingViewLogs,
+        now
+      })
+
+      if (!claimResult.ok && claimResult.blocked) {
+        blocked = true
+        blockedReason = claimResult.blockedReason
+        blockedReceiverName = claimResult.blockedReceiverName
+        blockedMessage = claimResult.blockedMessage
+        importedProjectId = claimResult.importedProjectId
+      } else if (!claimResult.ok) {
+        return {
+          ok: false,
+          message: claimResult.message || '项目接手失败，请稍后重试'
+        }
+      } else {
+      const claimViewLogs = Array.isArray(claimResult.viewLogs) ? claimResult.viewLogs : existingViewLogs
       const existingProjectResult = await db.collection('projects').where(isCloneSeed
         ? {
             _openid: receiverOpenid,
@@ -1246,30 +1504,17 @@ exports.main = async (event) => {
       imported = true
 
       const nextImportedAt = shareRecord.importedAt || now
-      const viewUpdate = upsertShareViewLog(existingViewLogs, {
-        viewerOpenid: receiverOpenid,
-        viewerName: receiverName,
-        viewedAt: now,
+      await finalizeOutboundShareClaim({
+        shareRecordId,
+        claimToken: claimResult.claimToken,
+        shareRecord,
+        receiverOpenid,
+        receiverAccountId,
+        receiverName,
         importedProjectId,
-        importedAt: nextImportedAt
-      })
-      const nextViewMeta = buildShareViewMeta(viewUpdate.viewLogs)
-
-      await db.collection('shareRecords').doc(shareRecordId).update({
-        data: {
-          receiverOpenid: shareRecord.receiverOpenid || receiverOpenid,
-          recipientAccountId: shareRecord.recipientAccountId || receiverAccountId,
-          receiverName: shareRecord.receiverName || receiverName,
-          receiverLockedAt: shareRecord.receiverLockedAt || nextImportedAt,
-          firstOpenedAt: nextViewMeta.firstOpenedAt || shareRecord.firstOpenedAt || now,
-          lastViewedAt: nextViewMeta.lastViewedAt || now,
-          importedProjectId,
-          importedAt: nextImportedAt,
-          viewCount: nextViewMeta.viewCount,
-          viewerCount: nextViewMeta.viewerCount,
-          viewLogs: serializeShareViewLogs(viewUpdate.viewLogs),
-          updatedAt: now
-        }
+        importedAt: nextImportedAt,
+        viewLogs: claimViewLogs,
+        now
       })
 
       if (isFirstImport) {
@@ -1317,6 +1562,7 @@ exports.main = async (event) => {
             createdAt: now
           })
         ])
+      }
       }
     }
   } else if (receiverOpenid && receiverOpenid !== ownerOpenid) {

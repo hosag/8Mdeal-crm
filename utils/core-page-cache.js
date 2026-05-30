@@ -1,7 +1,7 @@
 const { markPageCacheDirty, markPageCacheDirtyByPrefix } = require('./page-cache')
 
-const HOME_PAGE_CACHE_KEY = 'home:dashboard'
-const PROJECTS_PAGE_CACHE_KEY = 'projects:list'
+const HOME_PAGE_CACHE_KEY = 'home:dashboard:v2'
+const PROJECTS_PAGE_CACHE_KEY = 'projects:list:v2'
 const SHARED_OUT_PAGE_CACHE_KEY = 'shared-out:list'
 const PROJECT_DETAIL_CACHE_PREFIX = 'project-detail:'
 const DEFAULT_PROJECT_DETAIL_VIEW_MODES = ['default', 'shared-out']

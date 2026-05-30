@@ -45,10 +45,28 @@ const TAB_ROUTE_TO_KEY = {
 
 function shouldHideCustomTabBar(page) {
   const pageData = page && page.data && typeof page.data === 'object' ? page.data : {}
-  return pageData.showHomeEntryGuide === true
-    || pageData.showQuickEntrySheet === true
-    || pageData.showTaskCompleteSheet === true
-    || pageData.hideCustomTabBar === true
+  if (pageData.hideCustomTabBar === true || pageData.showHomeEntryGuide === true) {
+    return true
+  }
+
+  return Object.keys(pageData).some((key) => /^show[A-Z].*Sheet$/.test(key) && pageData[key] === true)
+}
+
+function setGlobalCustomTabBarHidden(hidden) {
+  const app = typeof getApp === 'function' ? getApp() : null
+  if (!app) {
+    return
+  }
+
+  if (!app.globalData) {
+    app.globalData = {}
+  }
+  app.globalData.customTabBarHidden = hidden === true
+}
+
+function getGlobalCustomTabBarHidden() {
+  const app = typeof getApp === 'function' ? getApp() : null
+  return !!(app && app.globalData && app.globalData.customTabBarHidden)
 }
 
 function getDefaultAppearanceSettings() {
@@ -155,6 +173,7 @@ function syncCustomTabBar(page, appearancePageClass) {
   }
 
   const hidden = shouldHideCustomTabBar(page)
+  setGlobalCustomTabBarHidden(hidden)
   if (tabBar.data.hidden !== hidden) {
     nextData.hidden = hidden
   }
@@ -172,5 +191,7 @@ module.exports = {
   getAppearancePageClass,
   applyAppearanceSettingsToApp,
   syncPageAppearance,
-  syncCustomTabBar
+  syncCustomTabBar,
+  setGlobalCustomTabBarHidden,
+  getGlobalCustomTabBarHidden
 }

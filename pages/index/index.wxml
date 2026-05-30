@@ -1,7 +1,7 @@
-<view class="page-shell home-page {{appearancePageClass}} {{showHomeEntryGuide ? 'is-home-entry-guide-active' : ''}}">
+<view class="page-shell home-page {{appearancePageClass}} {{showHomeEntryGuide ? 'is-home-entry-guide-active' : ''}} {{homeSuppressEntryAnimation ? 'is-tab-return-stable' : ''}}">
   <block wx:if="{{!showHomeEntryGuide}}">
     <view class="home-page__custom-nav-spacer" style="height: {{homeNavigationSpacerHeight}}px;"></view>
-    <view wx:if="{{isLoading && !hasLoadedOnce}}" class="rise-in">
+    <view wx:if="{{isLoading && !hasLoadedOnce && homeInitialLoadingVisible}}" class="rise-in">
       <loading-panel rows="2" appearance-page-class="{{appearancePageClass}}" />
     </view>
 
@@ -209,6 +209,12 @@
     </view>
   </view>
 </view>
+
+<bottom-nav
+  wx:if="{{showHomeFallbackTabBar}}"
+  current="home"
+  appearance-page-class="{{appearancePageClass}}"
+/>
 
 <view wx:if="{{showQuickEntrySheet}}">
   <view class="sheet-mask quick-entry-mask" bindtap="onQuickEntryMaskTap"></view>
@@ -974,3 +980,4 @@
     </view>
   </view>
 </view>
+<privacy-authorization showPrivacyAuthorization="{{showPrivacyAuthorization}}" privacyContractName="{{privacyContractName}}" />

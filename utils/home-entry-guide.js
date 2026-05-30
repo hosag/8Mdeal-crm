@@ -1,5 +1,6 @@
 const HOME_ENTRY_GUIDE_VERSION = 'v1'
 const HOME_ENTRY_GUIDE_STORAGE_KEY = 'homeEntryGuideSettings'
+const { buildAccountScopedStorageKey } = require('./account-scope')
 
 function getDefaultHomeEntryGuideSettings() {
   return {
@@ -42,6 +43,7 @@ function isHomeBrandSplashDismissed(value) {
 module.exports = {
   HOME_ENTRY_GUIDE_VERSION,
   HOME_ENTRY_GUIDE_STORAGE_KEY,
+  getHomeEntryGuideStorageKey: () => buildAccountScopedStorageKey(HOME_ENTRY_GUIDE_STORAGE_KEY),
   getDefaultHomeEntryGuideSettings,
   normalizeHomeEntryGuideSettings,
   buildDismissedHomeEntryGuideSettings,

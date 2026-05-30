@@ -111,6 +111,63 @@ function buildNextTaskPayload(value) {
   }
 }
 
+async function resolveAccountAccessContext(openid) {
+  const identityResult = await db.collection('accountIdentities').where({
+    provider: 'wechat_mp',
+    openid
+  }).limit(1).get()
+  const identity = identityResult.data[0] || null
+  const accountId = normalizeText(identity && identity.accountId)
+
+  if (!accountId) {
+    throw new Error('ACCOUNT_NOT_INITIALIZED: 当前账号尚未初始化，请重新进入小程序后再试')
+  }
+
+  const accountResult = await db.collection('accounts').where({
+    accountId
+  }).limit(1).get()
+  const entitlementsResult = await db.collection('entitlements').where({
+    accountId
+  }).limit(1).get()
+
+  return {
+    accountId,
+    account: accountResult.data[0] || null,
+    entitlements: entitlementsResult.data[0] || null
+  }
+}
+
+function ensureTaskUpdateWritable(context, options = {}) {
+  const account = context && context.account ? context.account : {}
+  const entitlements = context && context.entitlements ? context.entitlements : {}
+  const status = normalizeText(entitlements.status || account.status || 'trialing')
+  const nextStatus = normalizeText(options.nextStatus)
+  const hasNextTask = options.hasNextTask === true
+
+  if (status === 'disabled') {
+    throw new Error('ACCOUNT_DISABLED: 当前账号已被禁用')
+  }
+
+  if (account.phoneVerified !== true || (entitlements && entitlements.bindRequiredForWrite)) {
+    throw new Error('ACCOUNT_PHONE_REQUIRED: 保存正式数据前需要先绑定手机号')
+  }
+
+  if (!entitlements || !Object.keys(entitlements).length) {
+    if (status === 'free_limited' || status === 'expired_readonly') {
+      throw new Error('ENTITLEMENT_WRITE_DISABLED: 当前账号为只读状态')
+    }
+    return
+  }
+
+  if (nextStatus === 'done' && !entitlements.canSaveFollowUp) {
+    throw new Error('ENTITLEMENT_WRITE_DISABLED: 当前账号为只读状态')
+  }
+
+  if (hasNextTask && !entitlements.canCreateTask) {
+    throw new Error('ENTITLEMENT_WRITE_DISABLED: 当前账号为只读状态')
+  }
+}
+
 function buildTaskDoneFollowUp(task, actorName, resultSummary, now, openid, nextTask) {
   const taskTitle = normalizeText(task && task.title) || '未命名动作'
   const safeResultSummary = normalizeText(resultSummary)
@@ -260,6 +317,11 @@ exports.main = async (event) => {
     }
   }
   const nextTaskPayload = nextTaskResult && nextTaskResult.ok ? nextTaskResult.payload : null
+  const accessContext = await resolveAccountAccessContext(wxContext.OPENID)
+  ensureTaskUpdateWritable(accessContext, {
+    nextStatus,
+    hasNextTask: !!nextTaskPayload
+  })
 
   const taskResult = await db.collection('tasks').where({
     _id: taskId,

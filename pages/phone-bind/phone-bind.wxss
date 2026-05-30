@@ -26,6 +26,17 @@
   min-width: 0;
 }
 
+.phone-bind-auth-card {
+  height: auto;
+  min-height: 96rpx;
+  align-items: flex-start;
+  padding-top: 20rpx;
+  padding-bottom: 20rpx;
+  font-size: 24rpx;
+  line-height: 1.55;
+  color: var(--theme-text-secondary);
+}
+
 .phone-bind-timeline {
   margin-top: 10rpx;
 }
@@ -38,4 +49,19 @@
 
 .phone-bind-timeline-item + .phone-bind-timeline-item {
   margin-top: 8rpx;
+}
+
+.phone-bind-auth-button {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  line-height: inherit;
+}
+
+.phone-bind-auth-button::after {
+  border: 0;
+}
+
+.phone-bind-auth-button[disabled] {
+  opacity: 0.48;
 }

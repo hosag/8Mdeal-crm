@@ -5,7 +5,10 @@ cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 
 const db = cloud.database()
 const _ = db.command
-const CONTACT_CRYPTO_SECRET = process.env.CONTACT_CRYPTO_SECRET || 'deal-crm-contact-v1'
+const CONTACT_CRYPTO_SECRET = String(process.env.CONTACT_CRYPTO_SECRET || '').trim()
+if (!CONTACT_CRYPTO_SECRET) {
+  throw new Error('CONTACT_CRYPTO_SECRET is required')
+}
 const CONTACT_CRYPTO_PREFIX = 'enc:v1'
 const CONTACT_CRYPTO_KEY = crypto.createHash('sha256').update(CONTACT_CRYPTO_SECRET).digest()
 
@@ -206,6 +209,78 @@ async function resolveAccountIdByOpenid(openid = '') {
   } catch (error) {
     return ''
   }
+}
+
+async function safeGetList(collectionName, query, options = {}) {
+  try {
+    let request = db.collection(collectionName).where(query)
+    if (options.orderByField && options.orderByDirection) {
+      request = request.orderBy(options.orderByField, options.orderByDirection)
+    }
+    if (options.limit) {
+      request = request.limit(options.limit)
+    }
+    const result = await request.get()
+    return Array.isArray(result.data) ? result.data : []
+  } catch (error) {
+    return []
+  }
+}
+
+function uniqueValues(values) {
+  return [...new Set((Array.isArray(values) ? values : [])
+    .map((value) => normalizeText(value))
+    .filter(Boolean))]
+}
+
+async function resolveAccountScope(openid = '') {
+  const currentOpenid = normalizeText(openid)
+  if (!currentOpenid) {
+    return {
+      primaryAccountId: '',
+      accountIds: []
+    }
+  }
+
+  const identity = (await safeGetList('accountIdentities', {
+    provider: 'wechat_mp',
+    openid: currentOpenid
+  }, {
+    limit: 1
+  }))[0] || null
+  const primaryAccountId = normalizeText(identity && identity.accountId)
+  const accountIds = primaryAccountId ? [primaryAccountId] : []
+  const account = primaryAccountId
+    ? (await safeGetList('accounts', { accountId: primaryAccountId }, { limit: 1 }))[0] || null
+    : null
+  const phone = normalizeText(account && account.phone)
+
+  if (phone && account && account.phoneVerified === true) {
+    ;(await safeGetList('accounts', {
+      phone,
+      phoneVerified: true
+    }, {
+      limit: 100
+    })).forEach((item) => {
+      accountIds.push(item && item.accountId)
+    })
+  }
+
+  return {
+    primaryAccountId,
+    accountIds: uniqueValues(accountIds)
+  }
+}
+
+function canAccessProjectByScope(project, openid, accountIds) {
+  const item = project && typeof project === 'object' && !Array.isArray(project) ? project : {}
+  if (normalizeText(item._openid) && normalizeText(item._openid) === normalizeText(openid)) {
+    return true
+  }
+
+  const accountIdSet = new Set(uniqueValues(accountIds))
+  return accountIdSet.has(normalizeText(item.ownerAccountId))
+    || accountIdSet.has(normalizeText(item.accountId))
 }
 
 function normalizeShareViewLog(item) {
@@ -714,8 +789,7 @@ exports.main = async (event) => {
   }
 
   const result = await db.collection('projects').where({
-    _id: event.projectId,
-    _openid: wxContext.OPENID
+    _id: event.projectId
   }).limit(1).get()
 
   if (!result.data.length) {
@@ -727,7 +801,15 @@ exports.main = async (event) => {
 
   const item = result.data[0]
   const now = new Date()
-  const viewerAccountId = await resolveAccountIdByOpenid(viewerOpenid)
+  const accountScope = await resolveAccountScope(viewerOpenid)
+  if (!canAccessProjectByScope(item, viewerOpenid, accountScope.accountIds)) {
+    return {
+      ok: false,
+      message: 'project not found'
+    }
+  }
+
+  const viewerAccountId = accountScope.primaryAccountId || await resolveAccountIdByOpenid(viewerOpenid)
   const projectAccountId = normalizeText(item.accountId)
   const ownerAccountId = normalizeText(item.ownerAccountId || item.accountId)
   const sharedFromAccountId = normalizeText(item.sharedFromAccountId)
@@ -775,14 +857,12 @@ exports.main = async (event) => {
   await syncSharedSourceFollowUps(item)
 
   const followResult = await db.collection('followUps').where({
-    projectId: event.projectId,
-    _openid: wxContext.OPENID
+    projectId: event.projectId
   }).orderBy('followUpTime', 'desc').get()
   let taskResult = { data: [] }
   try {
     taskResult = await db.collection('tasks').where({
-      projectId: event.projectId,
-      _openid: wxContext.OPENID
+      projectId: event.projectId
     }).orderBy('dueAt', 'asc').get()
   } catch (error) {
     taskResult = { data: [] }

@@ -135,6 +135,9 @@
     "backgroundColor": "#F5F3EE",
     "backgroundTextStyle": "light"
   },
+  "usingComponents": {
+    "privacy-authorization": "/components/privacy-authorization/index"
+  },
   "tabBar": {
     "custom": true,
     "color": "#7B8793",

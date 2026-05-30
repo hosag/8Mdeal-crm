@@ -1,7 +1,5 @@
 const { loadOutboundData, markNotificationReadData, resolveNotificationData } = require('../../services/data')
-const { touchNotificationSync } = require('../../utils/notification-sync')
 const { syncPageAppearance } = require('../../utils/appearance')
-const { markHomePageCacheDirty } = require('../../utils/core-page-cache')
 const { readPageCache, shouldRefreshPageCache, writePageCache } = require('../../utils/page-cache')
 const { openTabPage } = require('../../utils/tab-bar-navigation')
 const { getNavigationSpacerHeight } = require('../../utils/navigation-metrics')
@@ -19,6 +17,18 @@ const SORT_OPTIONS = [
   { key: 'updated', label: '最近更新' },
   { key: 'viewed', label: '浏览优先' }
 ]
+
+function hasNotificationMutationResult(result) {
+  const source = result && typeof result === 'object' && !Array.isArray(result) ? result : {}
+  return [
+    source.updated,
+    source.updatedCount,
+    source.modifiedCount,
+    source.resolvedCount,
+    source.readCount,
+    source.count
+  ].some((value) => Number(value || 0) > 0)
+}
 
 function parseDateTime(value) {
   if (!value) {
@@ -219,6 +229,10 @@ Page({
       this.skipNextShowRefresh = false
       return
     }
+    if (!this.data.hasLoadedOnce) {
+      await this.fetchOutboundProjects()
+      return
+    }
     if (this.data.hasLoadedOnce && shouldRefreshPageCache(readPageCache(SHARED_OUT_PAGE_CACHE_KEY))) {
       await this.fetchOutboundProjects({ silent: true })
     }
@@ -273,6 +287,27 @@ Page({
     }, {
       ttl: SHARED_OUT_PAGE_CACHE_TTL
     })
+  },
+
+  handleAccountStorageScopeReady() {
+    if (this.data.hasLoadedOnce) {
+      this.persistSharedOutPageCache()
+    }
+  },
+
+  handleAccountStorageScopeChanged() {
+    this.setData({
+      outboundProjects: [],
+      filteredRecords: [],
+      summaryCards: [],
+      resultSummaryText: '正在整理外发数据',
+      isLoading: true,
+      hasLoadedOnce: false,
+      isRefreshing: false,
+      isLoadFailed: false,
+      loadError: ''
+    })
+    this.fetchOutboundProjects().catch(() => {})
   },
 
   async fetchOutboundProjects(options = {}) {
@@ -336,7 +371,7 @@ Page({
 
   async syncSharedNotifications() {
     try {
-      await Promise.all([
+      const results = await Promise.all([
         markNotificationReadData({
           types: ['shared_imported', 'shared_followed']
         }),
@@ -344,8 +379,9 @@ Page({
           types: ['shared_imported', 'shared_followed']
         })
       ])
-      touchNotificationSync('shared_out_notifications_synced')
-      markHomePageCacheDirty()
+      if (results.some((result) => hasNotificationMutationResult(result))) {
+        this.sharedNotificationSyncedAt = Date.now()
+      }
     } catch (error) {
       // Keep the tracking page available even if notification sync fails.
     }

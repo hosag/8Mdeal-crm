@@ -128,7 +128,7 @@ function ensureFollowUpWritable(context) {
     throw new Error('ACCOUNT_DISABLED: 当前账号已被禁用')
   }
 
-  if (entitlements && entitlements.bindRequiredForWrite) {
+  if (account.phoneVerified !== true || (entitlements && entitlements.bindRequiredForWrite)) {
     throw new Error('ACCOUNT_PHONE_REQUIRED: 保存正式数据前需要先绑定手机号')
   }
 

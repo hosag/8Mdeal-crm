@@ -17,16 +17,25 @@ function shouldHideTabBar(currentPage) {
     ? currentPage.data
     : {}
 
-  return pageData.showHomeEntryGuide === true
-    || pageData.showQuickEntrySheet === true
-    || pageData.showTaskCompleteSheet === true
-    || pageData.hideCustomTabBar === true
+  if (pageData.hideCustomTabBar === true || pageData.showHomeEntryGuide === true) {
+    return true
+  }
+
+  return Object.keys(pageData).some((key) => /^show[A-Z].*Sheet$/.test(key) && pageData[key] === true)
+}
+
+function schedule(callback, delay = 0) {
+  if (typeof setTimeout === 'function') {
+    return setTimeout(callback, delay)
+  }
+  callback()
+  return null
 }
 
 Component({
   data: {
     current: 'home',
-    hidden: false,
+    hidden: true,
     appearancePageClass: '',
     leftItems: [
       { key: 'home', label: '首页', icon: '/assets/icons/nav-home.svg', activeIcon: '/assets/icons/nav-home-active.svg', path: '/pages/index/index' },
@@ -41,10 +50,33 @@ Component({
   lifetimes: {
     attached() {
       this.syncFromCurrentPage()
+      this.syncFromCurrentPageSoon()
+    }
+  },
+
+  pageLifetimes: {
+    show() {
+      this.syncFromCurrentPage()
+      this.syncFromCurrentPageSoon()
     }
   },
 
   methods: {
+    noop() {},
+
+    showFromPage() {
+      this.setData({
+        hidden: false
+      })
+      this.syncFromCurrentPageSoon()
+    },
+
+    syncFromCurrentPageSoon() {
+      schedule(() => this.syncFromCurrentPage(), 0)
+      schedule(() => this.syncFromCurrentPage(), 80)
+      schedule(() => this.syncFromCurrentPage(), 220)
+    },
+
     syncFromCurrentPage() {
       const pages = typeof getCurrentPages === 'function' ? getCurrentPages() : []
       const currentPage = pages[pages.length - 1]

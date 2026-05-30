@@ -17,6 +17,50 @@ function maskPhone(value) {
   return `${text.slice(0, 3)}****${text.slice(-4)}`
 }
 
+function resolvePhoneInfo(result) {
+  if (!result || typeof result !== 'object') {
+    return {}
+  }
+
+  return result.phone_info || result.phoneInfo || result.phoneNumberInfo || {}
+}
+
+async function getTrustedPhoneNumber(code) {
+  if (!code) {
+    throw new Error('请使用微信手机号授权完成绑定')
+  }
+
+  if (!cloud.openapi || !cloud.openapi.phonenumber || typeof cloud.openapi.phonenumber.getPhoneNumber !== 'function') {
+    throw new Error('当前云环境暂不支持手机号授权，请检查云函数 SDK')
+  }
+
+  let result
+  try {
+    result = await cloud.openapi.phonenumber.getPhoneNumber({
+      code
+    })
+  } catch (error) {
+    throw new Error('手机号授权校验失败，请重新授权')
+  }
+
+  const phoneInfo = resolvePhoneInfo(result)
+  const phoneNumber = normalizeText(phoneInfo.phoneNumber || phoneInfo.purePhoneNumber)
+  const purePhoneNumber = normalizeText(phoneInfo.purePhoneNumber || phoneNumber)
+  const countryCode = normalizeText(phoneInfo.countryCode || '86')
+
+  if (!/^1\d{10}$/.test(purePhoneNumber)) {
+    throw new Error('暂仅支持绑定中国大陆手机号')
+  }
+
+  return {
+    phoneNumber: purePhoneNumber,
+    phoneMasked: maskPhone(purePhoneNumber),
+    countryCode,
+    providerPhoneNumber: phoneNumber,
+    watermark: phoneInfo.watermark || null
+  }
+}
+
 async function safeGetOne(collectionName, query) {
   try {
     const result = await db.collection(collectionName).where(query).limit(1).get()
@@ -29,7 +73,7 @@ async function safeGetOne(collectionName, query) {
 exports.main = async (event = {}) => {
   const wxContext = cloud.getWXContext()
   const openid = normalizeText(wxContext.OPENID)
-  const phoneNumber = normalizeText(event.phoneNumber)
+  const code = normalizeText(event.code)
   const consentVersion = normalizeText(event.consentVersion || 'p0_phone_bind_v1')
   const consentChecked = event.consentChecked === true
   const now = new Date()
@@ -38,13 +82,12 @@ exports.main = async (event = {}) => {
     throw new Error('无法解析当前微信身份，请稍后重试')
   }
 
-  if (!/^1\d{10}$/.test(phoneNumber)) {
-    throw new Error('请输入有效的 11 位手机号')
-  }
-
   if (!consentChecked) {
     throw new Error('请先勾选绑定说明后再继续')
   }
+
+  const phoneInfo = await getTrustedPhoneNumber(code)
+  const phoneNumber = phoneInfo.phoneNumber
 
   const identity = await safeGetOne('accountIdentities', {
     provider: 'wechat_mp',
@@ -67,6 +110,9 @@ exports.main = async (event = {}) => {
     data: {
       phone: phoneNumber,
       phoneVerified: true,
+      phoneBindProvider: 'wechat_get_phone_number',
+      phoneVerifiedAt: now,
+      phoneCountryCode: phoneInfo.countryCode,
       updatedAt: now
     }
   })
@@ -79,8 +125,9 @@ exports.main = async (event = {}) => {
     await db.collection('users').doc(userProfile._id).update({
       data: {
         accountId: identity.accountId,
-        phoneMasked: maskPhone(phoneNumber),
+        phoneMasked: phoneInfo.phoneMasked,
         bindStatus: 'bound',
+        phoneBindProvider: 'wechat_get_phone_number',
         updatedAt: now
       }
     })
@@ -92,9 +139,10 @@ exports.main = async (event = {}) => {
         accountId: identity.accountId,
         consentType: 'phone_bind',
         consentVersion,
-        phoneMasked: maskPhone(phoneNumber),
+        phoneMasked: phoneInfo.phoneMasked,
         granted: true,
-        source: 'manual_entry',
+        source: 'wechat_get_phone_number',
+        phoneBindProvider: 'wechat_get_phone_number',
         createdAt: now,
         updatedAt: now
       }
@@ -107,7 +155,7 @@ exports.main = async (event = {}) => {
     ok: true,
     accountId: identity.accountId,
     phoneVerified: true,
-    phoneMasked: maskPhone(phoneNumber),
+    phoneMasked: phoneInfo.phoneMasked,
     bindStatus: 'bound'
   }
 }

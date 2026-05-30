@@ -49,7 +49,7 @@ const APP_BUILD_ID = '2026-05-06 22:34'
 const BILLING_VIEW_KEYS = ['billingOverview', 'billingGlobalUsage', 'billingAccounts', 'billingPlans']
 const LOW_VOICE_ALERT_THRESHOLD = 120
 const LOW_AI_ALERT_THRESHOLD = 10000
-const CLOUD_CONFIG_STORAGE_KEY = 'deal_crm_admin_cloud_config_v1'
+const CLOUD_CONFIG_STORAGE_KEY = 'deal_crm_admin_cloud_config_v2'
 
 function reportFatalUiError(message) {
   try {
@@ -71,17 +71,12 @@ function buildDefaultCloudConfig() {
   const savedConfig = readSavedCloudConfig()
   const queryProvider = toText(readQueryParam('provider'))
   const queryBridgeBase = toText(readQueryParam('bridgeBase'))
-  const queryBridgeKey = toText(readQueryParam('bridgeKey'))
-  const queryOperatorKey = toText(readQueryParam('operatorKey'))
-  const hasCloudQuery = queryProvider === 'cloud' || Boolean(queryBridgeBase || queryBridgeKey || queryOperatorKey)
-  const providerMode = hasCloudQuery
-    ? (queryProvider === 'mock' ? 'mock' : 'cloud')
-    : (savedConfig.providerMode === 'cloud' ? 'cloud' : 'mock')
+  const providerMode = queryProvider === 'mock'
+    ? 'mock'
+    : 'cloud'
   const baseConfig = {
     providerMode,
-    bridgeBase: normalizeBridgeBase(queryBridgeBase || savedConfig.bridgeBase || 'http://127.0.0.1:8788'),
-    bridgeKey: toText(queryBridgeKey || savedConfig.bridgeKey),
-    operatorKey: toText(queryOperatorKey || savedConfig.operatorKey),
+    bridgeBase: normalizeBridgeBase(queryBridgeBase || savedConfig.bridgeBase || ''),
     usersPath: '/adminListUsers',
     ordersPath: '/adminListOrders',
     usagePath: '/adminListUsage',
@@ -98,10 +93,10 @@ function buildDefaultCloudConfig() {
     testAiModelConfigPath: '/adminTestAiModelConfig'
   }
 
-  if (baseConfig.providerMode === 'cloud') {
-    saveCloudConfig(baseConfig)
-  } else if (queryProvider === 'mock') {
+  if (queryProvider === 'mock') {
     clearSavedCloudConfig()
+  } else if (queryBridgeBase) {
+    saveCloudConfig(baseConfig)
   }
 
   return baseConfig
@@ -127,9 +122,7 @@ function saveCloudConfig(config = {}) {
     }
     window.localStorage.setItem(CLOUD_CONFIG_STORAGE_KEY, JSON.stringify({
       providerMode: toText(config.providerMode),
-      bridgeBase: normalizeBridgeBase(config.bridgeBase),
-      bridgeKey: toText(config.bridgeKey),
-      operatorKey: toText(config.operatorKey)
+      bridgeBase: normalizeBridgeBase(config.bridgeBase)
     }))
   } catch (error) {
     // localStorage may be blocked in some embedded browsers.
@@ -2783,7 +2776,13 @@ function createUiState() {
       toastText: '',
       toastTone: 'info',
       toastTimer: null,
-      supportsReset: DEFAULT_CLOUD_CONFIG.providerMode !== 'cloud'
+      supportsReset: DEFAULT_CLOUD_CONFIG.providerMode !== 'cloud',
+      authChecking: true,
+      authenticated: false,
+      authUser: '',
+      authConfigured: true,
+      cloudInvokeReady: false,
+      operatorConfigured: false
     }
   }
 }
@@ -4424,25 +4423,16 @@ function createMockProvider() {
 function createCloudProvider(config) {
   async function callBridge(path, payload = {}) {
     const bridgeBase = normalizeBridgeBase(config.bridgeBase)
-    const operatorKey = toText(config.operatorKey)
+    const apiPath = path.startsWith('/api/') ? path : `/api${path}`
+    const requestUrl = bridgeBase ? `${bridgeBase}${apiPath}` : apiPath
 
-    if (!bridgeBase) {
-      throw new Error('Cloud 模式未配置 bridgeBase，请在地址栏追加 ?provider=cloud&bridgeBase=http://你的桥接服务地址')
-    }
-    if (!operatorKey) {
-      throw new Error('Cloud 模式未配置 operatorKey，请在地址栏追加 operatorKey 后再访问。')
-    }
-
-    const response = await fetch(`${bridgeBase}${path}`, {
+    const response = await fetch(requestUrl, {
       method: 'POST',
+      credentials: bridgeBase ? 'include' : 'same-origin',
       headers: {
-        'Content-Type': 'application/json',
-        ...(config.bridgeKey ? { 'X-Admin-Bridge-Key': config.bridgeKey } : {})
+        'Content-Type': 'application/json'
       },
-      body: JSON.stringify({
-        operatorKey,
-        ...payload
-      })
+      body: JSON.stringify(payload)
     })
 
     const rawText = await response.text()
@@ -4455,7 +4445,10 @@ function createCloudProvider(config) {
     }
 
     if (!response.ok || json.ok === false) {
-      throw new Error(toText(json.message || json.error || rawText || '桥接服务调用失败'))
+      const error = new Error(toText(json.message || json.error || rawText || '桥接服务调用失败'))
+      error.statusCode = response.status
+      error.code = toText(json.code)
+      throw error
     }
 
     return json
@@ -4492,7 +4485,9 @@ function createCloudProvider(config) {
           .filter((item) => item.targetType === 'account' && isManualAdjustmentAction(item.actionType)),
         referralItems: (referralResult.referrals || []).map((item) => normalizeReferralForUi(item)),
         referralStats: referralResult.stats || buildLocalReferralStats([]),
-        sourceLabel: `CloudBridge ${normalizeBridgeBase(config.bridgeBase)}`,
+        sourceLabel: normalizeBridgeBase(config.bridgeBase)
+          ? `CloudBridge ${normalizeBridgeBase(config.bridgeBase)}`
+          : 'Admin API 同源服务',
         supportsReset: false
       }
     },
@@ -4585,6 +4580,173 @@ function createProvider(mode) {
   return mode === 'cloud'
     ? createCloudProvider(state.runtime.cloudConfig)
     : createMockProvider()
+}
+
+async function fetchJson(url, options = {}) {
+  const response = await fetch(url, {
+    credentials: 'same-origin',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...(options.headers || {})
+    }
+  })
+  const rawText = await response.text()
+  let json = {}
+
+  try {
+    json = rawText ? JSON.parse(rawText) : {}
+  } catch (error) {
+    throw new Error(`服务返回了非 JSON 响应: ${rawText.slice(0, 120)}`)
+  }
+
+  if (!response.ok || json.ok === false) {
+    const error = new Error(toText(json.error || json.message || rawText || '请求失败'))
+    error.statusCode = response.status
+    error.code = toText(json.code)
+    throw error
+  }
+
+  return json
+}
+
+function applySessionState(session = {}) {
+  state.runtime.authChecking = false
+  state.runtime.authenticated = Boolean(session.authenticated)
+  state.runtime.authUser = toText(session.username)
+  state.runtime.authConfigured = session.authConfigured !== false
+  if (Object.prototype.hasOwnProperty.call(session, 'canInvoke')) {
+    state.runtime.cloudInvokeReady = Boolean(session.canInvoke)
+  }
+  if (Object.prototype.hasOwnProperty.call(session, 'operatorConfigured')) {
+    state.runtime.operatorConfigured = Boolean(session.operatorConfigured)
+  }
+}
+
+async function refreshAuthSession() {
+  if (state.runtime.providerMode !== 'cloud') {
+    state.runtime.authChecking = false
+    state.runtime.authenticated = true
+    state.runtime.authUser = 'mock'
+    state.runtime.authConfigured = true
+    state.runtime.cloudInvokeReady = true
+    state.runtime.operatorConfigured = true
+    return
+  }
+
+  state.runtime.authChecking = true
+  renderAuthGate()
+
+  try {
+    const session = await fetchJson('/api/session', {
+      method: 'GET',
+      headers: {}
+    })
+    applySessionState(session)
+  } catch (error) {
+    state.runtime.authChecking = false
+    state.runtime.authenticated = false
+    state.runtime.authUser = ''
+    setNotice(error.message || '读取登录状态失败。', 'danger')
+  }
+}
+
+function renderAuthGate() {
+  const shell = document.querySelector('.admin-shell')
+  const overlay = document.getElementById('adminLoginOverlay')
+  const form = document.getElementById('adminLoginForm')
+  const usernameInput = document.getElementById('adminLoginUsername')
+  const passwordInput = document.getElementById('adminLoginPassword')
+  const errorBox = document.getElementById('adminLoginError')
+  const logoutBtn = document.getElementById('adminLogoutBtn')
+  const isCloudMode = state.runtime.providerMode === 'cloud'
+  const shouldShowLogin = isCloudMode && !state.runtime.authenticated
+
+  if (shell) {
+    shell.hidden = shouldShowLogin
+  }
+  if (overlay) {
+    overlay.hidden = !shouldShowLogin
+  }
+  if (logoutBtn) {
+    logoutBtn.hidden = !isCloudMode || !state.runtime.authenticated
+  }
+  if (usernameInput && !usernameInput.value) {
+    usernameInput.value = 'admin'
+  }
+  if (form) {
+    form.classList.toggle('is-loading', Boolean(state.runtime.authChecking))
+  }
+  if (errorBox) {
+    let message = ''
+    if (state.runtime.authChecking) {
+      message = '正在检查登录状态...'
+    } else if (!state.runtime.authConfigured) {
+      message = '本地管理台尚未配置 ADMIN_USERNAME / ADMIN_PASSWORD_HASH，请先补齐 admin-web-bridge/.env.local。'
+    } else if (state.runtime.noticeTone === 'danger' && state.runtime.noticeText) {
+      message = state.runtime.noticeText
+    }
+    errorBox.hidden = !message
+    errorBox.textContent = message
+  }
+}
+
+async function handleAdminLogin(event) {
+  event.preventDefault()
+  const usernameInput = document.getElementById('adminLoginUsername')
+  const passwordInput = document.getElementById('adminLoginPassword')
+  const username = usernameInput ? usernameInput.value : ''
+  const password = passwordInput ? passwordInput.value : ''
+
+  state.runtime.authChecking = true
+  setNotice('', 'info')
+  renderAuthGate()
+
+  try {
+    const session = await fetchJson('/api/login', {
+      method: 'POST',
+      body: JSON.stringify({
+        username,
+        password
+      })
+    })
+    applySessionState(session)
+    if (passwordInput) {
+      passwordInput.value = ''
+    }
+    await refreshData({ preserveSelection: false })
+  } catch (error) {
+    state.runtime.authChecking = false
+    state.runtime.authenticated = false
+    setNotice(error.message || '登录失败。', 'danger')
+    render()
+  }
+}
+
+async function handleAdminLogout() {
+  try {
+    await fetchJson('/api/logout', {
+      method: 'POST',
+      body: JSON.stringify({})
+    })
+  } catch (error) {
+    // Local logout still clears the client-side state even if the request fails.
+  }
+
+  state.runtime.authenticated = false
+  state.runtime.authUser = ''
+  state.accounts = []
+  state.orders = []
+  state.feedbackItems = []
+  state.referralItems = []
+  state.usageSummaries = []
+  state.usageLedger = []
+  state.usageViewSummaries = []
+  state.usageViewLedger = []
+  state.globalUsageSummaries = []
+  state.globalUsageLedger = []
+  setNotice('', 'info')
+  render()
 }
 
 function setNotice(text = '', tone = 'info') {
@@ -4993,6 +5155,13 @@ function scheduleGlobalUsageRefresh(options = {}) {
 async function refreshData(options = {}) {
   const preserveSelection = options.preserveSelection !== false
   const previousSelectedUsageAccountId = toText(state.selectedUsageAccountId)
+
+  if (state.runtime.providerMode === 'cloud' && !state.runtime.authenticated) {
+    state.runtime.loading = false
+    render()
+    return
+  }
+
   state.runtime.loading = true
   render()
 
@@ -5102,7 +5271,13 @@ async function refreshData(options = {}) {
       })
     }
   } catch (error) {
-    setNotice(error.message || '刷新数据失败，请检查桥接配置。', 'danger')
+    if (error.statusCode === 401 || error.code === 'ADMIN_AUTH_REQUIRED') {
+      state.runtime.authenticated = false
+      state.runtime.authUser = ''
+      setNotice('登录状态已失效，请重新登录。', 'danger')
+    } else {
+      setNotice(error.message || '刷新数据失败，请检查桥接配置。', 'danger')
+    }
   } finally {
     state.runtime.loading = false
     render()
@@ -5423,6 +5598,7 @@ function usageMatches(summary, keyword, usageTypeFilter) {
 }
 
 function render() {
+  renderAuthGate()
   renderHeader()
   renderOverview()
   renderAccounts()
@@ -5505,7 +5681,7 @@ function renderHeader() {
     billingPlansCount.textContent = `${state.plans.filter((item) => item.enabled).length}`
   }
 
-  modeBadge.textContent = state.runtime.providerMode === 'cloud' ? 'Cloud Bridge' : '本地 Mock'
+  modeBadge.textContent = state.runtime.providerMode === 'cloud' ? '云端后台' : '本地 Mock'
   syncMeta.textContent = state.runtime.loading
     ? '正在同步数据...'
     : (state.runtime.lastSyncAt ? `最近同步：${state.runtime.lastSyncAt}` : '尚未同步')
@@ -5515,17 +5691,17 @@ function renderHeader() {
   resetBtn.disabled = state.runtime.loading
 
   sidebarStatusCopy.textContent = state.runtime.providerMode === 'cloud'
-    ? `当前使用桥接模式读取管理云函数。bridgeBase：${state.runtime.cloudConfig.bridgeBase || '未配置'}`
+    ? `当前通过同源后台服务读取管理云函数。管理员：${state.runtime.authUser || '未登录'}；云密钥与 operatorKey 仅保存在服务端。`
     : '当前使用本地演示数据。切到 Cloud 模式后，页面交互层会直接复用到真实后台链路。'
 
   if (state.runtime.noticeText) {
     runtimeNotice.hidden = false
     runtimeNotice.className = `runtime-note is-${state.runtime.noticeTone}`
     runtimeNotice.textContent = state.runtime.noticeText
-  } else if (state.runtime.providerMode === 'cloud' && (!state.runtime.cloudConfig.bridgeBase || !state.runtime.cloudConfig.operatorKey)) {
+  } else if (state.runtime.providerMode === 'cloud' && state.runtime.authenticated && (!state.runtime.cloudInvokeReady || !state.runtime.operatorConfigured)) {
     runtimeNotice.hidden = false
-    runtimeNotice.className = 'runtime-note'
-    runtimeNotice.textContent = 'Cloud 模式需要同时提供 bridgeBase 和 operatorKey。当前页面会继续保留 UI，但不会成功取到真实数据。'
+    runtimeNotice.className = 'runtime-note is-danger'
+    runtimeNotice.textContent = '服务端配置未完整：请在 admin-web-bridge/.env.local 中配置 CLOUDBASE_SECRET_ID / CLOUDBASE_SECRET_KEY / ADMIN_OPERATOR_KEY。'
   } else if (state.runtime.providerMode === 'cloud' && !state.runtime.loading && !state.accounts.length) {
     runtimeNotice.hidden = false
     runtimeNotice.className = 'runtime-note'
@@ -9641,6 +9817,16 @@ function bindGlobalEvents() {
     })
   }
 
+  const loginForm = document.getElementById('adminLoginForm')
+  if (loginForm) {
+    loginForm.addEventListener('submit', handleAdminLogin)
+  }
+
+  const logoutBtn = document.getElementById('adminLogoutBtn')
+  if (logoutBtn) {
+    logoutBtn.addEventListener('click', handleAdminLogout)
+  }
+
   document.getElementById('refreshDataBtn').addEventListener('click', async () => {
     await refreshData({ preserveSelection: true })
   })
@@ -9922,7 +10108,12 @@ async function boot() {
   })
 
   bindGlobalEvents()
-  await refreshData({ preserveSelection: false })
+  await refreshAuthSession()
+  if (state.runtime.authenticated) {
+    await refreshData({ preserveSelection: false })
+  } else {
+    render()
+  }
 }
 
 boot()

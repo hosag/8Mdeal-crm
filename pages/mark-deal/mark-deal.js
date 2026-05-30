@@ -160,6 +160,7 @@ Page({
         projectId: this.data.form.projectId,
         includeHome: true,
         includeProjects: true,
+        includeSharedOut: true,
         includeProjectDetail: true
       })
 

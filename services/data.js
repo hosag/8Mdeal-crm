@@ -1467,14 +1467,27 @@ async function saveUserPreferencesData(payload) {
 
 async function bindPhoneData(payload = {}) {
   if (!canUseCloud()) {
-    const phoneNumber = String(payload.phoneNumber || '').trim()
-    const phoneMasked = /^1\d{10}$/.test(phoneNumber) ? `${phoneNumber.slice(0, 3)}****${phoneNumber.slice(-4)}` : ''
+    const code = String(payload.code || '').trim()
+    if (!code) {
+      throw new Error('请使用微信手机号授权完成绑定')
+    }
+
+    const phoneNumber = '13800000000'
+    const phoneMasked = `${phoneNumber.slice(0, 3)}****${phoneNumber.slice(-4)}`
+    cacheEntitlementsSummary({
+      ...cachedEntitlements,
+      phoneVerified: true,
+      source: getAppDataSource()
+    })
+
     return {
       data: cacheAccountSummary({
         ...cachedAccountSummary,
         phone: phoneNumber,
-        phoneVerified: /^1\d{10}$/.test(phoneNumber),
+        phoneVerified: true,
         phoneMasked,
+        phoneBindProvider: 'mock_wechat_get_phone_number',
+        phoneVerifiedAt: new Date().toISOString(),
         displayName: cachedAccountSummary.customDisplayName || cachedAccountSummary.wechatNickname || phoneMasked || cachedAccountSummary.accountId,
         displayNameSource: cachedAccountSummary.customDisplayName
           ? 'custom'
@@ -1527,6 +1540,7 @@ async function getEntitlementsData() {
     return {
       data: cacheEntitlementsSummary({
         ...getDefaultEntitlements(),
+        ...cachedEntitlements,
         source: getAppDataSource()
       }),
       source: getAppDataSource()

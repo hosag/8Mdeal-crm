@@ -729,6 +729,10 @@ Page({
       this.skipNextShowRefresh = false
       return
     }
+    if (this.data.projectId && !this.data.hasLoadedOnce) {
+      this.fetchProjectDetail()
+      return
+    }
     if (
       this.data.projectId
       && this.data.hasLoadedOnce
@@ -878,6 +882,69 @@ Page({
       prefix: PROJECT_DETAIL_CACHE_PREFIX,
       maxEntries: PROJECT_DETAIL_CACHE_LIMIT
     })
+  },
+
+  handleAccountStorageScopeChanged() {
+    this.releaseCopyProjectLock()
+    this.stopTaskCompletionVoiceInput({ silent: true })
+    stopVoiceRecordingTicker(this, 'taskCompletionVoiceTimer', 'taskCompletionVoiceElapsedText')
+    this.clearTaskFeedbackTimer()
+    this.setData({
+      projectDetail: {},
+      contacts: [],
+      tasks: [],
+      taskSummary: {},
+      followTimeline: [],
+      shareHistory: [],
+      projectAssets: [],
+      projectAssetSummary: buildProjectAssetSummary([], {}),
+      showContacts: false,
+      showAddContactSheet: false,
+      contactDraft: buildEmptyContactDraft(),
+      showShareSheet: false,
+      showTransferSheet: false,
+      transferProjectName: '',
+      showTaskCompleteSheet: false,
+      taskCompletionTaskId: '',
+      taskCompletionTaskTitle: '',
+      taskCompletionText: '',
+      showProjectAiSheet: false,
+      projectAiError: '',
+      projectAiResult: null,
+      projectAiResultBackup: null,
+      showProjectReviewSheet: false,
+      projectReviewError: '',
+      projectReviewResult: null,
+      projectReviewResultBackup: null,
+      projectBadges: [],
+      heroMetrics: [],
+      projectOverview: {},
+      contactMeta: {
+        countText: '',
+        primaryText: ''
+      },
+      timelineMeta: {
+        totalText: '',
+        latestText: '',
+        extraText: ''
+      },
+      shareHistoryMeta: {
+        totalText: '',
+        openedText: '',
+        unopenedText: ''
+      },
+      taskActionId: '',
+      canMarkDeal: true,
+      showActionFooter: false,
+      isReadOnlySharedOut: false,
+      isLoading: true,
+      hasLoadedOnce: false,
+      isRefreshing: false
+    })
+
+    if (this.data.projectId) {
+      this.fetchProjectDetail().catch(() => {})
+    }
   },
 
   async fetchProjectDetail(options = {}) {
@@ -1177,6 +1244,7 @@ Page({
         projectId: this.data.projectId,
         includeHome: true,
         includeProjects: true,
+        includeSharedOut: true,
         includeProjectDetail: true
       })
       await this.fetchProjectDetail()
@@ -1507,6 +1575,11 @@ Page({
       return
     }
 
+    const decision = await ensureActionAllowed('create_task', { refresh: true, guide: true })
+    if (!decision.allowed) {
+      return
+    }
+
     this.setData({
       taskActionId: taskId
     })
@@ -1532,6 +1605,7 @@ Page({
         projectId: this.data.projectId,
         includeHome: true,
         includeProjects: true,
+        includeSharedOut: true,
         includeProjectDetail: true
       })
       await this.fetchProjectDetail()
@@ -2052,6 +2126,11 @@ Page({
       }
     }
 
+    const decision = await ensureActionAllowed('create_task', { refresh: true, guide: true })
+    if (!decision.allowed) {
+      return
+    }
+
     this.setData({
       taskActionId: taskId
     })
@@ -2094,6 +2173,7 @@ Page({
         projectId: this.data.projectId,
         includeHome: true,
         includeProjects: true,
+        includeSharedOut: true,
         includeProjectDetail: true
       })
       await this.fetchProjectDetail()
@@ -2289,7 +2369,8 @@ Page({
       })
       markProjectRelatedCachesDirty({
         includeHome: true,
-        includeProjects: true
+        includeProjects: true,
+        includeSharedOut: true
       })
       keepCopyProjectLock = true
       await new Promise((resolve, reject) => {
