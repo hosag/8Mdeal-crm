@@ -35,7 +35,7 @@ function schedule(callback, delay = 0) {
 Component({
   data: {
     current: 'home',
-    hidden: true,
+    hidden: false,
     appearancePageClass: '',
     leftItems: [
       { key: 'home', label: '首页', icon: '/assets/icons/nav-home.svg', activeIcon: '/assets/icons/nav-home-active.svg', path: '/pages/index/index' },

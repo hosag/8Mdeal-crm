@@ -20,7 +20,7 @@ const { buildTaskCompletionFeedback, getTaskCompletionToastTitle } = require('..
 const { appendQueryParams } = require('../../utils/navigation-context')
 const { getNotificationPrimaryActionLabel } = require('../../utils/notification-meta')
 const { getNotificationSyncVersion, touchNotificationSync } = require('../../utils/notification-sync')
-const { setGlobalCustomTabBarHidden, syncCustomTabBar, syncPageAppearance } = require('../../utils/appearance')
+const { syncCustomTabBar, syncPageAppearance } = require('../../utils/appearance')
 const { ensureActionAllowed, getEntitlementSnapshot, buildEntitlementPagePrompt, buildEntitlementOverview } = require('../../utils/entitlement-guard')
 const {
   normalizeFollowUpMethod,
@@ -59,30 +59,11 @@ function schedule(callback, delay = 0) {
   return null
 }
 
-function showPlatformTabBar() {
-  if (typeof wx === 'undefined' || typeof wx.showTabBar !== 'function') {
-    return
-  }
-
-  wx.showTabBar({
-    animation: false,
-    fail: () => {}
-  })
-}
-
-function shouldShowHomeFallbackTabBar(data = {}) {
-  return data.showHomeEntryGuide !== true
-    && data.showQuickEntrySheet !== true
-    && data.showTaskCompleteSheet !== true
-}
-
 function syncTabBarAfterGuideClosed(page) {
   if (!page) {
     return
   }
 
-  setGlobalCustomTabBarHidden(true)
-  showPlatformTabBar()
   syncPageAppearance(page)
   syncCustomTabBar(page, page.data.appearancePageClass)
 
@@ -90,7 +71,7 @@ function syncTabBarAfterGuideClosed(page) {
     const tabBar = page.getTabBar()
     if (tabBar && typeof tabBar.setData === 'function') {
       tabBar.setData({
-        hidden: true,
+        hidden: false,
         current: 'home',
         appearancePageClass: page.data.appearancePageClass || ''
       })
@@ -3173,8 +3154,7 @@ Page({
     },
     homeAvatarText: '我',
     homeNavigationSpacerHeight: getNavigationSpacerHeight(),
-    hideCustomTabBar: true,
-    showHomeEntryGuide: true,
+    showHomeEntryGuide: false,
     showHomeFallbackTabBar: false,
     homeEntryGuideSkipNext: false,
     homeSuppressEntryAnimation: false,
@@ -3393,17 +3373,11 @@ Page({
       return
     }
 
-    setGlobalCustomTabBarHidden(true)
-
     this.setData({
       showHomeEntryGuide: shouldShow,
-      showHomeFallbackTabBar: shouldShowHomeFallbackTabBar({
-        ...this.data,
-        showHomeEntryGuide: shouldShow
-      }),
+      showHomeFallbackTabBar: false,
       homeEntryGuideSkipNext: false
     }, () => {
-      setGlobalCustomTabBarHidden(true)
       syncPageAppearance(this)
       schedule(() => this.syncHomeOverlayTabBar(), 0)
       schedule(() => this.syncHomeOverlayTabBar(), 80)
@@ -3439,13 +3413,9 @@ Page({
 
       this.setData({
         showHomeEntryGuide: false,
-        showHomeFallbackTabBar: shouldShowHomeFallbackTabBar({
-          ...this.data,
-          showHomeEntryGuide: false
-        }),
+        showHomeFallbackTabBar: false,
         homeEntryGuideSkipNext: false
       }, () => {
-        setGlobalCustomTabBarHidden(true)
         syncPageAppearance(this)
         schedule(() => this.syncHomeOverlayTabBar(), 0)
       })
@@ -3477,7 +3447,7 @@ Page({
     }
     this.setData({
       showHomeEntryGuide: false,
-      showHomeFallbackTabBar: true
+      showHomeFallbackTabBar: false
     }, () => {
       syncTabBarAfterGuideClosed(this)
       schedule(() => syncTabBarAfterGuideClosed(this), 0)
@@ -3523,12 +3493,9 @@ Page({
   },
 
   syncHomeOverlayTabBar() {
-    const showHomeFallbackTabBar = shouldShowHomeFallbackTabBar(this.data)
-
-    setGlobalCustomTabBarHidden(true)
-    if (this.data.showHomeFallbackTabBar !== showHomeFallbackTabBar) {
+    if (this.data.showHomeFallbackTabBar !== false) {
       this.setData({
-        showHomeFallbackTabBar
+        showHomeFallbackTabBar: false
       })
     }
     syncPageAppearance(this)

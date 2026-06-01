@@ -1,4 +1,4 @@
-<view wx:if="{{!hidden}}" class="bottom-nav {{appearancePageClass}}">
+<view class="bottom-nav {{hidden ? 'is-hidden' : ''}} {{appearancePageClass}}">
   <view
     wx:for="{{leftItems}}"
     wx:key="key"

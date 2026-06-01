@@ -210,12 +210,6 @@
   </view>
 </view>
 
-<bottom-nav
-  wx:if="{{showHomeFallbackTabBar}}"
-  current="home"
-  appearance-page-class="{{appearancePageClass}}"
-/>
-
 <view wx:if="{{showQuickEntrySheet}}">
   <view class="sheet-mask quick-entry-mask" bindtap="onQuickEntryMaskTap"></view>
   <view class="sheet-panel quick-entry-sheet {{appearancePageClass}} {{isQuickEntryEditing ? 'is-editing' : ''}}" style="{{quickEntrySheetStyle}}">
