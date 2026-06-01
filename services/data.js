@@ -57,6 +57,40 @@ let cachedAccountSummary = getDefaultAccountSummary()
 let cachedEntitlements = getDefaultEntitlements()
 let cachedMockBillingOrders = []
 let cachedMockBillingPaymentTransactions = []
+let localSignedOut = false
+
+function resetLocalSessionCache() {
+  cachedAccountSummary = getDefaultAccountSummary()
+  cachedEntitlements = getDefaultEntitlements()
+  cachedMockBillingOrders = []
+  cachedMockBillingPaymentTransactions = []
+}
+
+function setLocalSignedOut(value) {
+  localSignedOut = value === true
+}
+
+function isLocalSignedOut() {
+  return localSignedOut === true
+}
+
+function buildSignedOutDashboard() {
+  return {
+    metrics: [],
+    taskBoard: {
+      summary: {
+        openCount: 0,
+        overdueCount: 0,
+        todayCount: 0
+      },
+      cards: []
+    },
+    todos: [],
+    timeline: [],
+    hasContent: false,
+    overdueCount: 0
+  }
+}
 
 function getAppDataSource() {
   const app = getApp()
@@ -115,6 +149,13 @@ async function loadScope(scope) {
 }
 
 async function loadHomeData() {
+  if (isLocalSignedOut()) {
+    return {
+      data: buildSignedOutDashboard(),
+      source: getAppDataSource()
+    }
+  }
+
   try {
     const result = await callCloudFunction('getDashboard')
     if (result && Array.isArray(result.metrics) && Array.isArray(result.todos) && Array.isArray(result.timeline)) {
@@ -133,6 +174,13 @@ async function loadHomeData() {
 }
 
 async function loadProjectsData(options = {}) {
+  if (isLocalSignedOut()) {
+    return {
+      data: [],
+      source: getAppDataSource()
+    }
+  }
+
   try {
     const result = await callCloudFunction('listProjects', options)
     if (result && result.projects) {
@@ -1210,6 +1258,13 @@ async function loadShareConfigData(projectId = '') {
 }
 
 async function loadOutboundData() {
+  if (isLocalSignedOut()) {
+    return {
+      data: [],
+      source: getAppDataSource()
+    }
+  }
+
   try {
     const result = await callCloudFunction('listShareRecords')
     if (result && Array.isArray(result.records)) {
@@ -1233,6 +1288,16 @@ async function loadOutboundData() {
 }
 
 async function loadEarningsData() {
+  if (isLocalSignedOut()) {
+    return {
+      data: {
+        summary: [],
+        deals: []
+      },
+      source: getAppDataSource()
+    }
+  }
+
   try {
     const result = await callCloudFunction('getEarnings')
     if (result && Array.isArray(result.summary) && Array.isArray(result.deals)) {
@@ -1466,6 +1531,8 @@ async function saveUserPreferencesData(payload) {
 }
 
 async function bindPhoneData(payload = {}) {
+  setLocalSignedOut(false)
+
   if (!canUseCloud()) {
     const code = String(payload.code || '').trim()
     if (!code) {
@@ -1513,6 +1580,16 @@ async function bindPhoneData(payload = {}) {
 }
 
 async function resolveAccountData() {
+  if (isLocalSignedOut()) {
+    return {
+      data: cacheAccountSummary({
+        ...getDefaultAccountSummary(),
+        source: getAppDataSource()
+      }),
+      source: getAppDataSource()
+    }
+  }
+
   if (!canUseCloud()) {
     return {
       data: cacheAccountSummary({
@@ -1536,6 +1613,16 @@ async function resolveAccountData() {
 }
 
 async function getEntitlementsData() {
+  if (isLocalSignedOut()) {
+    return {
+      data: cacheEntitlementsSummary({
+        ...getDefaultEntitlements(),
+        source: getAppDataSource()
+      }),
+      source: getAppDataSource()
+    }
+  }
+
   if (!canUseCloud()) {
     return {
       data: cacheEntitlementsSummary({
@@ -1846,5 +1933,8 @@ module.exports = {
   getBillingOrderDetailData,
   prepareBillingPaymentData,
   loadUserPreferencesData,
-  saveUserPreferencesData
+  saveUserPreferencesData,
+  resetLocalSessionCache,
+  setLocalSignedOut,
+  isLocalSignedOut
 }

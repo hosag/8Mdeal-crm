@@ -6,7 +6,8 @@ const {
   resolveAccountData,
   getEntitlementsData,
   getDefaultAccountSummary,
-  getDefaultEntitlements
+  getDefaultEntitlements,
+  setLocalSignedOut
 } = require('./services/data')
 const {
   getDefaultAppearanceSettings,
@@ -30,6 +31,8 @@ const { registerPrivacyAuthorizationListener } = require('./utils/privacy-author
 
 App({
   onLaunch(options) {
+    setLocalSignedOut(false)
+
     const cloudReady = initCloud()
     const cloudStatus = getCloudStatus()
     const defaultAppearanceSettings = getDefaultAppearanceSettings()

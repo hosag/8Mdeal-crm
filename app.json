@@ -4,7 +4,8 @@
     "pages/tasks/tasks",
     "pages/projects/projects",
     "pages/shared-out/shared-out",
-    "pages/mine/mine"
+    "pages/mine/mine",
+    "pages/session/session"
   ],
   "subpackages": [
     {

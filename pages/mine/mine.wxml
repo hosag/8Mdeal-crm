@@ -210,6 +210,17 @@
           </view>
         </view>
       </view>
+
+      <view class="mine-setting-group mine-security-group">
+        <view class="mine-group-title">账号安全</view>
+        <view class="mine-signout-card">
+          <view class="mine-signout-copy">
+            <view class="mine-signout-title">退出当前账号</view>
+            <view class="mine-signout-desc">清除本机账号状态和页面缓存，云端项目数据不会删除。</view>
+          </view>
+          <view class="mine-signout-action {{isSigningOut ? 'is-disabled' : ''}}" bindtap="handleSignOutTap">{{isSigningOut ? '退出中' : '退出'}}</view>
+        </view>
+      </view>
     </view>
   </block>
 </view>

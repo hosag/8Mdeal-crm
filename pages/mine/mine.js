@@ -5,8 +5,17 @@ const {
   resolveAccountData,
   getEntitlementsData,
   getDefaultAccountSummary,
-  getDefaultEntitlements
+  getDefaultEntitlements,
+  resetLocalSessionCache,
+  setLocalSignedOut
 } = require('../../services/data')
+const { clearAllPageCache } = require('../../utils/page-cache')
+const {
+  cleanupAccountScopedStorage,
+  cleanupLegacySensitiveStorage,
+  readLastAccountScope,
+  writeLastAccountScope
+} = require('../../utils/account-scope')
 const {
   THEME_OPTIONS,
   THEME_LABELS,
@@ -182,7 +191,8 @@ Page({
     accountSummary: getDefaultAccountSummary(),
     entitlementsSummary: getDefaultEntitlements(),
     accountAccessRows: [],
-    accountAccessNotice: ''
+    accountAccessNotice: '',
+    isSigningOut: false
   },
 
   async onLoad() {
@@ -293,6 +303,10 @@ Page({
   },
 
   async refreshAccessState() {
+    if (this.data.isSigningOut) {
+      return
+    }
+
     try {
       const [accountResult, entitlementsResult] = await Promise.all([
         resolveAccountData(),
@@ -569,5 +583,95 @@ Page({
     }
 
     openTabPage('/pages/index/index?openQuickEntry=1&quickEntryStandalone=1')
+  },
+
+  handleSignOutTap() {
+    if (this.data.isSigningOut) {
+      return
+    }
+
+    wx.showModal({
+      title: '退出当前账号',
+      content: '将清除本机账号状态、草稿和页面缓存；云端项目数据不会删除，重新打开会使用当前微信身份同步。',
+      confirmText: '退出',
+      confirmColor: '#B54747',
+      cancelText: '取消',
+      success: (result) => {
+        if (result && result.confirm) {
+          this.signOutLocalAccount()
+        }
+      }
+    })
+  },
+
+  signOutLocalAccount() {
+    this.setData({
+      isSigningOut: true
+    })
+
+    const app = getApp()
+    const previousScope = app && app.globalData
+      ? String(app.globalData.accountStorageScope || '').trim()
+      : readLastAccountScope()
+    const defaultAccount = getDefaultAccountSummary()
+    const defaultEntitlements = getDefaultEntitlements()
+
+    try {
+      clearAllPageCache()
+      if (previousScope) {
+        cleanupAccountScopedStorage(previousScope)
+      }
+      cleanupLegacySensitiveStorage()
+      writeLastAccountScope('')
+      resetLocalSessionCache()
+      setLocalSignedOut(true)
+    } catch (error) {
+      // Local cleanup is best effort; keep the exit flow usable.
+    }
+
+    if (app && app.globalData) {
+      app.globalData.account = defaultAccount
+      app.globalData.accountStorageScope = ''
+      app.globalData.entitlements = defaultEntitlements
+      app.globalData.entitlementsVersion = Number(app.globalData.entitlementsVersion || 0) + 1
+      app.globalData.pageMemoryCache = Object.create(null)
+      app.globalData.homePageRuntimeSnapshot = null
+      app.globalData.quickEntryRequest = null
+      app.globalData.projectsTabRequest = null
+      app.globalData.customTabBarHidden = false
+      app.globalData.notificationSync = {
+        version: 0,
+        updatedAt: 0,
+        reason: 'sign_out'
+      }
+    }
+
+    this.setData({
+      isSigningOut: false,
+      showDisplayNameSheet: false,
+      preferenceSavingKey: '',
+      displayNameInput: '',
+      ...buildAccessSummaryState(defaultAccount, defaultEntitlements)
+    }, () => {
+      syncCustomTabBar(this, this.data.appearancePageClass)
+    })
+
+    wx.reLaunch({
+      url: '/pages/session/session?reason=signed_out',
+      success: () => {
+        setTimeout(() => {
+          wx.showToast({
+            title: '已退出当前账号',
+            icon: 'none'
+          })
+        }, 120)
+      },
+      fail: () => {
+        wx.showToast({
+          title: '已退出当前账号',
+          icon: 'none'
+        })
+      }
+    })
   }
 })

@@ -1,0 +1,60 @@
+.session-page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  padding: 0 32rpx 64rpx;
+}
+
+.session-nav-spacer {
+  width: 100%;
+  flex: 0 0 auto;
+}
+
+.session-panel {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding-bottom: 120rpx;
+}
+
+.session-mark {
+  align-self: flex-start;
+  display: inline-flex;
+  padding: 10rpx 18rpx;
+  border-radius: 999rpx;
+  background: var(--theme-soft-block-bg);
+  color: var(--theme-text-muted);
+  font-size: 22rpx;
+  font-weight: 800;
+}
+
+.session-title {
+  margin-top: 28rpx;
+  color: var(--theme-title);
+  font-size: 48rpx;
+  font-weight: 900;
+  line-height: 1.18;
+}
+
+.session-desc {
+  margin-top: 18rpx;
+  max-width: 620rpx;
+  color: var(--theme-text-soft);
+  font-size: 26rpx;
+  line-height: 1.7;
+}
+
+.session-actions {
+  margin-top: 42rpx;
+}
+
+.session-primary-action {
+  min-height: 88rpx;
+  max-width: 360rpx;
+}
+
+.session-primary-action.is-disabled {
+  opacity: 0.58;
+}

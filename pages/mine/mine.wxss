@@ -446,6 +446,57 @@
   margin-top: 10rpx;
 }
 
+.mine-security-group {
+  margin-top: 18rpx;
+}
+
+.mine-signout-card {
+  display: flex;
+  align-items: center;
+  gap: 18rpx;
+  padding: 16rpx 14rpx;
+  border-radius: 22rpx;
+  background: var(--theme-soft-block-bg);
+  box-shadow: inset 0 0 0 2rpx rgba(181, 71, 71, 0.06);
+}
+
+.mine-signout-copy {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.mine-signout-title {
+  font-size: 25rpx;
+  font-weight: 800;
+  color: #B54747;
+}
+
+.mine-signout-desc {
+  margin-top: 6rpx;
+  font-size: 20rpx;
+  line-height: 1.5;
+  color: var(--theme-text-soft);
+}
+
+.mine-signout-action {
+  flex: 0 0 auto;
+  min-width: 118rpx;
+  min-height: 56rpx;
+  padding: 0 20rpx;
+  border-radius: 18rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #B54747;
+  font-size: 22rpx;
+  font-weight: 800;
+  background: rgba(181, 71, 71, 0.08);
+}
+
+.mine-signout-action.is-disabled {
+  opacity: 0.46;
+}
+
 .mine-reminder-row {
   padding-top: 14rpx;
   padding-bottom: 10rpx;
