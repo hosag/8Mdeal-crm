@@ -384,10 +384,10 @@ function buildEffectiveStatusCard(order, entitlements, billingCatalog) {
 
   return {
     visible: true,
-    title: accessLevel === 'paid_active' ? '这笔订单对应的权益已生效' : '这笔订单已到账',
+    title: accessLevel === 'paid_active' ? '已完成开通' : '已完成支付',
     desc: latestSubscription && latestSubscription.expiresAtText
-      ? `${latestSubscription.planName || '当前套餐'} 有效至 ${latestSubscription.expiresAtText}`
-      : '当前订单已完成到账，可继续查看最新权益状态。',
+      ? `${latestSubscription.planName || '当前套餐'} 已开通至 ${latestSubscription.expiresAtText}`
+      : '当前购买结果已同步，可继续查看最新权益状态。',
     rows: [
       {
         key: 'subscription',
@@ -421,8 +421,8 @@ function buildEffectiveStatusCard(order, entitlements, billingCatalog) {
 function buildPrimaryActionMeta(order, transaction) {
   if (order.status === 'paid') {
     return {
-      title: '订单已支付',
-      desc: '这笔订单已经完成到账。现在更应该确认当前订阅、到期时间和剩余额度是否都已生效。',
+      title: '已完成支付',
+      desc: '购买结果已经同步完成，可以继续查看当前订阅、到期时间和剩余额度。',
       actionText: '查看当前权益',
       actionType: 'entitlements'
     }
@@ -430,8 +430,8 @@ function buildPrimaryActionMeta(order, transaction) {
 
   if (order.status === 'closed' || order.status === 'failed' || order.status === 'refunded') {
     return {
-      title: '当前订单不是待支付状态',
-      desc: '如果后续需要继续购买，建议回到套餐页重新创建一笔新的订单记录。',
+      title: '这笔订单已结束',
+      desc: '如果还需要继续购买，可以回到套餐页重新选择。',
       actionText: '回到套餐页',
       actionType: 'back'
     }
@@ -440,19 +440,19 @@ function buildPrimaryActionMeta(order, transaction) {
   if (transaction) {
     return {
       title: transaction.paymentSession && transaction.paymentSession.canInvokePayment
-        ? '当前订单可继续支付'
-        : '当前订单待支付',
+        ? '继续完成支付'
+        : '暂时无法支付',
       desc: transaction.paymentSession && transaction.paymentSession.canInvokePayment
-        ? '点击主按钮继续完成支付。'
-        : '当前暂不可支付，请稍后再试。',
+        ? '确认后将进入微信支付。'
+        : '支付信息还在准备中，请稍后再试。',
       actionText: transaction.paymentSession && transaction.paymentSession.canInvokePayment ? '继续支付' : '稍后再试',
       actionType: transaction.paymentSession && transaction.paymentSession.canInvokePayment ? 'invoke' : 'prepare'
     }
   }
 
   return {
-    title: '当前订单待支付',
-    desc: '点击主按钮继续完成支付。',
+    title: '继续完成支付',
+    desc: '确认后将进入微信支付。',
     actionText: '继续支付',
     actionType: 'prepare'
   }

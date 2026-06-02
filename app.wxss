@@ -1648,6 +1648,7 @@ page {
   inset: 0;
   background: var(--theme-sheet-mask);
   z-index: 80;
+  backdrop-filter: blur(10rpx);
 }
 
 .sheet-panel {

@@ -1038,7 +1038,15 @@ Page({
 
   async confirmPendingOrder() {
     const product = this.data.confirmProduct
-    if (!product || this.data.submittingProductKey) {
+    if (!product) {
+      wx.showToast({
+        title: '当前商品信息失效，请重试',
+        icon: 'none'
+      })
+      return
+    }
+
+    if (this.data.submittingProductKey) {
       return
     }
 

@@ -329,7 +329,7 @@
 }
 
 .plans-confirm-sheet {
-  z-index: 30;
+  z-index: 81;
   max-height: 82vh;
   overflow-y: auto;
 }
@@ -437,6 +437,16 @@
 .plans-confirm-submit {
   flex: 1 1 0;
   justify-content: center;
+}
+
+.plans-confirm-button {
+  border: 0;
+  margin: 0;
+  line-height: 88rpx;
+}
+
+.plans-confirm-button::after {
+  border: 0;
 }
 
 .page-shell.plans-page.appearance-font-large .plans-hero .hero-title {

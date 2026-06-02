@@ -213,10 +213,8 @@ function buildWechatJsapiOrderRequest(order, paymentProfile, openid, outTradeNo)
       openid: toText(openid)
     },
     attach: JSON.stringify({
-      orderId: toText(order.orderId),
-      accountId: toText(order.accountId),
-      productCode: toText(order.productCode),
-      transactionId: toText(outTradeNo)
+      o: toText(order.orderId),
+      t: toText(outTradeNo)
     })
   }
 }

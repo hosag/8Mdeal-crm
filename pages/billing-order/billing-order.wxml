@@ -15,7 +15,7 @@
         <view wx:if="{{order.originalPriceText}}" class="billing-order-hero-price-note">原价 {{order.originalPriceText}}</view>
       </view>
       <view class="hero-actions">
-        <view class="btn-secondary" bindtap="handlePrimaryAction">{{isSubmitting ? '处理中...' : primaryActionMeta.actionText}}</view>
+        <view class="btn-primary" bindtap="handlePrimaryAction">{{isSubmitting ? '处理中...' : primaryActionMeta.actionText}}</view>
         <view class="btn-ghost" bindtap="openPlansPage">回到套餐页</view>
       </view>
     </view>
@@ -69,7 +69,7 @@
     <view class="form-card section rise-in stagger-3">
       <view class="section-title">订单概览</view>
       <view class="billing-order-grid">
-        <view class="billing-order-item" wx:for="{{overviewRows}}" wx:key="key">
+        <view class="billing-order-item {{item.key === 'orderId' ? 'is-order-id' : ''}}" wx:for="{{overviewRows}}" wx:key="key">
           <view class="billing-order-label">{{item.label}}</view>
           <view class="billing-order-value">{{item.value}}</view>
         </view>

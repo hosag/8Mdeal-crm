@@ -27,9 +27,9 @@
         </view>
       </view>
       <view class="entitlements-grid">
-        <view class="entitlements-item" wx:for="{{effectiveAccessCard.rows}}" wx:key="key">
+        <view class="entitlements-item {{item.key === 'period' ? 'is-period' : ''}}" wx:for="{{effectiveAccessCard.rows}}" wx:key="key">
           <view class="entitlements-item-label">{{item.label}}</view>
-          <view class="entitlements-item-value">{{item.value}}</view>
+          <view class="entitlements-item-value {{item.key === 'period' ? 'is-period' : ''}}">{{item.value}}</view>
         </view>
       </view>
     </view>

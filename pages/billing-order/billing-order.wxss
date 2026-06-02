@@ -123,6 +123,12 @@
   font-weight: 700;
   line-height: 1.42;
   color: var(--theme-title);
+  word-break: break-all;
+}
+
+.billing-order-item.is-order-id .billing-order-value {
+  font-size: 16rpx;
+  line-height: 1.5;
 }
 
 .billing-order-empty-copy {

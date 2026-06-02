@@ -100,7 +100,7 @@
       <view class="sheet-handle"></view>
       <view class="sheet-header">
         <view class="sheet-title">{{confirmProduct.sheetTitle}}</view>
-        <view class="sheet-close" bindtap="closeOrderConfirmSheet">关闭</view>
+        <view class="sheet-close" catchtap="closeOrderConfirmSheet">关闭</view>
       </view>
 
       <view class="plans-confirm-hero">
@@ -129,8 +129,8 @@
       </view>
 
       <view class="inline-actions plans-confirm-actions">
-        <view class="btn-ghost plans-confirm-cancel" bindtap="closeOrderConfirmSheet">再想想</view>
-        <view class="btn-primary plans-confirm-submit" bindtap="confirmPendingOrder">{{confirmProduct.confirmText}}</view>
+        <button class="btn-ghost plans-confirm-cancel plans-confirm-button" bindtap="closeOrderConfirmSheet">再想想</button>
+        <button class="btn-primary plans-confirm-submit plans-confirm-button" bindtap="confirmPendingOrder">{{confirmProduct.confirmText}}</button>
       </view>
     </view>
   </block>

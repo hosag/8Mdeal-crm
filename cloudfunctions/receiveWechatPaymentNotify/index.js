@@ -121,26 +121,26 @@ function verifyWechatNotifySignature(rawBody, headers) {
   const nonce = toText(headers['wechatpay-nonce'])
   const signature = toText(headers['wechatpay-signature'])
   const serial = toText(headers['wechatpay-serial'])
-  const platformPem = normalizePem(getEnvText('BILLING_WECHAT_PAY_PLATFORM_CERT'))
-  const expectedSerial = toText(getEnvText('BILLING_WECHAT_PAY_PLATFORM_SERIAL_NO'))
+  const publicKeyPem = normalizePem(getEnvText('BILLING_WECHAT_PAY_PUBLIC_KEY'))
+  const expectedKeyId = toText(getEnvText('BILLING_WECHAT_PAY_PUBLIC_KEY_ID'))
 
   if (!timestamp || !nonce || !signature || !serial) {
     throw new Error('WECHAT_PAY_NOTIFY_INVALID_HEADERS')
   }
 
-  if (!platformPem) {
-    throw new Error('WECHAT_PAY_NOTIFY_CERT_MISSING')
+  if (!publicKeyPem) {
+    throw new Error('WECHAT_PAY_NOTIFY_PUBLIC_KEY_MISSING')
   }
 
-  if (expectedSerial && expectedSerial !== serial) {
-    throw new Error('WECHAT_PAY_NOTIFY_SERIAL_MISMATCH')
+  if (expectedKeyId && expectedKeyId !== serial) {
+    throw new Error('WECHAT_PAY_NOTIFY_KEY_ID_MISMATCH')
   }
 
   const verify = crypto.createVerify('RSA-SHA256')
   verify.update(buildWechatNotifySignMessage(timestamp, nonce, rawBody))
   verify.end()
 
-  const passed = verify.verify(platformPem, signature, 'base64')
+  const passed = verify.verify(publicKeyPem, signature, 'base64')
   if (!passed) {
     throw new Error('WECHAT_PAY_NOTIFY_VERIFY_FAILED')
   }
@@ -212,11 +212,28 @@ function mapTransactionTradeState(tradeState) {
   return ''
 }
 
+function parseWechatAttach(value) {
+  const current = toText(value)
+  if (!current) {
+    return {}
+  }
+
+  const parsed = safeJsonParse(current, null)
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    return {}
+  }
+
+  return parsed
+}
+
 function mapWechatNotifyToInternalEvent(eventType, notifyBody, verifyResult) {
   const currentEventType = toText(eventType).toUpperCase()
   const source = notifyBody && typeof notifyBody === 'object' ? notifyBody : {}
+  const attach = parseWechatAttach(source.attach)
   const outTradeNo = toText(source.out_trade_no)
-  const transactionId = toText(source.transaction_id)
+  const businessOrderId = toText(attach.orderId || attach.o || outTradeNo)
+  const localTransactionId = toText(attach.transactionId || attach.t || outTradeNo)
+  const providerTransactionId = toText(source.transaction_id)
   const successTime = toText(source.success_time)
   const tradeState = toText(source.trade_state)
   const refundStatus = toText(source.refund_status || source.refund_state)
@@ -225,20 +242,22 @@ function mapWechatNotifyToInternalEvent(eventType, notifyBody, verifyResult) {
   if (currentEventType === 'TRANSACTION.SUCCESS' || currentEventType === 'TRANSACTION.CLOSED') {
     return {
       provider: 'wechat_pay',
-      orderId: outTradeNo,
+      orderId: businessOrderId,
       outTradeNo,
       merchantOrderId: outTradeNo,
-      externalTransactionId: transactionId,
-      providerTransactionId: transactionId,
-      transactionId,
+      merchantTradeNo: outTradeNo,
+      externalTransactionId: providerTransactionId,
+      providerTransactionId,
+      transactionId: localTransactionId,
       tradeState,
       status: mapTransactionTradeState(tradeState) || (currentEventType === 'TRANSACTION.SUCCESS' ? 'success' : 'close'),
       paidAt: successTime,
       actionAt: successTime,
-      callbackTraceId: `${toText(verifyResult.timestamp)}:${toText(verifyResult.nonce)}:${currentEventType}:${outTradeNo || transactionId}`,
-      eventId: `${currentEventType}:${outTradeNo || transactionId}`,
+      callbackTraceId: `${toText(verifyResult.timestamp)}:${toText(verifyResult.nonce)}:${currentEventType}:${outTradeNo || providerTransactionId}`,
+      eventId: `${currentEventType}:${outTradeNo || providerTransactionId}`,
       source: 'wechat_pay_notify',
       message: toText(source.trade_state_desc || source.trade_state),
+      attach: clone(attach),
       rawCallback: clone(source)
     }
   }
@@ -246,40 +265,44 @@ function mapWechatNotifyToInternalEvent(eventType, notifyBody, verifyResult) {
   if (currentEventType === 'REFUND.SUCCESS') {
     return {
       provider: 'wechat_pay',
-      orderId: outTradeNo,
+      orderId: businessOrderId,
       outTradeNo,
       merchantOrderId: outTradeNo,
-      externalTransactionId: transactionId,
-      providerTransactionId: transactionId,
-      transactionId,
+      merchantTradeNo: outTradeNo,
+      externalTransactionId: providerTransactionId,
+      providerTransactionId,
+      transactionId: localTransactionId,
       tradeState: refundStatus || 'SUCCESS',
       status: 'refund',
       refundedAt: refundSuccessTime,
       actionAt: refundSuccessTime,
-      callbackTraceId: `${toText(verifyResult.timestamp)}:${toText(verifyResult.nonce)}:${currentEventType}:${outTradeNo || transactionId}`,
-      eventId: `${currentEventType}:${outTradeNo || transactionId}`,
+      callbackTraceId: `${toText(verifyResult.timestamp)}:${toText(verifyResult.nonce)}:${currentEventType}:${outTradeNo || providerTransactionId}`,
+      eventId: `${currentEventType}:${outTradeNo || providerTransactionId}`,
       source: 'wechat_pay_notify',
       message: refundStatus || 'refund_success',
+      attach: clone(attach),
       rawCallback: clone(source)
     }
   }
 
   return {
     provider: 'wechat_pay',
-    orderId: outTradeNo,
+    orderId: businessOrderId,
     outTradeNo,
     merchantOrderId: outTradeNo,
-    externalTransactionId: transactionId,
-    providerTransactionId: transactionId,
-    transactionId,
+    merchantTradeNo: outTradeNo,
+    externalTransactionId: providerTransactionId,
+    providerTransactionId,
+    transactionId: localTransactionId,
     tradeState,
     status: mapTransactionTradeState(tradeState) || 'pending',
     paidAt: successTime,
     actionAt: successTime,
-    callbackTraceId: `${toText(verifyResult.timestamp)}:${toText(verifyResult.nonce)}:${currentEventType}:${outTradeNo || transactionId}`,
-    eventId: `${currentEventType}:${outTradeNo || transactionId}`,
+    callbackTraceId: `${toText(verifyResult.timestamp)}:${toText(verifyResult.nonce)}:${currentEventType}:${outTradeNo || providerTransactionId}`,
+    eventId: `${currentEventType}:${outTradeNo || providerTransactionId}`,
     source: 'wechat_pay_notify',
     message: toText(source.trade_state_desc || source.summary || currentEventType),
+    attach: clone(attach),
     rawCallback: clone(source)
   }
 }

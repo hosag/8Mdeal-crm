@@ -112,6 +112,10 @@
   box-shadow: inset 0 0 0 1rpx rgba(24, 39, 51, 0.05);
 }
 
+.entitlements-item.is-period {
+  grid-column: 1 / -1;
+}
+
 .entitlements-item-label {
   font-size: 18rpx;
   color: var(--theme-text-muted);
@@ -123,6 +127,10 @@
   font-weight: 700;
   line-height: 1.45;
   color: var(--theme-title);
+}
+
+.entitlements-item-value.is-period {
+  white-space: nowrap;
 }
 
 .entitlements-effective-card {
