@@ -1,0 +1,42 @@
+<view class="page-shell legal-document-detail-page {{appearancePageClass}}">
+  <view class="hero rise-in">
+    <view class="eyebrow-row">
+      <view class="eyebrow">{{typeLabel}}</view>
+    </view>
+    <view class="hero-title">{{title || '协议详情'}}</view>
+    <view class="hero-subtitle">{{version ? version + ' · ' : ''}}{{effectiveAtText ? '生效日期 ' + effectiveAtText : '当前正式版本'}}</view>
+  </view>
+
+  <view wx:if="{{isLoading}}" class="form-card section rise-in stagger-1 legal-detail-loading">
+    <view class="card-title">正在读取协议内容...</view>
+  </view>
+
+  <block wx:else>
+    <view class="form-card section rise-in stagger-1 legal-version-card">
+      <view class="section-title">版本信息</view>
+      <view class="legal-version-grid">
+        <view class="legal-version-item">
+          <view class="field-label">协议类型</view>
+          <view class="card-subtitle">{{typeLabel}}</view>
+        </view>
+        <view class="legal-version-item">
+          <view class="field-label">协议版本</view>
+          <view class="card-subtitle">{{version || '未设置'}}</view>
+        </view>
+        <view class="legal-version-item">
+          <view class="field-label">发布日期</view>
+          <view class="card-subtitle">{{publishedAtText || '未设置'}}</view>
+        </view>
+        <view class="legal-version-item">
+          <view class="field-label">生效日期</view>
+          <view class="card-subtitle">{{effectiveAtText || '未设置'}}</view>
+        </view>
+      </view>
+    </view>
+
+    <view class="form-card section rise-in stagger-2 legal-content-card">
+      <view class="section-title">正文</view>
+      <rich-text class="legal-rich-text" nodes="{{htmlSnapshot}}"></rich-text>
+    </view>
+  </block>
+</view>

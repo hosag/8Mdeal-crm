@@ -87,10 +87,20 @@
         </view>
       </view>
 
+      <view class="nav-card mine-entry-card" data-url="/pages/legal-documents/legal-documents" bindtap="openPage">
+        <view class="line-between mine-entry-head">
+          <view class="mine-entry-main">
+            <view class="card-title">隐私政策与协议</view>
+            <view class="card-subtitle">查看当前生效的隐私政策和用户服务协议，并可手动完成同意留痕。</view>
+          </view>
+          <view class="section-link">进入</view>
+        </view>
+      </view>
+
       <view class="nav-card mine-entry-card" data-url="/pages/privacy-tags/privacy-tags" bindtap="openPage">
         <view class="line-between mine-entry-head">
           <view class="mine-entry-main">
-            <view class="card-title">隐私标签</view>
+            <view class="card-title">默认分享范围设置</view>
             <view class="card-subtitle">管理默认分享范围。</view>
           </view>
           <view class="section-link">进入</view>
@@ -111,7 +121,7 @@
                 <view>项目回看提醒</view>
                 <view wx:if="{{preferenceSavingKey === 'followUpEnabled'}}" class="menu-saving-text">保存中</view>
               </view>
-              <view class="menu-caption">控制较久未推进项目的弱提醒。</view>
+              <view class="menu-caption">多久未跟进时提醒我</view>
             </view>
             <switch
               color="#355d76"
@@ -129,7 +139,7 @@
                 <view>任务提醒</view>
                 <view wx:if="{{preferenceSavingKey === 'taskEnabled' || preferenceSavingKey === 'taskAdvance'}}" class="menu-saving-text">保存中</view>
               </view>
-              <view class="menu-caption">控制推进任务的到期与逾期提醒。</view>
+              <view class="menu-caption">任务到期提醒</view>
             </view>
             <switch
               color="#355d76"
@@ -195,7 +205,6 @@
           <view class="line-between mine-font-head">
             <view>
               <view class="field-label mine-font-title">字体与阅读</view>
-              <view class="menu-caption">按你的阅读习惯调整字号与控件密度。</view>
             </view>
             <view wx:if="{{preferenceSavingKey === 'fontScaleMode'}}" class="menu-saving-text">保存中</view>
           </view>
@@ -216,7 +225,7 @@
         <view class="mine-signout-card">
           <view class="mine-signout-copy">
             <view class="mine-signout-title">退出当前账号</view>
-            <view class="mine-signout-desc">清除本机账号状态和页面缓存，云端项目数据不会删除。</view>
+            <view class="mine-signout-desc">退出登录，项目数据保留在云端。</view>
           </view>
           <view class="mine-signout-action {{isSigningOut ? 'is-disabled' : ''}}" bindtap="handleSignOutTap">{{isSigningOut ? '退出中' : '退出'}}</view>
         </view>

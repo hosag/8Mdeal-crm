@@ -1,0 +1,46 @@
+.legal-documents-page {
+  padding-bottom: 80rpx;
+}
+
+.legal-documents-list {
+  display: grid;
+  gap: 20rpx;
+}
+
+.legal-doc-card {
+  padding: 22rpx 24rpx;
+}
+
+.legal-doc-card-head {
+  align-items: flex-start;
+}
+
+.legal-doc-card-main {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.legal-doc-meta-row {
+  margin-top: 18rpx;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16rpx;
+  flex-wrap: wrap;
+}
+
+.legal-doc-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44rpx;
+  padding: 0 16rpx;
+  border-radius: 999rpx;
+  background: var(--theme-warning-bg);
+  color: var(--theme-warning-text);
+  font-size: 22rpx;
+  font-weight: 700;
+}
+
+.legal-empty-card {
+  padding: 28rpx 24rpx;
+}

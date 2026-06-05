@@ -168,7 +168,7 @@ function normalizeCloudError(error) {
   }
 
   if (/ERR_PROXY_CONNECTION_FAILED|proxy|代理/i.test(rawMessage)) {
-    const normalized = new Error('云端请求失败：当前网络代理连接失败，请关闭开发者工具代理或系统代理后重试')
+    const normalized = new Error('云端请求失败：网络连接失败，请检查后重试')
     normalized.code = 'CLOUD_PROXY_CONNECTION_FAILED'
     normalized.rawMessage = rawMessage
     return normalized
@@ -275,9 +275,24 @@ function normalizeCloudError(error) {
       message: '当前无权执行内部到账操作'
     },
     {
+      pattern: /LEGAL_DOCUMENT_NOT_FOUND/i,
+      code: 'LEGAL_DOCUMENT_NOT_FOUND',
+      message: '当前协议版本不存在或尚未发布'
+    },
+    {
+      pattern: /LEGAL_DOCUMENT_TYPE_REQUIRED|AGREEMENT_TYPE_REQUIRED/i,
+      code: 'LEGAL_DOCUMENT_TYPE_REQUIRED',
+      message: '缺少协议类型，请返回重试'
+    },
+    {
+      pattern: /LEGAL_DOCUMENT_VERSION_REQUIRED|AGREEMENT_VERSION_REQUIRED/i,
+      code: 'LEGAL_DOCUMENT_VERSION_REQUIRED',
+      message: '缺少协议版本号，请返回重试'
+    },
+    {
       pattern: /ACCOUNT_DISABLED/i,
       code: 'ACCOUNT_DISABLED',
-      message: '当前账号已被禁用，请联系管理员处理'
+      message: '账号状态异常，请稍后重试'
     }
   ]
 

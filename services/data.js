@@ -524,6 +524,97 @@ function createRequestId(prefix = 'req') {
   return `${normalizeText(prefix) || 'req'}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
 }
 
+const LEGAL_DOCUMENT_TYPE_LABELS = {
+  privacy_policy: '隐私政策',
+  user_agreement: '用户服务协议'
+}
+
+const LEGAL_DOCUMENT_MOCK_DETAILS = {
+  privacy_policy: {
+    docId: 'legal_privacy_policy_v1_0_0',
+    docType: 'privacy_policy',
+    title: '隐私政策',
+    version: 'v1.0.0',
+    effectiveAt: '2026-06-03T00:00:00.000Z',
+    publishedAt: '2026-06-03T00:00:00.000Z',
+    requiresReconsent: true,
+    hash: 'sha256:mock_privacy_policy_v1_0_0',
+    htmlSnapshot: [
+      '<h1>隐私政策</h1>',
+      '<p>更新日期：2026-06-03<br />生效日期：2026-06-03</p>',
+      '<p>欢迎使用八面成交CRM。为便于你理解我们如何收集、使用、存储和保护个人信息，请重点阅读本政策。</p>',
+      '<h2>1. 我们收集的信息</h2>',
+      '<ul>',
+      '<li>账号信息：微信身份、手机号、昵称等用于识别账户与登录态的信息。</li>',
+      '<li>业务信息：项目、联系人、跟进、任务、分享、反馈等你主动填写的内容。</li>',
+      '<li>能力数据：你主动上传的录音、图片及其转写、识别结果。</li>',
+      '<li>交易信息：订单、支付状态、套餐、权益到账和额度流水。</li>',
+      '</ul>',
+      '<h2>2. 我们如何使用信息</h2>',
+      '<ul>',
+      '<li>提供项目管理、联系人维护、AI 整理、语音识别、支付与订阅等核心功能。</li>',
+      '<li>识别账号状态、同步套餐权益、进行安全校验、异常排查和服务优化。</li>',
+      '</ul>',
+      '<h2>3. 联系我们</h2>',
+      '<p>如你对本政策有疑问，可通过小程序内“反馈与建议”入口联系我们。</p>'
+    ].join(''),
+    summary: '当前正式版本，覆盖账号、项目、语音、支付与第三方说明。'
+  },
+  user_agreement: {
+    docId: 'legal_user_agreement_v1_0_0',
+    docType: 'user_agreement',
+    title: '用户服务协议',
+    version: 'v1.0.0',
+    effectiveAt: '2026-06-03T00:00:00.000Z',
+    publishedAt: '2026-06-03T00:00:00.000Z',
+    requiresReconsent: true,
+    hash: 'sha256:mock_user_agreement_v1_0_0',
+    htmlSnapshot: [
+      '<h1>用户服务协议</h1>',
+      '<p>更新日期：2026-06-03<br />生效日期：2026-06-03</p>',
+      '<p>欢迎使用八面成交CRM。你在注册、登录、使用本服务前，应仔细阅读并理解本协议。</p>',
+      '<h2>1. 服务内容</h2>',
+      '<ul>',
+      '<li>提供项目管理、联系人与跟进管理、语音录入、AI 整理、分享协作、套餐订阅与增值服务。</li>',
+      '<li>具体功能以小程序前台、后台配置及实际开放能力为准。</li>',
+      '</ul>',
+      '<h2>2. 用户行为规范</h2>',
+      '<ul>',
+      '<li>不得上传、发布或传播违法违规、侵权或骚扰性内容。</li>',
+      '<li>不得利用本服务从事破解、攻击、干扰、爬取等影响平台安全的行为。</li>',
+      '</ul>',
+      '<h2>3. 付费与权益</h2>',
+      '<p>套餐、流量包、订阅价格、权益内容、有效期和使用限制以购买页、支付页和实际到账结果为准。</p>',
+      '<h2>4. 联系方式</h2>',
+      '<p>如需咨询、投诉或申请协助，请通过小程序内“反馈与建议”入口联系我们。</p>'
+    ].join(''),
+    summary: '当前正式版本，覆盖账户使用、AI/语音说明和付费权益。'
+  }
+}
+
+function getMockLegalDocumentList() {
+  return Object.keys(LEGAL_DOCUMENT_MOCK_DETAILS).map((docType) => {
+    const detail = LEGAL_DOCUMENT_MOCK_DETAILS[docType]
+    return {
+      docId: detail.docId,
+      docType: detail.docType,
+      title: detail.title || LEGAL_DOCUMENT_TYPE_LABELS[detail.docType] || detail.docType,
+      version: detail.version,
+      effectiveAt: detail.effectiveAt,
+      publishedAt: detail.publishedAt,
+      requiresReconsent: detail.requiresReconsent === true,
+      hash: detail.hash || '',
+      summary: detail.summary || ''
+    }
+  })
+}
+
+function getMockLegalDocumentDetail(docType = '') {
+  const currentDocType = normalizeText(docType) || 'privacy_policy'
+  const detail = LEGAL_DOCUMENT_MOCK_DETAILS[currentDocType] || LEGAL_DOCUMENT_MOCK_DETAILS.privacy_policy
+  return clone(detail)
+}
+
 const CLOUD_PROVIDER_LABEL = 'CloudBase AI'
 const CLOUD_MODEL_NAME = 'hunyuan-exp / hunyuan-turbos-latest'
 
@@ -531,7 +622,7 @@ function buildAiSourceMeta(sourceType = 'model') {
   if (sourceType === 'fallback') {
     return {
       sourceType: 'fallback',
-      sourceLabel: '系统基础建议',
+      sourceLabel: '系统整理',
       providerLabel: '',
       modelName: '',
       canRegenerate: true
@@ -540,7 +631,7 @@ function buildAiSourceMeta(sourceType = 'model') {
 
   return {
     sourceType: 'model',
-    sourceLabel: '云端模型',
+    sourceLabel: 'AI整理',
     providerLabel: CLOUD_PROVIDER_LABEL,
     modelName: CLOUD_MODEL_NAME,
     canRegenerate: true
@@ -762,7 +853,7 @@ function buildLocalProjectJudgement(payload = {}, detail = {}) {
   return {
     ok: true,
     sourceType: 'fallback',
-    sourceLabel: '系统基础建议',
+    sourceLabel: '系统整理',
     providerLabel: '',
     modelName: '',
     canRegenerate: true,
@@ -835,13 +926,13 @@ function buildLocalProjectReview(payload = {}, detail = {}) {
         : '',
       completedTasks.length
         ? `过程中共完成 ${completedTasks.length} 条推进动作，说明项目是被持续压着往前走的。`
-        : '项目已成交，但当前沉淀的动作记录还不够完整。'
+        : '项目已成交，但当前记录还不够完整。'
     ].filter(Boolean).join('')
 
     return {
       ok: true,
       sourceType: 'fallback',
-      sourceLabel: '系统基础建议',
+      sourceLabel: '系统整理',
       providerLabel: '',
       modelName: '',
       canRegenerate: true,
@@ -904,7 +995,7 @@ function buildLocalProjectReview(payload = {}, detail = {}) {
   return {
     ok: true,
     sourceType: 'fallback',
-    sourceLabel: '系统基础建议',
+    sourceLabel: '系统整理',
     providerLabel: '',
     modelName: '',
     canRegenerate: true,
@@ -933,7 +1024,7 @@ function buildLocalDormantWake(payload = {}, detail = {}) {
   const topTask = openTasks[0] || null
   const topContact = contacts[0] || null
 
-  let wakeSummary = `${projectName}当前处于${stage}阶段，最近推进沉淀偏少，值得用一次低成本触达重新试探窗口。`
+  let wakeSummary = `${projectName}当前处于${stage}阶段，最近推进记录偏少，值得用一次低成本触达重新试探窗口。`
   if (latestSummary) {
     wakeSummary = `${projectName}当前处于${stage}阶段，最近明确推进停留在“${latestSummary}”，可以先做一次轻量唤醒判断是否还有窗口。`
   } else if (description) {
@@ -961,7 +1052,7 @@ function buildLocalDormantWake(payload = {}, detail = {}) {
   return {
     ok: true,
     sourceType: 'fallback',
-    sourceLabel: '系统基础建议',
+    sourceLabel: '系统整理',
     providerLabel: '',
     modelName: '',
     canRegenerate: true,
@@ -990,10 +1081,10 @@ function buildLocalNextSuggestion(payload = {}, detail = {}) {
 
   const stageActionMap = {
     线索: {
-      nextAction: '先确认客户真实需求和关键决策链路',
+      nextAction: '先确认客户真实需求和关键决策流程',
       method: '电话',
       talkTrack: `想和您先对齐一下 ${projectName} 这次推进里最关键的需求优先级和决策参与人，确保下一步方案准备不跑偏。`,
-      taskTitle: '确认需求优先级和决策链路',
+      taskTitle: '确认需求优先级和决策流程',
       type: 'collect_info'
     },
     洽谈: {
@@ -1476,6 +1567,75 @@ async function resolveNotificationData(payload) {
   return callCloudFunction('resolveNotification', payload)
 }
 
+async function getCurrentLegalDocumentsData() {
+  if (!canUseCloud()) {
+    return {
+      data: {
+        ok: true,
+        documents: getMockLegalDocumentList()
+      },
+      source: getAppDataSource()
+    }
+  }
+
+  const result = await callCloudFunction('getCurrentLegalDocuments')
+  return {
+    data: {
+      ok: result && result.ok !== false,
+      documents: Array.isArray(result && result.documents) ? clone(result.documents) : []
+    },
+    source: 'CloudBase'
+  }
+}
+
+async function getLegalDocumentDetailData(payload = {}) {
+  const nextPayload = payload && typeof payload === 'object' ? { ...payload } : {}
+  if (!canUseCloud()) {
+    return {
+      data: {
+        ok: true,
+        document: getMockLegalDocumentDetail(nextPayload.docType || nextPayload.agreementType)
+      },
+      source: getAppDataSource()
+    }
+  }
+
+  const result = await callCloudFunction('getLegalDocumentDetail', nextPayload)
+  return {
+    data: {
+      ok: result && result.ok !== false,
+      document: result && result.document ? clone(result.document) : null
+    },
+    source: 'CloudBase'
+  }
+}
+
+async function saveAgreementConsentData(payload = {}) {
+  const nextPayload = payload && typeof payload === 'object' ? { ...payload } : {}
+
+  if (!canUseCloud()) {
+    return {
+      data: {
+        ok: true,
+        agreementType: normalizeText(nextPayload.agreementType || nextPayload.docType),
+        version: normalizeText(nextPayload.version),
+        acceptedAt: new Date().toISOString()
+      },
+      source: getAppDataSource()
+    }
+  }
+
+  await resolveAccountData()
+  const result = await callCloudFunction('saveAgreementConsent', nextPayload)
+  return {
+    data: {
+      ...(result || {}),
+      ok: result && result.ok !== false
+    },
+    source: 'CloudBase'
+  }
+}
+
 async function submitFeedbackData(payload) {
   return callCloudFunction('submitFeedback', payload)
 }
@@ -1922,6 +2082,9 @@ module.exports = {
   loadNotificationsData,
   markNotificationReadData,
   resolveNotificationData,
+  getCurrentLegalDocumentsData,
+  getLegalDocumentDetailData,
+  saveAgreementConsentData,
   submitFeedbackData,
   getReferralInfoData,
   bindReferralData,

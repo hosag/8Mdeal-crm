@@ -1,0 +1,42 @@
+<view class="page-shell legal-documents-page {{appearancePageClass}}">
+  <view class="hero rise-in">
+    <view class="eyebrow-row">
+      <view class="eyebrow">协议中心</view>
+    </view>
+    <view class="hero-title">查看当前生效版本</view>
+    <view class="hero-subtitle">这里展示后台已发布的隐私政策与用户服务协议。{{sourceText ? ' 数据源：' + sourceText : ''}}</view>
+  </view>
+
+  <view wx:if="{{isLoading}}" class="form-card section rise-in stagger-1 legal-empty-card">
+    <view class="card-title">正在读取协议列表...</view>
+  </view>
+
+  <block wx:else>
+    <view wx:if="{{documents.length}}" class="section legal-documents-list rise-in stagger-1">
+      <view
+        wx:for="{{documents}}"
+        wx:key="docType"
+        class="nav-card legal-doc-card"
+        data-doc-type="{{item.docType}}"
+        bindtap="openDocument"
+      >
+        <view class="line-between legal-doc-card-head">
+          <view class="legal-doc-card-main">
+            <view class="card-title">{{item.title}}</view>
+            <view class="card-subtitle">{{item.typeLabel}} · {{item.version}}</view>
+          </view>
+          <view class="section-link">查看</view>
+        </view>
+        <view class="legal-doc-meta-row">
+          <view class="helper-text">生效日期 {{item.effectiveAtText || '未设置'}}</view>
+          <view wx:if="{{item.requiresReconsent}}" class="legal-doc-badge">版本更新需重确认</view>
+        </view>
+      </view>
+    </view>
+
+    <view wx:else class="form-card section rise-in stagger-1 legal-empty-card">
+      <view class="card-title">当前还没有可展示的正式协议</view>
+      <view class="card-subtitle">请先在后台协议中心发布隐私政策和用户服务协议。</view>
+    </view>
+  </block>
+</view>

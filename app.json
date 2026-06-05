@@ -63,6 +63,18 @@
       ]
     },
     {
+      "root": "pages/legal-documents",
+      "pages": [
+        "legal-documents"
+      ]
+    },
+    {
+      "root": "pages/legal-document-detail",
+      "pages": [
+        "legal-document-detail"
+      ]
+    },
+    {
       "root": "pages/referral",
       "pages": [
         "referral"
