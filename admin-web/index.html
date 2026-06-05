@@ -71,6 +71,7 @@
             </button>
           </div>
         </div>
+        <button class="nav-item" data-view="legalDocuments" type="button">协议中心</button>
         <button class="nav-item" data-view="aiConfig" type="button">AI模型配置</button>
         <button class="nav-item" data-view="audit" type="button">审计日志</button>
       </nav>
@@ -528,6 +529,52 @@
           </div>
           <div id="planCatalogWrap"></div>
         </section>
+      </section>
+
+      <section id="legalDocumentsView" class="view">
+        <div class="toolbar">
+          <div class="toolbar-group">
+            <input id="legalDocumentSearchInput" class="toolbar-input" type="search" placeholder="搜索协议类型 / 标题 / 版本">
+            <select id="legalDocumentDocTypeFilter" class="toolbar-select">
+              <option value="all">全部协议类型</option>
+              <option value="privacy_policy">隐私政策</option>
+              <option value="user_agreement">用户服务协议</option>
+              <option value="ai_notice">AI 使用说明</option>
+              <option value="audio_notice">录音与语音识别说明</option>
+              <option value="phone_bind_notice">手机号绑定说明</option>
+              <option value="data_storage_notice">云端存储说明</option>
+              <option value="account_cancellation_notice">账号注销说明</option>
+            </select>
+            <select id="legalDocumentStatusFilter" class="toolbar-select">
+              <option value="all">全部状态</option>
+              <option value="draft">草稿</option>
+              <option value="published">已发布</option>
+              <option value="archived">已归档</option>
+            </select>
+          </div>
+          <div class="toolbar-group">
+            <button id="refreshLegalDocumentsBtn" class="ghost-btn" type="button">刷新协议</button>
+            <button id="createLegalDocumentBtn" class="primary-btn" type="button">新建草稿</button>
+          </div>
+        </div>
+
+        <div class="panel-grid panel-grid-split">
+          <section class="panel">
+            <div class="panel-head">
+              <h3 class="panel-title">协议版本列表</h3>
+              <div id="legalDocumentsCountMeta" class="panel-meta"></div>
+            </div>
+            <div id="legalDocumentsListWrap"></div>
+          </section>
+
+          <section class="panel detail-panel">
+            <div class="panel-head">
+              <h3 class="panel-title">协议编辑与预览</h3>
+              <div id="selectedLegalDocumentMeta" class="panel-meta"></div>
+            </div>
+            <div id="legalDocumentEditorWrap"></div>
+          </section>
+        </div>
       </section>
 
       <section id="aiConfigView" class="view">

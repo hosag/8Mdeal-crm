@@ -1208,9 +1208,74 @@ button.section-summary-card {
   color: #8d5f1f;
 }
 
+.badge.is-gold {
+  background: rgba(181, 131, 42, 0.16);
+  color: #8b5b12;
+}
+
 .badge.is-neutral {
   background: rgba(96, 112, 128, 0.14);
   color: #53606d;
+}
+
+.legal-markdown-editor {
+  min-height: 360px;
+  font-family: "SFMono-Regular", "Menlo", "Monaco", monospace;
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.legal-markdown-preview {
+  display: grid;
+  gap: 14px;
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(246, 241, 233, 0.98) 100%);
+  line-height: 1.8;
+  color: var(--ink);
+}
+
+.legal-markdown-preview h1,
+.legal-markdown-preview h2,
+.legal-markdown-preview h3,
+.legal-markdown-preview h4,
+.legal-markdown-preview h5,
+.legal-markdown-preview h6 {
+  margin: 0;
+  color: var(--ink);
+}
+
+.legal-markdown-preview h1 {
+  font-size: 28px;
+}
+
+.legal-markdown-preview h2 {
+  font-size: 20px;
+}
+
+.legal-markdown-preview h3 {
+  font-size: 16px;
+}
+
+.legal-markdown-preview p,
+.legal-markdown-preview ul {
+  margin: 0;
+}
+
+.legal-markdown-preview ul {
+  padding-left: 20px;
+}
+
+.legal-markdown-preview li + li {
+  margin-top: 6px;
+}
+
+.legal-mono-text {
+  font-family: "SFMono-Regular", "Menlo", "Monaco", monospace;
+  font-size: 12px;
+  line-height: 1.7;
+  word-break: break-all;
 }
 
 .empty-card {

@@ -35,6 +35,10 @@ const VIEW_META = {
     title: '商品目录',
     desc: '独立维护套餐价格、启停、排序和额度，不再和查账信息混在同一页。'
   },
+  legalDocuments: {
+    title: '协议中心',
+    desc: '集中维护隐私政策和用户服务协议的草稿、发布和版本留痕，给小程序前台提供稳定口径。'
+  },
   aiConfig: {
     title: 'AI模型配置',
     desc: '独立维护 AI 供应商连接、额度策略和三段业务路由，避免和额度运营信息混杂。'
@@ -45,11 +49,111 @@ const VIEW_META = {
   }
 }
 
-const APP_BUILD_ID = '2026-05-06 22:34'
+const APP_BUILD_ID = '2026-06-03 20:05'
 const BILLING_VIEW_KEYS = ['billingOverview', 'billingGlobalUsage', 'billingAccounts', 'billingPlans']
 const LOW_VOICE_ALERT_THRESHOLD = 120
 const LOW_AI_ALERT_THRESHOLD = 10000
 const CLOUD_CONFIG_STORAGE_KEY = 'deal_crm_admin_cloud_config_v2'
+const LEGAL_DOCUMENT_TYPE_OPTIONS = [
+  { value: 'privacy_policy', label: '隐私政策' },
+  { value: 'user_agreement', label: '用户服务协议' },
+  { value: 'ai_notice', label: 'AI 使用说明' },
+  { value: 'audio_notice', label: '录音与语音识别说明' },
+  { value: 'phone_bind_notice', label: '手机号绑定说明' },
+  { value: 'data_storage_notice', label: '云端存储说明' },
+  { value: 'account_cancellation_notice', label: '账号注销说明' }
+]
+const LEGAL_DOCUMENT_TITLE_MAP = LEGAL_DOCUMENT_TYPE_OPTIONS.reduce((map, item) => {
+  map[item.value] = item.label
+  return map
+}, {})
+const LEGAL_DOCUMENT_TEMPLATE_LIBRARY = {
+  privacy_policy: [
+    '# 隐私政策',
+    '',
+    '更新日期：2026-06-03',
+    '生效日期：2026-06-03',
+    '',
+    '欢迎使用八面成交CRM。为便于你理解我们如何收集、使用、存储和保护个人信息，请重点阅读本政策。',
+    '',
+    '## 1. 我们收集的信息',
+    '- 账号信息：微信 OpenID、UnionID、手机号、昵称、头像等用于识别账户与登录态的信息。',
+    '- 业务信息：项目、联系人、跟进、任务、分享记录、反馈信息等你主动填写或上传的内容。',
+    '- 设备与日志信息：设备标识、操作日志、错误日志、访问时间、IP 等用于安全保障和排障的信息。',
+    '- 音视频与图片：你主动上传的录音、图片及其转写、识别结果。',
+    '- 交易信息：订单、支付状态、套餐、权益到账和额度流水。',
+    '',
+    '## 2. 我们如何使用信息',
+    '- 提供项目管理、联系人维护、跟进记录、AI 整理、语音识别、支付与订阅等核心功能。',
+    '- 识别账号状态、同步套餐权益、进行安全校验、异常排查和服务优化。',
+    '- 在你授权的前提下，用于手机号绑定、客服回访和问题处理。',
+    '',
+    '## 3. 第三方服务说明',
+    '- 语音识别、AI 生成、云存储、支付等能力可能由第三方服务商提供，我们会根据业务需要调用其接口。',
+    '- 我们会仅在实现对应功能所必需的范围内共享信息，并要求第三方承担相应的保密与安全义务。',
+    '',
+    '## 4. 信息存储与保护',
+    '- 我们会将信息存储在腾讯云等合法合规的云服务环境，并采取访问控制、加密、日志审计等措施保护数据安全。',
+    '- 联系人手机号、微信号等敏感字段会采用加密或脱敏处理。',
+    '',
+    '## 5. 你的权利',
+    '- 你可以查看、修改、删除部分业务信息，并可通过意见反馈或客服渠道申请更正、导出或注销账户。',
+    '- 当你撤回授权或注销账户后，我们将依据法律法规和业务留痕要求处理相关数据。',
+    '',
+    '## 6. 未成年人保护',
+    '- 若你是未成年人，应在监护人同意和指导下使用本服务。',
+    '',
+    '## 7. 政策更新',
+    '- 当本政策发生重大变化时，我们会通过小程序页面、弹窗或其他合理方式提示你。',
+    '',
+    '## 8. 联系我们',
+    '- 如你对本政策有疑问、意见或投诉，请通过小程序内“问题反馈”入口或官方客服联系方式与我们联系。',
+    ''
+  ].join('\n'),
+  user_agreement: [
+    '# 用户服务协议',
+    '',
+    '更新日期：2026-06-03',
+    '生效日期：2026-06-03',
+    '',
+    '欢迎使用八面成交CRM。你在注册、登录、使用本服务前，应仔细阅读并理解本协议。',
+    '',
+    '## 1. 服务内容',
+    '- 八面成交CRM为用户提供项目管理、联系人与跟进管理、语音录入、AI 整理、分享协作、套餐订阅与增值服务。',
+    '- 具体功能以小程序前台、后台配置及实际开放能力为准。',
+    '',
+    '## 2. 账户使用规则',
+    '- 你应保证注册、绑定和提交的信息真实、合法、有效。',
+    '- 你应妥善保管账号、设备和登录凭证，不得转让、出借或以其他方式允许他人冒用。',
+    '',
+    '## 3. 用户行为规范',
+    '- 不得上传、发布、传播违法违规、侵权、骚扰、虚假或损害他人合法权益的内容。',
+    '- 不得利用本服务从事破解、攻击、干扰、爬取、批量刷量等影响平台安全或稳定的行为。',
+    '',
+    '## 4. AI 与语音能力说明',
+    '- AI 生成和语音识别结果仅作为效率辅助，不构成任何承诺、保证或专业意见。',
+    '- 你应结合实际业务自行判断并承担因使用相关结果产生的责任。',
+    '',
+    '## 5. 付费与权益',
+    '- 套餐、流量包、订阅价格、权益内容、有效期和使用限制以购买页、支付页和实际到账结果为准。',
+    '- 因支付失败、退款、违规使用、系统异常纠正等原因，平台有权对相关权益进行回收、冻结或调整，并保留审计记录。',
+    '',
+    '## 6. 知识产权',
+    '- 本服务的软件、页面、设计、文案、商标及相关技术资料的知识产权归平台或合法权利人所有。',
+    '- 未经书面许可，不得擅自复制、修改、传播、反向工程或用于其他商业用途。',
+    '',
+    '## 7. 服务中断与责任限制',
+    '- 对于因系统维护、网络故障、第三方能力异常、不可抗力等导致的服务中断或结果偏差，平台将在合理范围内处理，但不承担超出法律规定的责任。',
+    '',
+    '## 8. 协议变更与终止',
+    '- 我们有权根据业务发展、法律法规要求更新本协议；重大变更会通过合理方式通知你。',
+    '- 若你违反本协议，平台有权限制、暂停或终止向你提供部分或全部服务。',
+    '',
+    '## 9. 联系方式',
+    '- 如需咨询、投诉或申请协助，请通过小程序内“问题反馈”入口或官方客服联系方式与我们联系。',
+    ''
+  ].join('\n')
+}
 
 function reportFatalUiError(message) {
   try {
@@ -89,6 +193,12 @@ function buildDefaultCloudConfig() {
     updatePlanPath: '/adminUpsertPlan',
     updateOrderPath: '/updateBillingOrderStatus',
     getAiModelConfigPath: '/adminGetAiModelConfig',
+    listLegalDocumentsPath: '/adminListLegalDocuments',
+    getLegalDocumentDetailPath: '/adminGetLegalDocumentDetail',
+    upsertLegalDocumentDraftPath: '/adminUpsertLegalDocumentDraft',
+    previewLegalDocumentPath: '/adminPreviewLegalDocument',
+    publishLegalDocumentPath: '/adminPublishLegalDocument',
+    cloneLegalDocumentDraftPath: '/adminCloneLegalDocumentDraft',
     updateAiModelConfigPath: '/adminUpdateAiModelConfig',
     testAiModelConfigPath: '/adminTestAiModelConfig'
   }
@@ -490,6 +600,248 @@ function escapeHtml(value) {
     .replace(/'/g, '&#39;')
 }
 
+function getLegalDocumentTypeLabel(docType = '') {
+  return LEGAL_DOCUMENT_TITLE_MAP[toText(docType)] || toText(docType) || '未命名协议'
+}
+
+function buildDefaultLegalDocumentMarkdown(docType = '') {
+  const currentDocType = toText(docType)
+  return LEGAL_DOCUMENT_TEMPLATE_LIBRARY[currentDocType] || [
+    `# ${getLegalDocumentTypeLabel(currentDocType)}`,
+    '',
+    '更新日期：2026-06-03',
+    '生效日期：2026-06-03',
+    '',
+    '请在此填写协议正文。',
+    ''
+  ].join('\n')
+}
+
+function buildEmptyLegalDocumentDraft(docType = 'privacy_policy') {
+  const currentDocType = toText(docType) || 'privacy_policy'
+  return {
+    docId: '',
+    docType: currentDocType,
+    title: getLegalDocumentTypeLabel(currentDocType),
+    version: '',
+    status: 'draft',
+    summary: '',
+    changeNotesText: '',
+    requiresReconsent: currentDocType === 'privacy_policy' || currentDocType === 'user_agreement',
+    effectiveAt: '',
+    markdownSource: buildDefaultLegalDocumentMarkdown(currentDocType),
+    htmlSnapshot: '',
+    plainTextSnapshot: '',
+    hash: '',
+    previousVersion: '',
+    sourceDraftId: '',
+    currentRevision: 1,
+    publishedAt: '',
+    updatedAt: '',
+    isCurrent: false,
+    readOnly: false
+  }
+}
+
+function formatDateTimeLocalValue(value) {
+  if (!value) {
+    return ''
+  }
+  const date = value instanceof Date ? value : new Date(value)
+  if (Number.isNaN(date.getTime())) {
+    return ''
+  }
+  const offsetMs = date.getTimezoneOffset() * 60 * 1000
+  return new Date(date.getTime() - offsetMs).toISOString().slice(0, 16)
+}
+
+function normalizeLegalChangeNotesText(value) {
+  if (Array.isArray(value)) {
+    return value.map((item) => toText(item)).filter(Boolean).join('\n')
+  }
+  return toText(value)
+}
+
+function splitLegalChangeNotes(value) {
+  return toText(value)
+    .split('\n')
+    .map((item) => toText(item))
+    .filter(Boolean)
+}
+
+function normalizeLegalDocumentSummaryForUi(record = {}) {
+  return {
+    docId: toText(record.docId || record._id),
+    docType: toText(record.docType),
+    title: toText(record.title || getLegalDocumentTypeLabel(record.docType)),
+    version: toText(record.version),
+    status: toText(record.status || 'draft'),
+    isCurrent: Boolean(record.isCurrent),
+    requiresReconsent: Boolean(record.requiresReconsent),
+    contentFormat: toText(record.contentFormat || 'markdown'),
+    summary: toText(record.summary),
+    changeNotes: Array.isArray(record.changeNotes) ? record.changeNotes.map((item) => toText(item)).filter(Boolean) : [],
+    effectiveAt: toText(record.effectiveAt),
+    publishedAt: toText(record.publishedAt),
+    archivedAt: toText(record.archivedAt),
+    hash: toText(record.hash),
+    previousVersion: toText(record.previousVersion),
+    currentRevision: Math.max(1, Math.floor(toNumber(record.currentRevision, 1))),
+    updatedBy: toText(record.updatedBy || record.operatorId),
+    updatedAt: toText(record.updatedAt),
+    createdAt: toText(record.createdAt)
+  }
+}
+
+function normalizeLegalDocumentDetailForUi(record = {}) {
+  const summary = normalizeLegalDocumentSummaryForUi(record)
+  return {
+    ...summary,
+    markdownSource: String(record.markdownSource || ''),
+    htmlSnapshot: toText(record.htmlSnapshot),
+    plainTextSnapshot: toText(record.plainTextSnapshot),
+    sourceDraftId: toText(record.sourceDraftId),
+    operatorId: toText(record.operatorId),
+    readOnly: summary.status === 'published'
+  }
+}
+
+function createLegalDraftFromDetail(record = {}) {
+  const detail = normalizeLegalDocumentDetailForUi(record)
+  return {
+    ...detail,
+    changeNotesText: normalizeLegalChangeNotesText(detail.changeNotes),
+    effectiveAt: formatDateTimeLocalValue(detail.effectiveAt)
+  }
+}
+
+function createEmptyLegalPreviewState() {
+  return {
+    html: '',
+    plainText: '',
+    generatedAt: '',
+    source: 'empty'
+  }
+}
+
+function getLegalDocumentStatusLabel(status = '') {
+  return {
+    draft: '草稿',
+    published: '已发布',
+    archived: '已归档'
+  }[toText(status)] || '未知状态'
+}
+
+function getLegalDocumentStatusBadgeClass(status = '') {
+  const current = toText(status)
+  if (current === 'published') {
+    return 'is-success'
+  }
+  if (current === 'archived') {
+    return 'is-neutral'
+  }
+  return 'is-brand'
+}
+
+function renderLegalMarkdownPreview(markdownSource = '') {
+  const lines = String(markdownSource || '').replace(/\r\n/g, '\n').trim().split('\n')
+  const html = []
+  let listBuffer = []
+  let paragraphBuffer = []
+
+  function flushList() {
+    if (!listBuffer.length) {
+      return
+    }
+    html.push('<ul>')
+    listBuffer.forEach((item) => {
+      html.push(`<li>${escapeHtml(item)}</li>`)
+    })
+    html.push('</ul>')
+    listBuffer = []
+  }
+
+  function flushParagraph() {
+    if (!paragraphBuffer.length) {
+      return
+    }
+    html.push(`<p>${paragraphBuffer.map((item) => escapeHtml(item)).join('<br />')}</p>`)
+    paragraphBuffer = []
+  }
+
+  lines.forEach((line) => {
+    const trimmed = toText(line)
+    if (!trimmed) {
+      flushList()
+      flushParagraph()
+      return
+    }
+
+    const headingMatch = trimmed.match(/^(#{1,6})\s+(.+)$/)
+    if (headingMatch) {
+      flushList()
+      flushParagraph()
+      const level = Math.min(6, headingMatch[1].length)
+      html.push(`<h${level}>${escapeHtml(headingMatch[2])}</h${level}>`)
+      return
+    }
+
+    const listMatch = trimmed.match(/^[-*]\s+(.+)$/)
+    if (listMatch) {
+      flushParagraph()
+      listBuffer.push(listMatch[1])
+      return
+    }
+
+    flushList()
+    paragraphBuffer.push(trimmed)
+  })
+
+  flushList()
+  flushParagraph()
+  return html.join('')
+}
+
+function buildLegalPlainText(markdownSource = '') {
+  return String(markdownSource || '')
+    .replace(/\r\n/g, '\n')
+    .replace(/^#{1,6}\s+/gm, '')
+    .replace(/^[-*]\s+/gm, '')
+    .replace(/\n{2,}/g, '\n')
+    .trim()
+}
+
+function legalDocumentMatches(item, keyword = '') {
+  const currentKeyword = toText(keyword).toLowerCase()
+  if (!currentKeyword) {
+    return true
+  }
+  return [
+    item.docId,
+    item.docType,
+    getLegalDocumentTypeLabel(item.docType),
+    item.title,
+    item.version,
+    item.summary
+  ].some((field) => toText(field).toLowerCase().includes(currentKeyword))
+}
+
+function suggestNextLegalVersion(version = '') {
+  const current = toText(version)
+  const semverMatch = current.match(/^v?(\d+)\.(\d+)\.(\d+)$/i)
+  if (semverMatch) {
+    return `v${semverMatch[1]}.${semverMatch[2]}.${Number(semverMatch[3]) + 1}`
+  }
+  const dateMatch = current.match(/^(\d{4}-\d{2}-\d{2})(?:\.(\d+))?$/)
+  if (dateMatch) {
+    return `${dateMatch[1]}.${Number(dateMatch[2] || 0) + 1}`
+  }
+  if (current) {
+    return `${current}.1`
+  }
+  return 'v1.0.0'
+}
+
 function buildAuditLog(payload) {
   return {
     logId: `log_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
@@ -536,7 +888,7 @@ function formatCompactDateText(value) {
 function formatAmountText(amount, currency = 'CNY') {
   const current = Number(amount)
   if (!Number.isFinite(current) || current <= 0) {
-    return '待确认金额'
+    return '价格待定'
   }
   if (currency && currency !== 'CNY') {
     return `${currency} ${current}`
@@ -550,7 +902,7 @@ function formatPlanPriceText(record = {}) {
     return formatAmountText(price, 'CNY')
   }
 
-  return toText(record.displayPriceText || record.priceLabel) || '待确认金额'
+  return toText(record.displayPriceText || record.priceLabel) || '价格待定'
 }
 
 function addDays(source, days) {
@@ -839,7 +1191,7 @@ function formatCharsText(value) {
 
 function formatProjectLimitText(value) {
   const projectLimit = toNumber(value, -1)
-  return projectLimit < 0 ? '不限项目位' : `${projectLimit} 个项目位`
+  return projectLimit < 0 ? '项目数量不限' : `${projectLimit} 个项目`
 }
 
 function formatUsageAmountText(usageType, value) {
@@ -2720,10 +3072,18 @@ function createUiState() {
     referralStatusFilter: 'all',
     referralTimeWindow: 'all',
     selectedReferralId: '',
+    legalDocumentSearch: '',
+    legalDocumentDocTypeFilter: 'all',
+    legalDocumentStatusFilter: 'all',
+    selectedLegalDocumentId: '',
     accounts: [],
     orders: [],
     feedbackItems: [],
     referralItems: [],
+    legalDocuments: [],
+    legalDocumentDetail: null,
+    legalDocumentDraft: buildEmptyLegalDocumentDraft(),
+    legalDocumentPreview: createEmptyLegalPreviewState(),
     referralStats: {
       totalCount: 0,
       pendingCount: 0,
@@ -2763,6 +3123,9 @@ function createUiState() {
       loading: false,
       feedbackLoading: false,
       referralLoading: false,
+      legalDocumentsLoading: false,
+      legalDocumentDetailLoading: false,
+      legalDocumentPreviewLoading: false,
       usageLoading: false,
       overviewUsageLoading: false,
       globalUsageLoading: false,
@@ -2907,14 +3270,14 @@ function createMockData() {
       accountId: 'acct_003',
       title: '语音转写包',
       productType: 'voice_pack',
-      amountText: '待确认金额',
+      amountText: '价格待定',
       status: 'pending',
       readiness: 'placeholder_only',
       sourceReason: 'speech_exhausted',
       createdAt: '2026-04-28 14:32',
       updatedAt: '2026-04-28 14:36',
       channelOrderStatus: '未发起',
-      pendingReason: '当前已完成订单与支付准备留痕；待商户配置完成后，可直接继续这条支付会话。',
+      pendingReason: '订单已创建，当前暂不支持支付。',
       canInvokePayment: false
     },
     {
@@ -2922,14 +3285,14 @@ function createMockData() {
       accountId: 'acct_004',
       title: '基础版月付',
       productType: 'subscription',
-      amountText: '待确认金额',
+      amountText: '价格待定',
       status: 'pending',
       readiness: 'config_incomplete',
       sourceReason: 'write_disabled',
       createdAt: '2026-04-28 10:14',
       updatedAt: '2026-04-28 10:20',
       channelOrderStatus: '待补配置项',
-      pendingReason: '当前支付会话仍是占位模式；待商户配置完成后，再回到这笔订单继续发起支付。',
+      pendingReason: '支付暂未开通，订单已保留。',
       canInvokePayment: false
     },
     {
@@ -2937,7 +3300,7 @@ function createMockData() {
       accountId: 'acct_002',
       title: '基础版年付',
       productType: 'subscription',
-      amountText: '待确认金额',
+      amountText: '价格待定',
       status: 'paid',
       readiness: 'ready',
       sourceReason: 'project_limit_reached',
@@ -2952,7 +3315,7 @@ function createMockData() {
       accountId: 'acct_001',
       title: 'AI 额度包',
       productType: 'ai_pack',
-      amountText: '待确认金额',
+      amountText: '价格待定',
       status: 'failed',
       readiness: 'config_incomplete',
       sourceReason: 'ai_exhausted',
@@ -3061,14 +3424,14 @@ function createMockData() {
       originalPrice: 0,
       isPricePending: false,
       displayPriceText: '首周全功能体验',
-      displayBillingText: '新用户默认入口',
+      displayBillingText: '新用户试用',
       projectLimit: 3,
       monthlyVoiceSeconds: 600,
       monthlyAiTokens: 50000,
-      summary: '用于低成本体验闪录、AI 自动整理、外发项目和基础 CRM 流程。',
+      summary: '体验核心功能，包括语音记录与AI整理',
       featureLines: [
-        '支持完整试用，但会控制项目数、语音时长和 AI 总额度。',
-        '保存数据或开通付费前，需要先完成手机号绑定。'
+        '体验核心功能。',
+        '绑定手机号后可保存数据和购买套餐。'
       ],
       supportsShareOut: true,
       supportsQuickEntry: true,
@@ -3091,7 +3454,7 @@ function createMockData() {
       projectLimit: -1,
       monthlyVoiceSeconds: 1800,
       monthlyAiTokens: 200000,
-      summary: '适合个人销售工程师稳定日常使用，先解决持续可写和可外发的核心问题。',
+      summary: '适合长期使用的个人用户',
       featureLines: [
         '继续新增 / 编辑项目、跟进、任务和成交记录。',
         '支持闪录、AI 自动理解、外发项目与只读追踪。'
@@ -3117,10 +3480,10 @@ function createMockData() {
       projectLimit: -1,
       monthlyVoiceSeconds: 24000,
       monthlyAiTokens: 2400000,
-      summary: '适合已经把系统纳入日常推进流程、希望长期保持可写状态的个人用户。',
+      summary: '适合长期使用的个人用户',
       featureLines: [
-        '年度持续可写，避免到期中断项目推进。',
-        '同样支持外发项目、闪录、AI 和联系人全量沉淀。'
+        '长期可继续使用，减少到期中断。',
+        '支持转交项目、闪录、AI 和联系人管理。'
       ],
       supportsShareOut: true,
       supportsQuickEntry: true,
@@ -3309,11 +3672,109 @@ function createMockData() {
     })
   ]
 
+  const privacyPublishedMarkdown = buildDefaultLegalDocumentMarkdown('privacy_policy')
+  const agreementPublishedMarkdown = buildDefaultLegalDocumentMarkdown('user_agreement')
+  const privacyDraftMarkdown = [
+    '# 隐私政策',
+    '',
+    '更新日期：2026-06-10',
+    '生效日期：2026-06-10',
+    '',
+    '本版本准备补充客服联系方式、注销说明和第三方服务清单。',
+    '',
+    '## 本次更新重点',
+    '- 补充隐私说明入口文案',
+    '- 细化录音、图片上传、手机号绑定相关说明',
+    '- 预留客服联系方式位置',
+    ''
+  ].join('\n')
+  const legalDocuments = [
+    {
+      docId: 'legal_privacy_policy_v1_0_0',
+      docType: 'privacy_policy',
+      title: '隐私政策',
+      version: 'v1.0.0',
+      status: 'published',
+      isCurrent: true,
+      contentFormat: 'markdown',
+      markdownSource: privacyPublishedMarkdown,
+      htmlSnapshot: renderLegalMarkdownPreview(privacyPublishedMarkdown),
+      plainTextSnapshot: buildLegalPlainText(privacyPublishedMarkdown),
+      summary: '首个正式发布版本，覆盖账号、项目、语音、支付与第三方说明。',
+      changeNotes: ['建立正式隐私政策版本'],
+      requiresReconsent: true,
+      effectiveAt: '2026-06-03T00:00:00.000Z',
+      publishedAt: '2026-06-03T00:00:00.000Z',
+      archivedAt: '',
+      hash: 'sha256:mock_privacy_v1_0_0',
+      previousVersion: '',
+      currentRevision: 1,
+      updatedBy: 'admin_demo',
+      updatedAt: '2026-06-03T00:00:00.000Z',
+      createdAt: '2026-06-03T00:00:00.000Z',
+      sourceDraftId: '',
+      operatorId: 'admin_demo'
+    },
+    {
+      docId: 'legal_privacy_policy_v1_1_0',
+      docType: 'privacy_policy',
+      title: '隐私政策',
+      version: 'v1.1.0',
+      status: 'draft',
+      isCurrent: false,
+      contentFormat: 'markdown',
+      markdownSource: privacyDraftMarkdown,
+      htmlSnapshot: '',
+      plainTextSnapshot: '',
+      summary: '补齐提审阶段缺失的隐私说明、客服联系方式和测试说明。',
+      changeNotes: ['补充提审要求文案', '准备加入客服联系方式'],
+      requiresReconsent: true,
+      effectiveAt: '2026-06-10T00:00:00.000Z',
+      publishedAt: '',
+      archivedAt: '',
+      hash: '',
+      previousVersion: 'v1.0.0',
+      currentRevision: 2,
+      updatedBy: 'admin_demo',
+      updatedAt: '2026-06-03T12:30:00.000Z',
+      createdAt: '2026-06-03T12:00:00.000Z',
+      sourceDraftId: 'legal_privacy_policy_v1_0_0',
+      operatorId: 'admin_demo'
+    },
+    {
+      docId: 'legal_user_agreement_v1_0_0',
+      docType: 'user_agreement',
+      title: '用户服务协议',
+      version: 'v1.0.0',
+      status: 'published',
+      isCurrent: true,
+      contentFormat: 'markdown',
+      markdownSource: agreementPublishedMarkdown,
+      htmlSnapshot: renderLegalMarkdownPreview(agreementPublishedMarkdown),
+      plainTextSnapshot: buildLegalPlainText(agreementPublishedMarkdown),
+      summary: '首个正式版本，覆盖账户使用、AI/语音说明和付费权益。',
+      changeNotes: ['建立正式用户服务协议版本'],
+      requiresReconsent: true,
+      effectiveAt: '2026-06-03T00:00:00.000Z',
+      publishedAt: '2026-06-03T00:00:00.000Z',
+      archivedAt: '',
+      hash: 'sha256:mock_user_agreement_v1_0_0',
+      previousVersion: '',
+      currentRevision: 1,
+      updatedBy: 'admin_demo',
+      updatedAt: '2026-06-03T00:00:00.000Z',
+      createdAt: '2026-06-03T00:00:00.000Z',
+      sourceDraftId: '',
+      operatorId: 'admin_demo'
+    }
+  ]
+
   return {
     accounts,
     orders,
     feedbackItems,
     referralItems,
+    legalDocuments,
     usageLedger,
     plans,
     aiModelConfig: normalizeAiModelConfig(DEFAULT_AI_MODEL_CONFIG),
@@ -3943,6 +4404,26 @@ function createMockProvider() {
     return account
   }
 
+  function findLegalDocument(docId) {
+    const document = store.legalDocuments.find((item) => toText(item.docId) === toText(docId))
+    if (!document) {
+      throw new Error('当前协议不存在，无法继续处理。')
+    }
+    return document
+  }
+
+  function buildLegalDocumentList(payload = {}) {
+    const keyword = toText(payload.keyword)
+    const docType = toText(payload.docType)
+    const status = toText(payload.status || 'all')
+    return store.legalDocuments
+      .map((item) => normalizeLegalDocumentSummaryForUi(item))
+      .filter((item) => !docType || docType === 'all' || item.docType === docType)
+      .filter((item) => status === 'all' || item.status === status)
+      .filter((item) => legalDocumentMatches(item, keyword))
+      .sort((left, right) => `${right.updatedAt || ''}`.localeCompare(`${left.updatedAt || ''}`))
+  }
+
   function snapshot() {
     return {
       accounts: store.accounts.map((item) => normalizeAccountForUi(item)),
@@ -3976,6 +4457,9 @@ function createMockProvider() {
       aiModelConfig: normalizeAiModelConfig(store.aiModelConfig),
       feedbackItems: store.feedbackItems.map((item) => normalizeFeedbackForUi(item)),
       referralItems: store.referralItems.map((item) => normalizeReferralForUi(item)),
+      legalDocuments: store.legalDocuments
+        .map((item) => normalizeLegalDocumentSummaryForUi(item))
+        .sort((left, right) => `${right.updatedAt || ''}`.localeCompare(`${left.updatedAt || ''}`)),
       referralStats: buildLocalReferralStats(store.referralItems),
       auditLogs: store.auditLogs.map((item) => normalizeAuditForUi(item)),
       manualAdjustmentLogs: store.auditLogs
@@ -4082,6 +4566,230 @@ function createMockProvider() {
   return {
     async refreshAll() {
       return snapshot()
+    },
+    async listLegalDocuments(payload = {}) {
+      const documents = buildLegalDocumentList(payload)
+      return {
+        ok: true,
+        documents,
+        total: documents.length
+      }
+    },
+    async getLegalDocumentDetail(payload = {}) {
+      const docId = toText(payload.docId)
+      const document = docId
+        ? findLegalDocument(docId)
+        : store.legalDocuments
+          .slice()
+          .sort((left, right) => `${right.updatedAt || ''}`.localeCompare(`${left.updatedAt || ''}`))[0]
+      if (!document) {
+        throw new Error('当前还没有协议文档。')
+      }
+      return {
+        ok: true,
+        document: normalizeLegalDocumentDetailForUi(document)
+      }
+    },
+    async upsertLegalDocumentDraft(payload = {}) {
+      const now = new Date().toISOString()
+      const docId = toText(payload.docId)
+      const docType = toText(payload.docType)
+      const version = toText(payload.version)
+      const title = toText(payload.title || getLegalDocumentTypeLabel(docType))
+      const markdownSource = String(payload.markdownSource || '')
+      if (!docType) {
+        throw new Error('缺少协议类型。')
+      }
+      if (!version) {
+        throw new Error('缺少版本号。')
+      }
+      if (!title) {
+        throw new Error('缺少标题。')
+      }
+      if (!markdownSource.trim()) {
+        throw new Error('缺少协议正文。')
+      }
+
+      const duplicate = store.legalDocuments.find((item) => {
+        return item.docType === docType
+          && item.version === version
+          && toText(item.docId) !== docId
+      })
+      if (duplicate) {
+        throw new Error('同类型协议版本号已存在。')
+      }
+
+      const existingIndex = store.legalDocuments.findIndex((item) => toText(item.docId) === docId)
+      const existing = existingIndex >= 0 ? store.legalDocuments[existingIndex] : null
+      if (existing && existing.status === 'published') {
+        throw new Error('已发布版本不可直接编辑，请先复制为新草稿。')
+      }
+
+      const nextDocId = docId || `legal_${docType}_${version.replace(/[^a-zA-Z0-9]+/g, '_')}`
+      const nextDocument = {
+        docId: nextDocId,
+        docType,
+        title,
+        version,
+        status: 'draft',
+        isCurrent: false,
+        contentFormat: 'markdown',
+        markdownSource,
+        htmlSnapshot: existing ? toText(existing.htmlSnapshot) : '',
+        plainTextSnapshot: existing ? toText(existing.plainTextSnapshot) : '',
+        summary: toText(payload.summary),
+        changeNotes: Array.isArray(payload.changeNotes)
+          ? payload.changeNotes.map((item) => toText(item)).filter(Boolean)
+          : splitLegalChangeNotes(payload.changeNotes),
+        requiresReconsent: Boolean(payload.requiresReconsent),
+        effectiveAt: toText(payload.effectiveAt) || now,
+        publishedAt: existing ? toText(existing.publishedAt) : '',
+        archivedAt: existing ? toText(existing.archivedAt) : '',
+        hash: existing ? toText(existing.hash) : '',
+        sourceDraftId: toText(payload.sourceDraftId || (existing && existing.sourceDraftId)),
+        previousVersion: toText(payload.previousVersion || (existing && existing.previousVersion)),
+        currentRevision: Math.max(1, Math.floor(toNumber((existing && existing.currentRevision) || 0, 0)) + 1),
+        updatedBy: 'admin_demo',
+        updatedAt: now,
+        createdAt: existing ? toText(existing.createdAt) : now,
+        operatorId: 'admin_demo'
+      }
+
+      if (existingIndex >= 0) {
+        store.legalDocuments.splice(existingIndex, 1, nextDocument)
+      } else {
+        store.legalDocuments.unshift(nextDocument)
+      }
+
+      store.auditLogs.unshift(buildAuditLog({
+        operatorId: 'admin_demo',
+        actionType: 'upsert_legal_document_draft',
+        targetType: 'legal_document',
+        targetId: nextDocId,
+        reason: toText(payload.reason || `维护协议草稿 ${title}`),
+        beforeSnapshot: existing ? normalizeLegalDocumentDetailForUi(existing) : {},
+        afterSnapshot: normalizeLegalDocumentDetailForUi(nextDocument),
+        createdAt: now
+      }))
+
+      return {
+        ok: true,
+        action: existing ? 'updated' : 'created',
+        document: normalizeLegalDocumentSummaryForUi(nextDocument)
+      }
+    },
+    async previewLegalDocument(payload = {}) {
+      const markdownSource = String(payload.markdownSource || '')
+      return {
+        ok: true,
+        contentFormat: 'markdown',
+        markdownSource,
+        html: renderLegalMarkdownPreview(markdownSource),
+        plainText: buildLegalPlainText(markdownSource)
+      }
+    },
+    async publishLegalDocument(payload = {}) {
+      const docId = toText(payload.docId)
+      const target = findLegalDocument(docId)
+      if (target.status !== 'draft') {
+        throw new Error('当前协议不是草稿，不能直接发布。')
+      }
+      const now = new Date().toISOString()
+      store.legalDocuments = store.legalDocuments.map((item) => {
+        if (item.docType === target.docType && item.status === 'published') {
+          return {
+            ...item,
+            isCurrent: false,
+            updatedAt: now,
+            updatedBy: 'admin_demo'
+          }
+        }
+        return item
+      })
+
+      const htmlSnapshot = renderLegalMarkdownPreview(target.markdownSource)
+      const plainTextSnapshot = buildLegalPlainText(target.markdownSource)
+      const publishedDocument = {
+        ...target,
+        status: 'published',
+        isCurrent: true,
+        htmlSnapshot,
+        plainTextSnapshot,
+        hash: `sha256:mock_${target.docType}_${target.version}`,
+        publishedAt: now,
+        updatedAt: now,
+        updatedBy: 'admin_demo',
+        operatorId: 'admin_demo'
+      }
+      const targetIndex = store.legalDocuments.findIndex((item) => toText(item.docId) === docId)
+      store.legalDocuments.splice(targetIndex, 1, publishedDocument)
+      store.auditLogs.unshift(buildAuditLog({
+        operatorId: 'admin_demo',
+        actionType: 'publish_legal_document',
+        targetType: 'legal_document',
+        targetId: docId,
+        reason: toText(payload.reason || `发布协议 ${target.title}`),
+        beforeSnapshot: normalizeLegalDocumentDetailForUi(target),
+        afterSnapshot: normalizeLegalDocumentDetailForUi(publishedDocument),
+        createdAt: now
+      }))
+      return {
+        ok: true,
+        action: 'published',
+        document: normalizeLegalDocumentSummaryForUi(publishedDocument)
+      }
+    },
+    async cloneLegalDocumentDraft(payload = {}) {
+      const sourceDocId = toText(payload.sourceDocId)
+      const nextVersion = toText(payload.nextVersion)
+      if (!sourceDocId) {
+        throw new Error('缺少来源协议。')
+      }
+      if (!nextVersion) {
+        throw new Error('缺少新版本号。')
+      }
+      const source = findLegalDocument(sourceDocId)
+      const duplicate = store.legalDocuments.find((item) => item.docType === source.docType && item.version === nextVersion)
+      if (duplicate) {
+        throw new Error('同类型协议版本号已存在。')
+      }
+      const now = new Date().toISOString()
+      const nextDocument = {
+        ...source,
+        docId: `legal_${source.docType}_${nextVersion.replace(/[^a-zA-Z0-9]+/g, '_')}`,
+        version: nextVersion,
+        status: 'draft',
+        isCurrent: false,
+        htmlSnapshot: '',
+        plainTextSnapshot: '',
+        hash: '',
+        summary: '',
+        changeNotes: [],
+        sourceDraftId: source.docId,
+        previousVersion: source.version,
+        currentRevision: 1,
+        publishedAt: '',
+        updatedAt: now,
+        createdAt: now,
+        updatedBy: 'admin_demo',
+        operatorId: 'admin_demo'
+      }
+      store.legalDocuments.unshift(nextDocument)
+      store.auditLogs.unshift(buildAuditLog({
+        operatorId: 'admin_demo',
+        actionType: 'clone_legal_document_draft',
+        targetType: 'legal_document',
+        targetId: nextDocument.docId,
+        reason: toText(payload.reason || `复制协议 ${source.title}`),
+        beforeSnapshot: normalizeLegalDocumentDetailForUi(source),
+        afterSnapshot: normalizeLegalDocumentDetailForUi(nextDocument),
+        createdAt: now
+      }))
+      return {
+        ok: true,
+        action: 'cloned',
+        document: normalizeLegalDocumentSummaryForUi(nextDocument)
+      }
     },
     async fetchFeedback(payload = {}) {
       const keyword = toText(payload.keyword).toLowerCase()
@@ -4501,6 +5209,43 @@ function createCloudProvider(config) {
         pageInfo: usageResult.pageInfo || {}
       }
     },
+    async listLegalDocuments(payload = {}) {
+      const result = await callBridge(config.listLegalDocumentsPath, payload)
+      return {
+        documents: (result.documents || []).map((item) => normalizeLegalDocumentSummaryForUi(item)),
+        total: result.total || 0
+      }
+    },
+    async getLegalDocumentDetail(payload = {}) {
+      const result = await callBridge(config.getLegalDocumentDetailPath, payload)
+      return {
+        document: result.document ? normalizeLegalDocumentDetailForUi(result.document) : null
+      }
+    },
+    async upsertLegalDocumentDraft(payload = {}) {
+      const result = await callBridge(config.upsertLegalDocumentDraftPath, payload)
+      return {
+        ...result,
+        document: result.document ? normalizeLegalDocumentSummaryForUi(result.document) : null
+      }
+    },
+    async previewLegalDocument(payload = {}) {
+      return callBridge(config.previewLegalDocumentPath, payload)
+    },
+    async publishLegalDocument(payload = {}) {
+      const result = await callBridge(config.publishLegalDocumentPath, payload)
+      return {
+        ...result,
+        document: result.document ? normalizeLegalDocumentSummaryForUi(result.document) : null
+      }
+    },
+    async cloneLegalDocumentDraft(payload = {}) {
+      const result = await callBridge(config.cloneLegalDocumentDraftPath, payload)
+      return {
+        ...result,
+        document: result.document ? normalizeLegalDocumentSummaryForUi(result.document) : null
+      }
+    },
     async updateEntitlement(payload) {
       return callBridge(config.updatePath, payload)
     },
@@ -4745,6 +5490,9 @@ async function handleAdminLogout() {
   state.usageViewLedger = []
   state.globalUsageSummaries = []
   state.globalUsageLedger = []
+  state.legalDocuments = []
+  state.selectedLegalDocumentId = ''
+  applyLegalDocumentDetail(null)
   setNotice('', 'info')
   render()
 }
@@ -4804,6 +5552,14 @@ function supportsManualAdjustmentFetch() {
 
 function supportsReferralFetch() {
   return Boolean(provider && typeof provider.fetchReferrals === 'function')
+}
+
+function supportsLegalDocumentAdmin() {
+  return Boolean(
+    provider
+    && typeof provider.listLegalDocuments === 'function'
+    && typeof provider.getLegalDocumentDetail === 'function'
+  )
 }
 
 function hasUsageServerFilter() {
@@ -4897,6 +5653,18 @@ function buildOverviewUsageFetchPayload() {
   }
 }
 
+function buildLegalDocumentFetchPayload() {
+  const payload = {
+    limit: 100,
+    docType: state.legalDocumentDocTypeFilter,
+    status: state.legalDocumentStatusFilter
+  }
+  if (toText(state.legalDocumentSearch)) {
+    payload.keyword = toText(state.legalDocumentSearch)
+  }
+  return payload
+}
+
 function applyUsageViewResult(result = {}, preserveSelection = true, preferredAccountId = '') {
   state.usageViewSummaries = Array.isArray(result.usageSummaries) ? result.usageSummaries : []
   state.usageViewLedger = Array.isArray(result.usageLedger) ? result.usageLedger : []
@@ -4955,6 +5723,101 @@ function applyReferralResult(result = {}) {
     : buildLocalReferralStats(state.referralItems)
   if (!state.referralItems.some((item) => item.relationId === state.selectedReferralId)) {
     state.selectedReferralId = state.referralItems[0] ? state.referralItems[0].relationId : ''
+  }
+}
+
+function applyLegalDocumentDetail(document) {
+  const detail = document ? normalizeLegalDocumentDetailForUi(document) : null
+  state.legalDocumentDetail = detail
+  state.legalDocumentDraft = detail ? createLegalDraftFromDetail(detail) : buildEmptyLegalDocumentDraft()
+  if (detail && detail.htmlSnapshot) {
+    state.legalDocumentPreview = {
+      html: detail.htmlSnapshot,
+      plainText: toText(detail.plainTextSnapshot),
+      generatedAt: toText(detail.publishedAt || detail.updatedAt),
+      source: detail.status === 'published' ? 'published' : 'snapshot'
+    }
+  } else {
+    state.legalDocumentPreview = createEmptyLegalPreviewState()
+  }
+}
+
+async function refreshLegalDocumentDetail(options = {}) {
+  const docId = toText(options.docId || state.selectedLegalDocumentId)
+  const renderOnFinish = options.renderOnFinish !== false
+  if (!supportsLegalDocumentAdmin()) {
+    return
+  }
+  if (!docId) {
+    state.selectedLegalDocumentId = ''
+    applyLegalDocumentDetail(null)
+    if (renderOnFinish) {
+      render()
+    }
+    return
+  }
+
+  state.runtime.legalDocumentDetailLoading = true
+  if (renderOnFinish) {
+    render()
+  }
+
+  try {
+    const result = await provider.getLegalDocumentDetail({ docId })
+    state.selectedLegalDocumentId = docId
+    applyLegalDocumentDetail(result.document || null)
+  } catch (error) {
+    setNotice(error.message || '读取协议详情失败，请稍后重试。', 'danger')
+  } finally {
+    state.runtime.legalDocumentDetailLoading = false
+    if (renderOnFinish) {
+      render()
+    }
+  }
+}
+
+async function refreshLegalDocumentsData(options = {}) {
+  const preserveSelection = options.preserveSelection !== false
+  const preferredDocId = toText(options.preferredDocId || state.selectedLegalDocumentId)
+  const renderOnFinish = options.renderOnFinish !== false
+  if (!supportsLegalDocumentAdmin()) {
+    return
+  }
+
+  state.runtime.legalDocumentsLoading = true
+  if (renderOnFinish) {
+    render()
+  }
+
+  try {
+    const result = await provider.listLegalDocuments(buildLegalDocumentFetchPayload())
+    state.legalDocuments = Array.isArray(result.documents) ? result.documents : []
+    const nextSelectedDocId = preserveSelection && preferredDocId && state.legalDocuments.some((item) => item.docId === preferredDocId)
+      ? preferredDocId
+      : (state.legalDocuments[0] ? state.legalDocuments[0].docId : '')
+    state.selectedLegalDocumentId = nextSelectedDocId
+
+    if (!nextSelectedDocId) {
+      applyLegalDocumentDetail(null)
+      return
+    }
+
+    const shouldReloadDetail = options.forceDetailReload === true
+      || !state.legalDocumentDetail
+      || toText(state.legalDocumentDetail.docId) !== nextSelectedDocId
+    if (shouldReloadDetail) {
+      await refreshLegalDocumentDetail({
+        docId: nextSelectedDocId,
+        renderOnFinish: false
+      })
+    }
+  } catch (error) {
+    setNotice(error.message || '刷新协议中心失败，请稍后重试。', 'danger')
+  } finally {
+    state.runtime.legalDocumentsLoading = false
+    if (renderOnFinish) {
+      render()
+    }
   }
 }
 
@@ -5267,6 +6130,13 @@ async function refreshData(options = {}) {
     }
     if (provider.fetchReferrals) {
       await refreshReferralData({
+        renderOnFinish: false
+      })
+    }
+    if (supportsLegalDocumentAdmin()) {
+      await refreshLegalDocumentsData({
+        preserveSelection,
+        preferredDocId: state.selectedLegalDocumentId,
         renderOnFinish: false
       })
     }
@@ -5607,6 +6477,7 @@ function render() {
   renderReferrals()
   renderUsage()
   renderGlobalUsage()
+  renderLegalDocuments()
   renderAiConfig()
   renderAudit()
   renderToast()
@@ -7325,13 +8196,13 @@ function buildMiniPlanCardMarkup(plan, options = {}) {
         </div>
         <div class="mini-plan-side">
           ${isCurrent ? '<span class="badge is-success">当前套餐</span>' : ''}
-          <div class="mini-plan-price">${escapeHtml(plan.amountText || '待确认金额')}</div>
+          <div class="mini-plan-price">${escapeHtml(plan.amountText || '价格待定')}</div>
           ${plan.originalPriceText ? `<div class="mini-plan-original">原价 ${escapeHtml(plan.originalPriceText)}</div>` : ''}
         </div>
       </div>
       <div class="detail-grid purchase-summary-grid mini-plan-grid">
         <div>
-          <div class="detail-item-label">项目位</div>
+          <div class="detail-item-label">项目数量</div>
           <div class="detail-item-value">${escapeHtml(formatProjectLimitText(plan.projectLimit))}</div>
         </div>
         <div>
@@ -7358,7 +8229,7 @@ function buildOrderPurchaseSummaryMarkup(order, plan) {
   const featureLines = plan && Array.isArray(plan.featureLines) ? plan.featureLines : []
   const planName = order.title || (plan && plan.planName) || '当前商品'
   const billingText = (plan && plan.displayBillingText) || order.billingCycle || '-'
-  const amountText = order.amountText || (plan && plan.amountText) || '待确认金额'
+  const amountText = order.amountText || (plan && plan.amountText) || '价格待定'
   const originalPriceText = order.originalPriceText || (plan && plan.originalPriceText) || ''
   const projectText = plan ? formatProjectLimitText(plan.projectLimit) : '待同步'
   const voiceText = plan ? formatVoiceQuotaText(plan.monthlyVoiceSeconds) : '待同步'
@@ -8817,6 +9688,491 @@ function renderGlobalUsage() {
   }
 }
 
+function getSelectedLegalDocumentSummary() {
+  return state.legalDocuments.find((item) => item.docId === state.selectedLegalDocumentId) || null
+}
+
+function buildLegalDocumentDraftPayload() {
+  const draft = state.legalDocumentDraft && typeof state.legalDocumentDraft === 'object'
+    ? state.legalDocumentDraft
+    : buildEmptyLegalDocumentDraft()
+  return {
+    docId: toText(draft.docId || state.selectedLegalDocumentId),
+    docType: toText(draft.docType),
+    title: toText(draft.title),
+    version: toText(draft.version),
+    summary: toText(draft.summary),
+    changeNotes: splitLegalChangeNotes(draft.changeNotesText),
+    requiresReconsent: Boolean(draft.requiresReconsent),
+    effectiveAt: toText(draft.effectiveAt),
+    markdownSource: String(draft.markdownSource || ''),
+    sourceDraftId: toText(draft.sourceDraftId),
+    previousVersion: toText(draft.previousVersion)
+  }
+}
+
+function createFreshLegalDraft(docType = 'privacy_policy') {
+  state.selectedLegalDocumentId = ''
+  state.legalDocumentDetail = null
+  state.legalDocumentDraft = buildEmptyLegalDocumentDraft(docType)
+  state.legalDocumentPreview = createEmptyLegalPreviewState()
+}
+
+async function performLegalDocumentPreviewAction() {
+  const payload = buildLegalDocumentDraftPayload()
+  if (!toText(payload.markdownSource)) {
+    setNotice('请先填写协议正文后再预览。', 'danger')
+    render()
+    return
+  }
+
+  try {
+    state.runtime.legalDocumentPreviewLoading = true
+    render()
+    const result = await provider.previewLegalDocument({
+      markdownSource: payload.markdownSource
+    })
+    state.legalDocumentPreview = {
+      html: toText(result.html),
+      plainText: toText(result.plainText),
+      generatedAt: formatDateTimeText(new Date()),
+      source: 'preview'
+    }
+  } catch (error) {
+    setNotice(error.message || '生成协议预览失败，请稍后重试。', 'danger')
+  } finally {
+    state.runtime.legalDocumentPreviewLoading = false
+    render()
+  }
+}
+
+async function performLegalDocumentSaveAction() {
+  const payload = buildLegalDocumentDraftPayload()
+  try {
+    state.runtime.loading = true
+    setNotice('', 'info')
+    render()
+    const result = await provider.upsertLegalDocumentDraft({
+      ...payload,
+      reason: `后台维护协议草稿：${payload.title || getLegalDocumentTypeLabel(payload.docType)}`
+    })
+    const savedDocId = result && result.document ? toText(result.document.docId) : ''
+    setNotice(`已保存协议草稿${savedDocId ? `：${savedDocId}` : ''}。`, 'success')
+    await refreshLegalDocumentsData({
+      preserveSelection: false,
+      preferredDocId: savedDocId,
+      forceDetailReload: true,
+      renderOnFinish: false
+    })
+  } catch (error) {
+    setNotice(error.message || '保存协议草稿失败，请稍后重试。', 'danger')
+  } finally {
+    state.runtime.loading = false
+    render()
+  }
+}
+
+async function performLegalDocumentPublishAction() {
+  const detail = state.legalDocumentDetail
+  if (!detail || !toText(detail.docId)) {
+    setNotice('请先选择一份草稿后再发布。', 'danger')
+    render()
+    return
+  }
+  if (detail.status !== 'draft') {
+    setNotice('当前版本不是草稿，不能直接发布。', 'danger')
+    render()
+    return
+  }
+  if (!window.confirm(`确认发布 ${detail.title} ${detail.version} 吗？发布后该版本会成为当前生效版本。`)) {
+    return
+  }
+  const reason = window.prompt('请输入发布原因（会写入审计日志）', `发布协议：${detail.title} ${detail.version}`)
+  if (reason === null) {
+    return
+  }
+
+  try {
+    state.runtime.loading = true
+    setNotice('', 'info')
+    render()
+    await provider.publishLegalDocument({
+      docId: detail.docId,
+      reason: toText(reason) || `发布协议：${detail.title} ${detail.version}`
+    })
+    setNotice(`已发布 ${detail.title} ${detail.version}。`, 'success')
+    await refreshLegalDocumentsData({
+      preserveSelection: false,
+      preferredDocId: detail.docId,
+      forceDetailReload: true,
+      renderOnFinish: false
+    })
+  } catch (error) {
+    setNotice(error.message || '发布协议失败，请稍后重试。', 'danger')
+  } finally {
+    state.runtime.loading = false
+    render()
+  }
+}
+
+async function performLegalDocumentCloneAction() {
+  const detail = state.legalDocumentDetail
+  if (!detail || !toText(detail.docId)) {
+    setNotice('请先选择一份已有协议后再复制。', 'danger')
+    render()
+    return
+  }
+  const nextVersion = window.prompt('请输入新版本号', suggestNextLegalVersion(detail.version))
+  if (nextVersion === null) {
+    return
+  }
+  const reason = window.prompt('请输入复制原因（会写入审计日志）', `复制协议为新草稿：${detail.title} ${nextVersion}`)
+  if (reason === null) {
+    return
+  }
+
+  try {
+    state.runtime.loading = true
+    setNotice('', 'info')
+    render()
+    const result = await provider.cloneLegalDocumentDraft({
+      sourceDocId: detail.docId,
+      nextVersion: toText(nextVersion),
+      reason: toText(reason) || `复制协议为新草稿：${detail.title}`
+    })
+    const clonedDocId = result && result.document ? toText(result.document.docId) : ''
+    setNotice(`已复制为新草稿 ${toText(nextVersion)}。`, 'success')
+    await refreshLegalDocumentsData({
+      preserveSelection: false,
+      preferredDocId: clonedDocId,
+      forceDetailReload: true,
+      renderOnFinish: false
+    })
+  } catch (error) {
+    setNotice(error.message || '复制协议草稿失败，请稍后重试。', 'danger')
+  } finally {
+    state.runtime.loading = false
+    render()
+  }
+}
+
+function bindLegalDocumentActions() {
+  document.querySelectorAll('[data-legal-doc-id]').forEach((button) => {
+    button.addEventListener('click', () => {
+      refreshLegalDocumentDetail({
+        docId: toText(button.getAttribute('data-legal-doc-id')),
+        renderOnFinish: true
+      })
+    })
+  })
+
+  const refreshBtn = document.getElementById('refreshLegalDocumentsBtn')
+  if (refreshBtn) {
+    refreshBtn.addEventListener('click', () => {
+      refreshLegalDocumentsData({
+        preserveSelection: true,
+        renderOnFinish: true
+      })
+    })
+  }
+
+  const createBtn = document.getElementById('createLegalDocumentBtn')
+  if (createBtn) {
+    createBtn.addEventListener('click', () => {
+      const docType = state.legalDocumentDocTypeFilter !== 'all'
+        ? state.legalDocumentDocTypeFilter
+        : 'privacy_policy'
+      createFreshLegalDraft(docType)
+      render()
+    })
+  }
+
+  const fillTemplateBtn = document.getElementById('fillLegalTemplateBtn')
+  if (fillTemplateBtn) {
+    fillTemplateBtn.addEventListener('click', () => {
+      const docType = toText(state.legalDocumentDraft.docType || 'privacy_policy')
+      const hasExistingContent = toText(state.legalDocumentDraft.markdownSource)
+      if (hasExistingContent && !window.confirm('当前正文将被默认模板覆盖，是否继续？')) {
+        return
+      }
+      state.legalDocumentDraft.markdownSource = buildDefaultLegalDocumentMarkdown(docType)
+      if (!toText(state.legalDocumentDraft.title)) {
+        state.legalDocumentDraft.title = getLegalDocumentTypeLabel(docType)
+      }
+      state.legalDocumentPreview = createEmptyLegalPreviewState()
+      render()
+    })
+  }
+
+  const docTypeSelect = document.getElementById('legalDocTypeInput')
+  if (docTypeSelect) {
+    docTypeSelect.addEventListener('change', (event) => {
+      const nextDocType = toText(event.target.value) || 'privacy_policy'
+      const previousDocType = toText(state.legalDocumentDraft.docType)
+      const previousDefaultTitle = getLegalDocumentTypeLabel(previousDocType)
+      const nextDefaultTitle = getLegalDocumentTypeLabel(nextDocType)
+      const nextTemplate = buildDefaultLegalDocumentMarkdown(nextDocType)
+      const currentTemplate = buildDefaultLegalDocumentMarkdown(previousDocType)
+      state.legalDocumentDraft.docType = nextDocType
+      if (!toText(state.legalDocumentDraft.title) || state.legalDocumentDraft.title === previousDefaultTitle) {
+        state.legalDocumentDraft.title = nextDefaultTitle
+      }
+      if (!toText(state.legalDocumentDraft.markdownSource) || state.legalDocumentDraft.markdownSource === currentTemplate) {
+        state.legalDocumentDraft.markdownSource = nextTemplate
+      }
+      render()
+    })
+  }
+
+  const fieldBindings = [
+    ['legalDocTitleInput', 'title'],
+    ['legalDocVersionInput', 'version'],
+    ['legalDocEffectiveAtInput', 'effectiveAt'],
+    ['legalDocSummaryInput', 'summary'],
+    ['legalDocChangeNotesInput', 'changeNotesText'],
+    ['legalDocMarkdownInput', 'markdownSource']
+  ]
+  fieldBindings.forEach(([elementId, fieldName]) => {
+    const element = document.getElementById(elementId)
+    if (!element) {
+      return
+    }
+    element.addEventListener('input', (event) => {
+      state.legalDocumentDraft[fieldName] = event.target.value
+      if (fieldName === 'markdownSource') {
+        state.legalDocumentPreview = createEmptyLegalPreviewState()
+      }
+    })
+  })
+
+  const reconsentCheckbox = document.getElementById('legalDocRequiresReconsentInput')
+  if (reconsentCheckbox) {
+    reconsentCheckbox.addEventListener('change', (event) => {
+      state.legalDocumentDraft.requiresReconsent = Boolean(event.target.checked)
+    })
+  }
+
+  const saveBtn = document.getElementById('saveLegalDocumentDraftBtn')
+  if (saveBtn) {
+    saveBtn.addEventListener('click', performLegalDocumentSaveAction)
+  }
+
+  const previewBtn = document.getElementById('previewLegalDocumentBtn')
+  if (previewBtn) {
+    previewBtn.addEventListener('click', performLegalDocumentPreviewAction)
+  }
+
+  const publishBtn = document.getElementById('publishLegalDocumentBtn')
+  if (publishBtn) {
+    publishBtn.addEventListener('click', performLegalDocumentPublishAction)
+  }
+
+  const cloneBtn = document.getElementById('cloneLegalDocumentBtn')
+  if (cloneBtn) {
+    cloneBtn.addEventListener('click', performLegalDocumentCloneAction)
+  }
+}
+
+function renderLegalDocuments() {
+  const listWrap = document.getElementById('legalDocumentsListWrap')
+  const editorWrap = document.getElementById('legalDocumentEditorWrap')
+  const countMeta = document.getElementById('legalDocumentsCountMeta')
+  const selectedMeta = document.getElementById('selectedLegalDocumentMeta')
+  const searchInput = document.getElementById('legalDocumentSearchInput')
+  const docTypeFilter = document.getElementById('legalDocumentDocTypeFilter')
+  const statusFilter = document.getElementById('legalDocumentStatusFilter')
+  if (!listWrap || !editorWrap || !countMeta || !selectedMeta || !searchInput || !docTypeFilter || !statusFilter) {
+    return
+  }
+
+  searchInput.value = state.legalDocumentSearch
+  docTypeFilter.value = state.legalDocumentDocTypeFilter
+  statusFilter.value = state.legalDocumentStatusFilter
+
+  if (!supportsLegalDocumentAdmin()) {
+    countMeta.textContent = '协议中心未就绪'
+    selectedMeta.textContent = '请先部署协议中心云函数'
+    listWrap.innerHTML = '<div class="empty-card">当前 provider 尚未接入协议中心接口。</div>'
+    editorWrap.innerHTML = '<div class="empty-card">请先部署并配置 `adminListLegalDocuments`、`adminGetLegalDocumentDetail` 等管理云函数。</div>'
+    return
+  }
+
+  const documents = Array.isArray(state.legalDocuments) ? state.legalDocuments : []
+  const selectedSummary = getSelectedLegalDocumentSummary()
+  const detail = state.legalDocumentDetail
+  const draft = state.legalDocumentDraft && typeof state.legalDocumentDraft === 'object'
+    ? state.legalDocumentDraft
+    : buildEmptyLegalDocumentDraft()
+  const preview = state.legalDocumentPreview && typeof state.legalDocumentPreview === 'object'
+    ? state.legalDocumentPreview
+    : createEmptyLegalPreviewState()
+  const isReadOnly = Boolean(draft.readOnly)
+  const isExistingDocument = Boolean(toText(detail && detail.docId))
+  const previewTitle = preview.source === 'preview'
+    ? '服务器预览'
+    : (preview.source === 'published' ? '已发布快照' : '当前暂无预览')
+
+  countMeta.textContent = state.runtime.legalDocumentsLoading
+    ? '正在刷新协议列表...'
+    : `共 ${documents.length} 个版本`
+  selectedMeta.textContent = isExistingDocument
+    ? `${getLegalDocumentTypeLabel(detail.docType)} · ${detail.version} · ${getLegalDocumentStatusLabel(detail.status)}`
+    : '新建草稿'
+
+  listWrap.innerHTML = documents.length
+    ? `
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>协议</th>
+            <th>版本</th>
+            <th>状态</th>
+            <th>更新时间</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${documents.map((item) => `
+            <tr class="${state.selectedLegalDocumentId === item.docId ? 'is-selected' : ''}">
+              <td>
+                <button class="data-row-button" type="button" data-legal-doc-id="${escapeHtml(item.docId)}">
+                  ${buildTableMainCell(item.title || getLegalDocumentTypeLabel(item.docType), `${getLegalDocumentTypeLabel(item.docType)} · ${item.docId}`)}
+                </button>
+              </td>
+              <td>${buildTableMainCell(item.version || '-', item.previousVersion ? `上一版 ${item.previousVersion}` : '首版')}</td>
+              <td>
+                ${buildBadgeListMarkup([
+                  `<span class="badge ${getLegalDocumentStatusBadgeClass(item.status)}">${escapeHtml(getLegalDocumentStatusLabel(item.status))}</span>`,
+                  item.isCurrent ? '<span class="badge is-success">当前生效</span>' : '<span class="badge is-neutral">历史版本</span>',
+                  item.requiresReconsent ? '<span class="badge is-gold">需重确认</span>' : ''
+                ].filter(Boolean))}
+              </td>
+              <td>${buildTableMainCell(formatCompactDateText(item.updatedAt) || '-', item.updatedBy || '-')}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    `
+    : `<div class="empty-card">${escapeHtml(state.runtime.legalDocumentsLoading ? '正在加载协议列表...' : '当前还没有协议版本。可先新建隐私政策和用户服务协议草稿。')}</div>`
+
+  editorWrap.innerHTML = `
+    <div class="detail-stack">
+      <section class="detail-card detail-card-hero">
+        <div class="purchase-hero">
+          <div class="purchase-hero-main">
+            <div class="mini-kicker">协议中心</div>
+            <h4 class="purchase-title">${escapeHtml(draft.title || getLegalDocumentTypeLabel(draft.docType))}</h4>
+            <div class="purchase-subtitle">${escapeHtml(getLegalDocumentTypeLabel(draft.docType))}${draft.version ? ` · ${escapeHtml(draft.version)}` : ''}</div>
+          </div>
+          <div class="table-badge-row">
+            <span class="badge ${getLegalDocumentStatusBadgeClass(draft.status)}">${escapeHtml(getLegalDocumentStatusLabel(draft.status || 'draft'))}</span>
+            ${draft.isCurrent ? '<span class="badge is-success">当前生效</span>' : ''}
+            ${draft.requiresReconsent ? '<span class="badge is-gold">需重确认</span>' : ''}
+          </div>
+        </div>
+        <div class="order-note">${escapeHtml(isReadOnly ? '已发布版本为只读。若需要改文案，请先复制为新草稿。' : '草稿支持直接编辑、服务端预览和发布。')}</div>
+      </section>
+
+      <section class="detail-card">
+        <h4 class="detail-card-title">基础信息</h4>
+        <div class="plan-editor-grid">
+          <label class="field-group">
+            <span class="field-label">协议类型</span>
+            <select id="legalDocTypeInput" class="form-select" ${isReadOnly ? 'disabled' : ''}>
+              ${buildSelectOptionsMarkup(LEGAL_DOCUMENT_TYPE_OPTIONS, draft.docType)}
+            </select>
+          </label>
+          <label class="field-group">
+            <span class="field-label">标题</span>
+            <input id="legalDocTitleInput" class="form-input" value="${escapeHtml(draft.title || '')}" ${isReadOnly ? 'disabled' : ''} />
+          </label>
+          <label class="field-group">
+            <span class="field-label">版本号</span>
+            <input id="legalDocVersionInput" class="form-input" value="${escapeHtml(draft.version || '')}" placeholder="v1.0.0" ${isReadOnly ? 'disabled' : ''} />
+          </label>
+          <label class="field-group">
+            <span class="field-label">生效时间</span>
+            <input id="legalDocEffectiveAtInput" class="form-input" type="datetime-local" value="${escapeHtml(formatDateTimeLocalValue(draft.effectiveAt))}" ${isReadOnly ? 'disabled' : ''} />
+          </label>
+        </div>
+        <label class="checkbox-item">
+          <input id="legalDocRequiresReconsentInput" type="checkbox" ${draft.requiresReconsent ? 'checked' : ''} ${isReadOnly ? 'disabled' : ''}>
+          发布后需要用户重新确认
+        </label>
+        <label class="field-group">
+          <span class="field-label">版本摘要</span>
+          <textarea id="legalDocSummaryInput" class="form-textarea is-compact" placeholder="一句话说明本版本调整重点。" ${isReadOnly ? 'disabled' : ''}>${escapeHtml(draft.summary || '')}</textarea>
+        </label>
+        <label class="field-group">
+          <span class="field-label">变更说明</span>
+          <textarea id="legalDocChangeNotesInput" class="form-textarea is-compact" placeholder="每行一条变更说明。" ${isReadOnly ? 'disabled' : ''}>${escapeHtml(draft.changeNotesText || '')}</textarea>
+        </label>
+      </section>
+
+      <section class="detail-card">
+        <div class="panel-head">
+          <h4 class="detail-card-title">协议正文</h4>
+          <div class="inline-actions">
+            <button id="fillLegalTemplateBtn" class="ghost-btn" type="button" ${isReadOnly ? 'disabled' : ''}>填入默认模板</button>
+          </div>
+        </div>
+        <textarea id="legalDocMarkdownInput" class="form-textarea legal-markdown-editor" placeholder="使用 Markdown 编写协议正文。" ${isReadOnly ? 'disabled' : ''}>${escapeHtml(draft.markdownSource || '')}</textarea>
+        <div class="plan-editor-footer">
+          <div class="plan-editor-preview">支持最小 Markdown：标题、段落、无序列表。发布时会在云端生成 HTML 与纯文本快照。</div>
+          <div class="inline-actions">
+            <button id="previewLegalDocumentBtn" class="secondary-btn" type="button" ${state.runtime.loading ? 'disabled' : ''}>${state.runtime.legalDocumentPreviewLoading ? '生成中...' : '服务端预览'}</button>
+            <button id="saveLegalDocumentDraftBtn" class="primary-btn" type="button" ${isReadOnly || state.runtime.loading ? 'disabled' : ''}>保存草稿</button>
+            <button id="publishLegalDocumentBtn" class="ghost-btn" type="button" ${!isExistingDocument || isReadOnly || state.runtime.loading ? 'disabled' : ''}>发布</button>
+            <button id="cloneLegalDocumentBtn" class="ghost-btn" type="button" ${!isExistingDocument || state.runtime.loading ? 'disabled' : ''}>复制新版本</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="detail-card">
+        <div class="panel-head">
+          <h4 class="detail-card-title">预览</h4>
+          <div class="panel-meta">${escapeHtml(previewTitle)}${preview.generatedAt ? ` · ${formatCompactDateText(preview.generatedAt)}` : ''}</div>
+        </div>
+        ${preview.html
+          ? `<div class="legal-markdown-preview">${preview.html}</div>`
+          : `<div class="empty-card">${escapeHtml(state.runtime.legalDocumentPreviewLoading ? '正在生成预览...' : '当前还没有预览内容。可先点击“服务端预览”，已发布版本则会展示快照。')}</div>`}
+      </section>
+
+      <section class="detail-card">
+        <h4 class="detail-card-title">版本信息</h4>
+        <div class="detail-grid">
+          <div>
+            <div class="detail-item-label">文档标识</div>
+            <div class="detail-item-value">${escapeHtml(draft.docId || '保存后生成')}</div>
+          </div>
+          <div>
+            <div class="detail-item-label">当前修订</div>
+            <div class="detail-item-value">${escapeHtml(`${draft.currentRevision || 1}`)}</div>
+          </div>
+          <div>
+            <div class="detail-item-label">上一版本</div>
+            <div class="detail-item-value">${escapeHtml(draft.previousVersion || '-')}</div>
+          </div>
+          <div>
+            <div class="detail-item-label">已发布时间</div>
+            <div class="detail-item-value">${escapeHtml(formatCompactDateText(draft.publishedAt) || '-')}</div>
+          </div>
+          <div>
+            <div class="detail-item-label">最近更新</div>
+            <div class="detail-item-value">${escapeHtml(formatCompactDateText(draft.updatedAt) || '-')}</div>
+          </div>
+          <div>
+            <div class="detail-item-label">快照 Hash</div>
+            <div class="detail-item-value legal-mono-text">${escapeHtml(draft.hash || '-')}</div>
+          </div>
+        </div>
+        ${selectedSummary && selectedSummary.summary ? `<div class="order-note">${escapeHtml(selectedSummary.summary)}</div>` : ''}
+      </section>
+    </div>
+  `
+
+  bindLegalDocumentActions()
+}
+
 function renderAiConfig() {
   try {
     renderAiModelConfigPanel()
@@ -9543,7 +10899,7 @@ function renderPlanCatalog() {
                 <div class="plan-front-preview-subtitle">${escapeHtml(plan.displayBillingText || plan.billingCycle || 'one_time')}</div>
               </div>
               <div class="plan-front-preview-price-wrap">
-                <div class="plan-front-preview-price">${escapeHtml(plan.amountText || '待确认金额')}</div>
+                <div class="plan-front-preview-price">${escapeHtml(plan.amountText || '价格待定')}</div>
                 ${plan.originalPriceText ? `<div class="plan-front-preview-original">原价 ${escapeHtml(plan.originalPriceText)}</div>` : ''}
               </div>
             </div>
@@ -9795,6 +11151,12 @@ function bindGlobalEvents() {
       state.sidebarGroups.billing = true
     }
     render()
+    if (normalizedView === 'legalDocuments' && !state.legalDocuments.length && !state.runtime.legalDocumentsLoading) {
+      refreshLegalDocumentsData({
+        preserveSelection: true,
+        renderOnFinish: true
+      })
+    }
   }
 
   document.querySelectorAll('.nav-item').forEach((item) => {
@@ -9894,6 +11256,15 @@ function bindGlobalEvents() {
       state.selectedFeedbackId = state.feedbackItems[0] ? state.feedbackItems[0].feedbackId : ''
       state.selectedReferralId = state.referralItems[0] ? state.referralItems[0].relationId : ''
       state.selectedUsageAccountId = state.usageViewSummaries[0] ? state.usageViewSummaries[0].accountId : ''
+      state.legalDocuments = []
+      state.selectedLegalDocumentId = ''
+      applyLegalDocumentDetail(null)
+      if (supportsLegalDocumentAdmin()) {
+        await refreshLegalDocumentsData({
+          preserveSelection: false,
+          renderOnFinish: false
+        })
+      }
       setNotice('已重置为初始演示数据。', 'success')
     } catch (error) {
       setNotice(error.message || '重置失败。', 'danger')
@@ -10005,6 +11376,30 @@ function bindGlobalEvents() {
 
   document.getElementById('refreshReferralsBtn').addEventListener('click', () => {
     refreshReferralData({
+      renderOnFinish: true
+    })
+  })
+
+  document.getElementById('legalDocumentSearchInput').addEventListener('input', (event) => {
+    state.legalDocumentSearch = toText(event.target.value)
+    refreshLegalDocumentsData({
+      preserveSelection: true,
+      renderOnFinish: true
+    })
+  })
+
+  document.getElementById('legalDocumentDocTypeFilter').addEventListener('change', (event) => {
+    state.legalDocumentDocTypeFilter = toText(event.target.value) || 'all'
+    refreshLegalDocumentsData({
+      preserveSelection: false,
+      renderOnFinish: true
+    })
+  })
+
+  document.getElementById('legalDocumentStatusFilter').addEventListener('change', (event) => {
+    state.legalDocumentStatusFilter = toText(event.target.value) || 'all'
+    refreshLegalDocumentsData({
+      preserveSelection: false,
       renderOnFinish: true
     })
   })
