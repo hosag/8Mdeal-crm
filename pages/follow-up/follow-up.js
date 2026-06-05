@@ -1859,8 +1859,15 @@ Page({
       return
     }
 
+    this.setData({
+      isSaving: true
+    })
+
     const decision = await ensureActionAllowed('save_follow_up', { refresh: true, guide: true })
     if (!decision.allowed) {
+      this.setData({
+        isSaving: false
+      })
       return
     }
 
@@ -1872,10 +1879,6 @@ Page({
         stageChange = pendingStage.recommendedStage
       }
     }
-
-    this.setData({
-      isSaving: true
-    })
 
     try {
       const selectedMethod = normalizeFollowUpMethod(this.data.currentMethod, '其他')

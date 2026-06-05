@@ -82,7 +82,7 @@ Page({
     ...getDefaultPrivacyState(),
     isSaving: false,
     account: getDefaultAccountSummary(),
-    helperText: '使用微信手机号授权完成验证，手机号仅用于账号识别、权益与支付归属。',
+    helperText: '通过手机号快捷验证完成绑定，手机号仅用于账号识别、权益与支付归属。',
     isLoading: true,
     returnTo: '',
     returnFocus: '',
@@ -150,8 +150,8 @@ Page({
     if (!code) {
       wx.showToast({
         title: errMsg.indexOf('deny') > -1 || errMsg.indexOf('fail') > -1
-          ? '需要授权手机号后继续'
-          : '当前微信版本暂不支持手机号授权',
+          ? '需要完成手机号验证后继续'
+          : '当前版本暂不支持手机号快捷验证',
         icon: 'none'
       })
       return

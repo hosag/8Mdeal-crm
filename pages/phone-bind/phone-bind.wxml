@@ -20,7 +20,7 @@
     </view>
     <view class="field-group">
       <view class="field-label">授权方式</view>
-      <view class="input-sim phone-bind-auth-card">点击按钮授权微信手机号，无需手动输入。</view>
+      <view class="input-sim phone-bind-auth-card">点击按钮完成手机号快捷验证，无需手动输入。</view>
     </view>
     <view class="field-group phone-bind-check-group">
       <view class="field-label">绑定说明</view>
@@ -43,7 +43,7 @@
       open-type="getPhoneNumber"
       bindgetphonenumber="handleGetPhoneNumber"
       disabled="{{isSaving || !consentChecked}}"
-    >{{isSaving ? '绑定中...' : '微信授权绑定手机号'}}</button>
+    >{{isSaving ? '绑定中...' : '手机号快捷验证并绑定'}}</button>
   </view>
   <privacy-authorization showPrivacyAuthorization="{{showPrivacyAuthorization}}" privacyContractName="{{privacyContractName}}" />
 </view>
