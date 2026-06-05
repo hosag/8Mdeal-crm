@@ -9,7 +9,7 @@
   </view>
 
   <view class="form-card section rise-in stagger-1 phone-bind-return-card">
-    <view class="section-title">绑定完成后的回流</view>
+    <view class="section-title">绑定后会回到哪里</view>
     <view class="card-subtitle">{{returnHint}}</view>
   </view>
 
@@ -20,26 +20,21 @@
     </view>
     <view class="field-group">
       <view class="field-label">授权方式</view>
-      <view class="input-sim phone-bind-auth-card">点击底部按钮后，通过微信手机号授权完成可信验证；页面不会读取或提交手填手机号。</view>
+      <view class="input-sim phone-bind-auth-card">点击按钮授权微信手机号，无需手动输入。</view>
     </view>
     <view class="field-group phone-bind-check-group">
       <view class="field-label">绑定说明</view>
       <checkbox-group bindchange="onConsentChange">
         <label class="phone-bind-check-item">
           <checkbox value="agree" checked="{{consentChecked}}" color="#355d76" />
-          <view class="card-subtitle phone-bind-check-copy">我确认该手机号仅用于账号识别、后续付费与权益操作，不会在分享卡中自动对外展示。</view>
+          <view class="card-subtitle phone-bind-check-copy">手机号仅用于账号识别与付费，不会对外展示。</view>
         </label>
       </checkbox-group>
     </view>
   </view>
 
   <view class="form-card section rise-in stagger-2">
-    <view class="section-title">绑定后会发生什么</view>
-    <view class="phone-bind-timeline">
-      <view class="phone-bind-timeline-item">1. 当前账户会通过微信授权手机号标记为已绑定。</view>
-      <view class="phone-bind-timeline-item">2. 正式保存项目、跟进、任务时，不再被“需先绑定手机号”拦截。</view>
-      <view class="phone-bind-timeline-item">3. 后续订阅与流量包购买会直接归属到当前账户。</view>
-    </view>
+    <view class="section-title">绑定后可直接保存数据、购买套餐</view>
   </view>
 
   <view class="footer-bar {{appearancePageClass}}">

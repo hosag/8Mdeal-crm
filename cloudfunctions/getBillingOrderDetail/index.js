@@ -20,7 +20,7 @@ function toBoolean(value, fallback = false) {
 function buildAmountText(amount, currency = 'CNY') {
   const current = Number(amount)
   if (!Number.isFinite(current) || current <= 0) {
-    return currency === 'CNY' ? '待确认金额' : '待配置'
+    return currency === 'CNY' ? '价格待定' : '待配置'
   }
 
   return `¥${(current / 100).toFixed(2)}`

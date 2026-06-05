@@ -52,7 +52,7 @@
           </view>
         </view>
         <view wx:if="{{order.capabilityLines.length}}" class="billing-order-capability-wrap">
-          <view class="billing-order-capability-title">包含能力</view>
+          <view class="billing-order-capability-title">包含功能</view>
           <view class="compact-inline-metrics billing-order-capability-pills">
             <view class="compact-inline-item" wx:for="{{order.capabilityLines}}" wx:key="*this">{{item}}</view>
           </view>

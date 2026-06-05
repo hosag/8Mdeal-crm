@@ -18,12 +18,12 @@ const DEFAULT_BILLING_PRODUCTS = [
     originalPrice: 0,
     isPricePending: false,
     displayPriceText: '首周全功能体验',
-    displayBillingText: '新用户默认入口',
-    summary: '用于低成本体验闪录、AI 自动整理、外发项目和基础 CRM 流程。',
+    displayBillingText: '新用户试用',
+    summary: '体验核心功能，包括语音记录与AI整理',
     featureLines: [
-      '支持完整试用，但会控制项目数、语音时长和 AI 总额度。',
-      '保存数据或开通付费前，需要先完成手机号绑定。',
-      '试用结束后保留查看，不再允许新增、语音和 AI。'
+      '体验核心功能。',
+      '绑定手机号后可保存数据和购买套餐。',
+      '试用结束后可查看，但不可新增内容。'
     ],
     projectLimit: 3,
     supportsShareOut: true,
@@ -44,9 +44,9 @@ const DEFAULT_BILLING_PRODUCTS = [
     price: 0,
     originalPrice: 0,
     isPricePending: true,
-    displayPriceText: '待确认金额',
+    displayPriceText: '价格待定',
     displayBillingText: '按月订阅',
-    summary: '适合个人销售工程师稳定日常使用，先解决“持续可写”和“可外发”的核心问题。',
+    summary: '适合长期使用的个人用户',
     featureLines: [
       '继续新增 / 编辑项目、跟进、任务和成交记录。',
       '支持闪录、AI 自动理解、外发项目与只读追踪。',
@@ -71,13 +71,12 @@ const DEFAULT_BILLING_PRODUCTS = [
     price: 0,
     originalPrice: 0,
     isPricePending: true,
-    displayPriceText: '待确认金额',
+    displayPriceText: '价格待定',
     displayBillingText: '按年订阅',
-    summary: '适合已经把系统纳入日常推进流程、希望长期保持可写状态的个人用户。',
+    summary: '适合长期使用的个人用户',
     featureLines: [
-      '年度持续可写，避免到期中断项目推进。',
-      '同样支持外发项目、闪录、AI 和联系人全量沉淀。',
-      '后续可叠加语音包和 AI 额度包，不和订阅互相绑定。'
+      '长期可继续使用，减少到期中断。',
+      '支持转交项目、闪录、AI 和联系人管理。'
     ],
     projectLimit: -1,
     supportsShareOut: true,
@@ -123,7 +122,7 @@ const DEFAULT_BILLING_PRODUCTS = [
     summary: '适合高频使用闪录整理、项目 AI 研判、复盘和下一步建议的用户。',
     featureLines: [
       '按 token 或额度包补充，不影响订阅有效期。',
-      '主要覆盖闪录理解、项目研判、复盘和自动建议。',
+      '用于AI整理、分析与建议。',
       '适合把 AI 作为日常推进辅助的重度用户。'
     ],
     includedAiTokens: 200000
@@ -216,7 +215,7 @@ function normalizeProduct(value, index = 0) {
     isPricePending,
     displayPriceText: price > 0
       ? formatPriceTextFromCents(price, toText(source.currency) || 'CNY')
-      : (fallbackDisplayPriceText || (isPricePending ? '待确认金额' : formatPriceTextFromCents(0, 'CNY'))),
+      : (fallbackDisplayPriceText || (isPricePending ? '价格待定' : formatPriceTextFromCents(0, 'CNY'))),
     displayBillingText: toText(source.displayBillingText || fallback.displayBillingText) || fallback.displayBillingText,
     summary: toText(source.summary || fallback.summary) || fallback.summary,
     featureLines: Array.isArray(source.featureLines) && source.featureLines.length

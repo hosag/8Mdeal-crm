@@ -120,7 +120,7 @@
         </view>
       </view>
     </view>
-    <view class="earnings-add-record" bindtap="addRevenueRecord">添加一行</view>
+    <view class="earnings-add-record" bindtap="addRevenueRecord">添加记录</view>
   </scroll-view>
 
   <view class="inline-actions earnings-sheet-actions">

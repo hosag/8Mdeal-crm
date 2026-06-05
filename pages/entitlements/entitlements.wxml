@@ -58,7 +58,7 @@
     <view class="section rise-in stagger-3">
       <view class="section-header entitlements-section-header">
         <view>
-          <view class="section-title">能力边界</view>
+          <view class="section-title">功能权限</view>
         </view>
       </view>
       <view class="entitlements-capability-grid">

@@ -57,15 +57,15 @@ function buildReturnHint(returnTo = '', focus = '', reason = '') {
 
   if (target === 'plans') {
     if (nextFocus === 'addons' && nextReason === 'speech_exhausted') {
-      return '绑定完成后，会回到套餐页的流量包区域，继续补语音时长。'
+      return '绑定后将返回套餐页'
     }
     if (nextFocus === 'addons' && nextReason === 'ai_exhausted') {
-      return '绑定完成后，会回到套餐页的流量包区域，继续补 AI 额度。'
+      return '绑定后将返回套餐页'
     }
     if (nextFocus === 'subscription') {
-      return '绑定完成后，会回到套餐页的正式订阅区域，继续处理当前受限问题。'
+      return '绑定后将返回套餐页'
     }
-    return '绑定完成后，会回到套餐页继续后续操作。'
+    return '绑定后将返回套餐页'
   }
 
   if (target === 'entitlements') {

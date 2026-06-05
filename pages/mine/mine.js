@@ -111,7 +111,7 @@ function buildMineHeroSubtitle(account, entitlements) {
   const parts = [overview.writeStatusLabel]
 
   if (effectiveEnd) {
-    parts.push(`有效至 ${effectiveEnd}`)
+    parts.push(`有效期至 ${effectiveEnd}`)
   }
 
   return parts.filter(Boolean).join(' · ')

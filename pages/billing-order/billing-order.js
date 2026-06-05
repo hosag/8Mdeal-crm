@@ -19,7 +19,7 @@ const {
 function buildAmountText(amount, currency = 'CNY') {
   const current = Number(amount)
   if (!Number.isFinite(current) || current <= 0) {
-    return currency === 'CNY' ? '待确认金额' : '待确认'
+    return currency === 'CNY' ? '价格待定' : '待确认'
   }
 
   return `¥${(current / 100).toFixed(2)}`
@@ -80,10 +80,10 @@ function formatAiQuotaText(value) {
 function formatProjectLimitText(value) {
   const projectLimit = Number(value)
   if (!Number.isFinite(projectLimit) || projectLimit < 0) {
-    return '不限项目位'
+    return '项目数量不限'
   }
 
-  return `${projectLimit} 个项目位`
+  return `${projectLimit} 个项目`
 }
 
 function buildCapabilityLines(pricingSnapshot = {}) {
@@ -114,7 +114,7 @@ function getPaymentTransactionStatusLabel(value) {
     pending: '待发起',
     success: '已成功',
     failed: '已失败',
-    callback_error: '回调异常'
+    callback_error: '支付状态异常'
   }
   return labels[current] || '未定义'
 }
@@ -149,8 +149,8 @@ function getReadinessLabel(value) {
   const current = String(value || '').trim()
   const labels = {
     ready: '可继续支付',
-    config_incomplete: '暂不可支付',
-    placeholder_only: '暂不可支付'
+    config_incomplete: '当前暂不支持支付',
+    placeholder_only: '当前暂不支持支付'
   }
   return labels[current] || '待确认'
 }
@@ -207,25 +207,25 @@ function buildEntryGuide(reason) {
       visible: true,
       tone: 'soft',
       title: '项目数量已达上限',
-      desc: '当前更关注的是恢复正式订阅，解决新增项目和持续可写能力。'
+      desc: '开通订阅后可继续新增项目。'
     },
     write_disabled: {
       visible: true,
       tone: 'brand',
-      title: '账号已只读',
-      desc: '这笔订单主要用于恢复正式可写能力，解决新增、保存、闪录和 AI 受限。'
+      title: '当前仅可查看',
+      desc: '这笔订单用于恢复编辑、保存、闪录和 AI 功能。'
     },
     share_out_disabled: {
       visible: true,
       tone: 'neutral',
       title: '外发能力受限',
-      desc: '如果后续完成正式订阅开通，项目外发能力会一并恢复。'
+      desc: '订阅开通后恢复外发功能'
     },
     bind_required: {
       visible: true,
       tone: 'soft',
       title: '请先确认手机号',
-      desc: '后续仍建议先确认账户已绑定手机号，再继续正式购买和权益归属。'
+      desc: '购买前请先绑定手机号'
     }
   }
 
@@ -320,7 +320,7 @@ function decorateTransaction(record) {
     updatedAtText: formatDateLabel(record.updatedAt),
     expiresAtText: formatDateLabel(record.expiresAt || paymentSession.expiresAt),
     preparedAtText: formatDateLabel(paymentSession.preparedAt),
-    invokeStatusText: paymentSession.canInvokePayment ? '可继续支付' : '暂不可支付',
+    invokeStatusText: paymentSession.canInvokePayment ? '可继续支付' : '当前暂不支持支付',
     readinessLabel: getReadinessLabel(paymentSession.readinessCode || ''),
     channelRequestAtText: formatDateLabel(channelOrder.requestAt)
   }
@@ -343,7 +343,7 @@ function buildProductSummaryRows(order) {
     { key: 'amount', label: '成交金额', value: order.pricingSnapshot.priceText || order.amountText },
     { key: 'originalPrice', label: '原价参考', value: order.pricingSnapshot.originalPriceText || '无' },
     { key: 'billing', label: '计费周期', value: order.pricingSnapshot.displayBillingText || order.billingCycleLabel },
-    { key: 'projects', label: '项目位', value: order.projectLimitText },
+    { key: 'projects', label: '项目数量', value: order.projectLimitText },
     { key: 'voice', label: '包含语音', value: order.includedVoiceText },
     { key: 'ai', label: '包含 AI', value: order.includedAiText }
   ]
@@ -370,7 +370,7 @@ function buildEffectiveStatusCard(order, entitlements, billingCatalog) {
   const projectLimit = Number(entitlements && entitlements.projectLimit)
   const currentProjectCount = Math.max(0, Number(entitlements && entitlements.currentProjectCount || 0))
   const projectText = Number.isFinite(projectLimit) && projectLimit > -1
-    ? `${currentProjectCount}/${projectLimit} 个项目位`
+    ? `${currentProjectCount}/${projectLimit} 个项目`
     : `${currentProjectCount} 个在用项目`
 
   if (order.status !== 'paid' && accessLevel !== 'paid_active') {
@@ -411,7 +411,7 @@ function buildEffectiveStatusCard(order, entitlements, billingCatalog) {
       },
       {
         key: 'projects',
-        label: '项目位',
+        label: '项目数量',
         value: projectText
       }
     ]
@@ -716,8 +716,8 @@ Page({
       }
 
       wx.showModal({
-        title: '暂不可支付',
-        content: '当前暂不可支付，请稍后再试。',
+        title: '当前暂不支持支付',
+        content: '当前暂不支持支付，请稍后再试。',
         showCancel: false,
         confirmText: '我知道了'
       })
@@ -736,7 +736,7 @@ Page({
   async invokeLatestPaymentSession() {
     if (!this.data.latestPaymentTransaction || !this.data.latestPaymentTransaction.paymentSession) {
       wx.showToast({
-        title: '当前暂不可支付',
+        title: '当前暂不支持支付',
         icon: 'none'
       })
       return
@@ -749,7 +749,7 @@ Page({
     const session = paymentSession && typeof paymentSession === 'object' ? paymentSession : null
     if (!session) {
       wx.showToast({
-        title: '当前暂不可支付',
+        title: '当前暂不支持支付',
         icon: 'none'
       })
       return
@@ -757,8 +757,8 @@ Page({
 
     if (session.canInvokePayment !== true) {
       wx.showModal({
-        title: '暂不可支付',
-        content: '当前暂不可支付，请稍后再试。',
+        title: '当前暂不支持支付',
+        content: '当前暂不支持支付，请稍后再试。',
         showCancel: false,
         confirmText: '我知道了'
       })
@@ -771,8 +771,8 @@ Page({
 
     if (!clientPayload || !clientPayload.timeStamp || !clientPayload.nonceStr || !clientPayload.package || !clientPayload.signType || !clientPayload.paySign) {
       wx.showModal({
-        title: '暂不可支付',
-        content: '当前暂不可支付，请稍后再试。',
+        title: '当前暂不支持支付',
+        content: '当前暂不支持支付，请稍后再试。',
         showCancel: false,
         confirmText: '我知道了'
       })

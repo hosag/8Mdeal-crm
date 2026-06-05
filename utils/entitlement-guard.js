@@ -193,8 +193,8 @@ function buildGuideTarget(decision, snapshot, options = {}) {
 
   if (code === 'ENTITLEMENT_SPEECH_EXHAUSTED') {
     return {
-      title: '语音额度暂时用完了',
-      content: decision.message || '语音录入先暂停了。补充语音时长包后，就可以继续转写。',
+      title: '语音用量不足',
+      content: decision.message || '语音功能已暂停，补充时长后可恢复',
       confirmText: '看流量包',
       url: appendReasonQuery('/pages/plans/plans?focus=addons', 'speech_exhausted')
     }
@@ -202,8 +202,8 @@ function buildGuideTarget(decision, snapshot, options = {}) {
 
   if (code === 'ENTITLEMENT_AI_EXHAUSTED') {
     return {
-      title: 'AI 额度暂时用完了',
-      content: decision.message || 'AI 功能先暂停了。补充 AI 额度包后，就可以继续生成摘要和下一步建议。',
+      title: 'AI用量不足',
+      content: decision.message || 'AI功能已暂停，补充额度后可恢复',
       confirmText: '看流量包',
       url: appendReasonQuery('/pages/plans/plans?focus=addons', 'ai_exhausted')
     }
@@ -230,7 +230,7 @@ function buildGuideTarget(decision, snapshot, options = {}) {
   if (code === 'ACCOUNT_DISABLED') {
     return {
       title: '当前账号不可用',
-      content: decision.message || '当前账号已被禁用，请联系管理员处理。',
+      content: decision.message || '账号状态异常，请稍后重试',
       confirmText: '查看权益',
       url: appendReasonQuery('/pages/entitlements/entitlements', 'account_disabled')
     }
@@ -240,16 +240,16 @@ function buildGuideTarget(decision, snapshot, options = {}) {
     if (readonly || action === 'quick_entry' || action === 'save_follow_up' || action === 'save_project' || action === 'create_task' || action === 'share_out') {
       if (action === 'quick_entry') {
         return {
-          title: '闪录需要恢复可写权限',
-          content: decision.message || entitlements.reasonSummary || '当前账号为只读状态，可以继续查看已有项目，但不能新增闪录、跟进或任务。开通正式套餐后可继续使用闪录。',
+          title: '闪录功能暂不可用',
+          content: decision.message || entitlements.reasonSummary || '当前仅可查看，开通套餐后可恢复闪录',
           confirmText: '订阅套餐',
           url: appendReasonQuery('/pages/plans/plans?focus=subscription', 'write_disabled')
         }
       }
 
       return {
-        title: '当前账号已只读',
-        content: decision.message || entitlements.reasonSummary || '当前账号可以继续查看，但不能新增或修改数据。',
+        title: '当前仅可查看',
+        content: decision.message || entitlements.reasonSummary || '当前仅可查看，不可编辑',
         confirmText: '订阅套餐',
         url: appendReasonQuery('/pages/plans/plans?focus=subscription', 'write_disabled')
       }
@@ -266,7 +266,7 @@ function buildGuideTarget(decision, snapshot, options = {}) {
   if (code === 'ENTITLEMENT_REFRESH_FAILED') {
     return {
       title: '暂时无法确认权益',
-      content: decision.message || '当前无法确认账号权益，请稍后重试。你也可以先进入套餐页查看当前权限状态。',
+      content: decision.message || '账号状态加载失败，请稍后重试',
       confirmText: '订阅套餐',
       url: appendReasonQuery('/pages/plans/plans?focus=subscription', 'entitlement_refresh_failed')
     }
@@ -315,14 +315,14 @@ async function runDeniedActionGuide(decision, snapshot, options = {}) {
 
 function getReadonlyMessage(action) {
   if (action === 'quick_entry') {
-    return '当前账号已进入只读状态，暂时不能继续闪录'
+    return '当前仅可查看，暂不可用闪录'
   }
 
   if (action === 'share_out') {
-    return '当前账号已进入只读状态，暂时不能继续外发项目'
+    return '当前仅可查看，暂不可转交项目'
   }
 
-  return '当前账号为只读状态，暂时无法继续保存'
+  return '当前仅可查看，不可编辑'
 }
 
 function buildProjectLimitMessage(entitlements) {
@@ -342,11 +342,11 @@ function evaluateAction(action, snapshot, options = {}) {
     : 'local_quota'
 
   if (options.refresh === true && snapshot.refreshError) {
-    return buildDecision(false, 'ENTITLEMENT_REFRESH_FAILED', '当前无法确认账号权益，请稍后重试或查看套餐状态')
+    return buildDecision(false, 'ENTITLEMENT_REFRESH_FAILED', '账号状态加载失败，请稍后重试')
   }
 
   if (isAccountDisabled(snapshot)) {
-    return buildDecision(false, 'ACCOUNT_DISABLED', '当前账号已被禁用，请联系管理员处理')
+    return buildDecision(false, 'ACCOUNT_DISABLED', '账号状态异常，请稍后重试')
   }
 
   switch (action) {
@@ -392,7 +392,7 @@ function evaluateAction(action, snapshot, options = {}) {
       }
       if (options.isEdit) {
         if (!entitlements.canEditProject) {
-          return buildDecision(false, 'ENTITLEMENT_WRITE_DISABLED', '当前账号为只读状态，暂时无法继续修改项目')
+          return buildDecision(false, 'ENTITLEMENT_WRITE_DISABLED', '当前仅可查看，不可编辑')
         }
         return buildDecision(true)
       }
@@ -409,7 +409,7 @@ function evaluateAction(action, snapshot, options = {}) {
         return buildDecision(false, 'ACCOUNT_PHONE_REQUIRED', '请先绑定手机号后再继续保存')
       }
       if (!entitlements.canSaveFollowUp) {
-        return buildDecision(false, 'ENTITLEMENT_WRITE_DISABLED', '当前账号为只读状态，暂时无法继续保存跟进')
+        return buildDecision(false, 'ENTITLEMENT_WRITE_DISABLED', '当前仅可查看，不可编辑')
       }
       return buildDecision(true)
 
@@ -418,7 +418,7 @@ function evaluateAction(action, snapshot, options = {}) {
         return buildDecision(false, 'ACCOUNT_PHONE_REQUIRED', '请先绑定手机号后再继续保存')
       }
       if (!entitlements.canSaveFollowUp || !entitlements.canCreateTask) {
-        return buildDecision(false, 'ENTITLEMENT_WRITE_DISABLED', '当前账号为只读状态，暂时无法继续创建任务')
+        return buildDecision(false, 'ENTITLEMENT_WRITE_DISABLED', '当前仅可查看，不可编辑')
       }
       return buildDecision(true)
 
@@ -427,7 +427,7 @@ function evaluateAction(action, snapshot, options = {}) {
         return buildDecision(false, 'ACCOUNT_PHONE_REQUIRED', '请先绑定手机号后再继续保存')
       }
       if (isReadonlyAccount(snapshot)) {
-        return buildDecision(false, 'ENTITLEMENT_WRITE_DISABLED', '当前账号为只读状态，暂时无法继续生成分享卡')
+        return buildDecision(false, 'ENTITLEMENT_WRITE_DISABLED', '当前仅可查看，不可编辑')
       }
       return buildDecision(true)
 
@@ -491,7 +491,7 @@ function formatPhoneStatus(account, entitlements) {
     return account.phoneMasked || '已绑定'
   }
 
-  return entitlements.bindRequiredForWrite ? '未绑定，写入前需完成绑定' : '未绑定'
+  return entitlements.bindRequiredForWrite ? '未绑定，保存前需先绑定' : '未绑定'
 }
 
 function formatProjectQuota(entitlements) {
@@ -519,10 +519,10 @@ function formatAiQuota(entitlements) {
 function getAccessLevelLabel(accessLevel) {
   const current = String(accessLevel || '').trim()
   const labels = {
-    trial_full: '试用可写',
-    paid_active: '付费可写',
-    free_readonly: '免费只读',
-    paid_readonly: '到期只读',
+    trial_full: '试用可编辑',
+    paid_active: '付费可编辑',
+    free_readonly: '免费查看',
+    paid_readonly: '到期后仅查看',
     disabled: '已禁用'
   }
   return labels[current] || '未识别'
@@ -534,7 +534,7 @@ function getStatusLabel(status) {
     trialing: '试用中',
     active_paid: '付费中',
     free_limited: '免费版',
-    expired_readonly: '只读查看',
+    expired_readonly: '仅可查看',
     disabled: '已禁用'
   }
   return labels[current] || '未识别'
@@ -548,11 +548,11 @@ function buildEntitlementOverview(snapshot) {
 
   if (!statusHint) {
     if (isAccountDisabled(snapshot)) {
-      statusHint = '当前账号不可用，请联系管理员处理。'
+      statusHint = '账号状态异常，请稍后重试。'
     } else if (isReadonly) {
-      statusHint = '当前账号处于只读状态，可以继续查看，但不能新增或修改数据。'
+      statusHint = '当前仅可查看，不可编辑。'
     } else if (entitlements.bindRequiredForWrite) {
-      statusHint = '当前可继续体验，但正式写入前需要先绑定手机号。'
+      statusHint = '当前可继续体验，保存数据前请先绑定手机号。'
     } else {
       statusHint = '当前账户可继续新增项目、跟进、任务和外发。'
     }
@@ -567,8 +567,8 @@ function buildEntitlementOverview(snapshot) {
     aiQuotaText: formatAiQuota(entitlements),
     reasonSummary: statusHint,
     writeStatusLabel: entitlements.bindRequiredForWrite
-      ? '待绑定后写入'
-      : (isReadonly ? '当前只读' : '当前可写')
+      ? '待绑定后保存'
+      : (isReadonly ? '当前仅查看' : '当前可编辑')
   }
 }
 
@@ -595,7 +595,7 @@ function buildEntitlementPagePrompt(snapshot, pageKey = '') {
       return buildPagePrompt({
         tone: 'danger',
         title: '当前账号不可用',
-        desc: overview.reasonSummary || '当前账号已被禁用，请联系管理员处理。',
+        desc: overview.reasonSummary || '账号状态异常，请稍后重试',
         ...getPromptAction('open_entitlements', 'account_disabled')
       })
     },
@@ -606,8 +606,8 @@ function buildEntitlementPagePrompt(snapshot, pageKey = '') {
 
       return buildPagePrompt({
         tone: 'soft',
-        title: '正式写入前先绑定手机号',
-        desc: '当前还能继续体验，但保存项目、跟进、任务和开通套餐前，需要先完成手机号绑定。',
+        title: '保存数据前请先绑定手机号',
+        desc: '绑定手机号后即可保存数据和购买套餐',
         ...getPromptAction('bind_phone', 'bind_required')
       })
     },
@@ -618,8 +618,8 @@ function buildEntitlementPagePrompt(snapshot, pageKey = '') {
 
       return buildPagePrompt({
         tone: 'brand',
-        title: '当前账号处于只读状态',
-        desc: overview.reasonSummary || '你仍可继续查看完整进展，但新增项目、跟进、任务和外发能力已暂停。',
+        title: '当前仅可查看',
+        desc: overview.reasonSummary || '当前仅可查看，编辑功能已暂停',
         ...getPromptAction('open_subscription', 'write_disabled')
       })
     },
@@ -630,7 +630,7 @@ function buildEntitlementPagePrompt(snapshot, pageKey = '') {
 
       return buildPagePrompt({
         tone: 'soft',
-        title: '语音额度暂时用完了',
+        title: '语音用量不足',
         desc: '语音录入和闪录转写已暂停。补充语音时长包后可立即恢复。',
         ...getPromptAction('open_addons', 'speech_exhausted')
       })
@@ -648,7 +648,7 @@ function buildEntitlementPagePrompt(snapshot, pageKey = '') {
 
       return buildPagePrompt({
         tone: 'brand',
-        title: 'AI 额度暂时用完了',
+        title: 'AI用量不足',
         desc: 'AI 整理和下一步建议已暂停。补充 AI 额度包后可立即恢复。',
         ...getPromptAction('open_addons', 'ai_exhausted')
       })
@@ -666,7 +666,7 @@ function buildEntitlementPagePrompt(snapshot, pageKey = '') {
       return buildPagePrompt({
         tone: 'soft',
         title: '项目数量已达当前上限',
-        desc: `当前已使用 ${currentProjectCount}/${projectLimit} 个项目位，可先整理现有项目，或开通正式套餐继续新增。`,
+        desc: `当前已使用 ${currentProjectCount}/${projectLimit} 个项目，可先整理现有项目，或开通正式套餐继续新增。`,
         ...getPromptAction('open_subscription', 'project_limit_reached')
       })
     },
@@ -678,7 +678,7 @@ function buildEntitlementPagePrompt(snapshot, pageKey = '') {
       return buildPagePrompt({
         tone: 'neutral',
         title: '当前套餐暂不支持项目外发',
-        desc: '如果需要把项目直接转交给他人接手，请先开通支持外发的正式套餐。',
+        desc: '开通套餐后可转交项目',
         ...getPromptAction('open_subscription', 'share_out_disabled')
       })
     }

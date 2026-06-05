@@ -1,11 +1,11 @@
 <view class="page-shell referral-page {{appearancePageClass}}">
   <view class="hero rise-in referral-hero">
     <view class="eyebrow-row">
-      <view class="eyebrow">{{isInviteeMode ? '朋友推荐' : '推荐有奖'}}</view>
+      <view class="eyebrow">{{isInviteeMode ? '朋友推荐' : '推荐朋友'}}</view>
       <view wx:if="{{isInviteeMode}}" class="source-badge">八面成交 · 私人CRM</view>
     </view>
     <view class="hero-title">{{isInviteeMode ? '朋友推荐你试试八面成交' : '推荐朋友使用八面成交'}}</view>
-    <view class="hero-subtitle">{{isInviteeMode ? '把项目、推进动作和关键动态收进同一个私人CRM。创建首个项目后，双方各得 10 万 AI 额度。' : '朋友点开后会先看到产品核心价值，创建首个项目后，双方各得 10 万 AI 额度。'}}</view>
+    <view class="hero-subtitle">{{isInviteeMode ? '创建首个项目后，双方各得 10 万 AI 额度。' : '朋友创建首个项目后，双方各得 10 万 AI 额度。'}}</view>
   </view>
 
   <block wx:if="{{isInviteeMode}}">
@@ -20,8 +20,8 @@
         </view>
       </view>
 
-      <view class="referral-brand-title">先盯今天该推进什么，再回到项目全局</view>
-      <view class="card-subtitle referral-brand-desc">把项目、客户、联系人、推进动作和关键动态收进同一页，默认私密，判断更快，不再靠群聊和零散备忘录拼上下文。</view>
+      <view class="referral-brand-title">聚焦今日任务，掌握项目全局</view>
+      <view class="card-subtitle referral-brand-desc">项目、客户、任务一站式管理，默认私密。</view>
 
       <view class="referral-brand-values">
         <view class="referral-brand-value-chip" wx:for="{{brandValueChips}}" wx:key="*this">{{item}}</view>
@@ -38,12 +38,12 @@
     <view class="surface-card section referral-invitee-card is-{{inviteeCard.tone}} rise-in stagger-2">
       <view class="referral-invitee-status">
         <view class="card-title">{{isLoading ? '正在确认推荐关系' : inviteeCard.title}}</view>
-        <view class="card-subtitle">{{isLoading ? '请稍候，系统正在确认推荐资格。' : inviteeCard.desc}}</view>
+        <view class="card-subtitle">{{isLoading ? '请稍候，正在确认邀请状态。' : inviteeCard.desc}}</view>
       </view>
 
       <view wx:if="{{inviteeCard.showRules}}" class="referral-rule-grid">
         <view class="referral-rule-item">
-          <view class="referral-rule-label">触发条件</view>
+          <view class="referral-rule-label">如何获得奖励</view>
           <view class="referral-rule-value">创建首个项目</view>
         </view>
         <view class="referral-rule-item">
@@ -78,11 +78,11 @@
 
       <view class="referral-rule-grid">
         <view class="referral-rule-item">
-          <view class="referral-rule-label">触发条件</view>
+          <view class="referral-rule-label">如何获得奖励</view>
           <view class="referral-rule-value">朋友创建首个项目</view>
         </view>
         <view class="referral-rule-item">
-          <view class="referral-rule-label">奖励对象</view>
+          <view class="referral-rule-label">奖励给谁</view>
           <view class="referral-rule-value">双方同得</view>
         </view>
       </view>
@@ -131,7 +131,7 @@
           <view class="referral-row-status is-{{item.status}}">{{item.statusLabel}}</view>
         </view>
       </view>
-      <view wx:else class="empty-copy">还没有邀请记录</view>
+      <view wx:else class="empty-copy">暂无邀请记录</view>
     </view>
   </block>
 </view>

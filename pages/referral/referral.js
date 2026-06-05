@@ -313,7 +313,7 @@ Page({
     const referralCode = normalizeText(this.data.referralCode)
     const path = normalizeText(this.data.sharePath) || `/pages/referral/referral?referrerCode=${encodeURIComponent(referralCode)}`
     return {
-      title: '朋友推荐你试试八面成交，项目和推进动作一页看清',
+      title: '朋友邀请你试试八面成交，项目和任务一页看清',
       path,
       imageUrl: REFERRAL_SHARE_IMAGE_URL
     }

@@ -48,7 +48,7 @@ function buildPlanActionMeta(account, entitlements) {
 
   if (accessLevel === 'paid_readonly' || accessLevel === 'free_readonly') {
     return {
-      title: '当前账号只读，建议先恢复正式可写',
+      title: '当前仅可查看，建议先恢复编辑功能',
       desc: '正式订阅会恢复新增项目、跟进保存、闪录语音和 AI 能力。',
       actionText: '订阅套餐',
       actionType: 'open_subscription'
@@ -75,7 +75,7 @@ function buildPlanActionMeta(account, entitlements) {
 
   return {
     title: '按使用强度选择订阅或加购',
-    desc: '订阅负责持续可写；额度不足时，再单独补语音或 AI。',
+    desc: '订阅后可继续编辑保存；额度不足时，再单独补语音或 AI。',
     actionText: '查看套餐与加购',
     actionType: 'open_subscription'
   }
@@ -322,7 +322,7 @@ function buildEffectiveSubscriptionSummary(account, entitlements, latestSubscrip
   const projectLimit = Number(entitlements.projectLimit)
   const currentProjectCount = Math.max(0, Number(entitlements.currentProjectCount || 0))
   const projectText = Number.isFinite(projectLimit) && projectLimit > -1
-    ? `${currentProjectCount}/${projectLimit} 个项目位`
+    ? `${currentProjectCount}/${projectLimit} 个项目`
     : `${currentProjectCount} 个在用项目`
 
   return {
@@ -423,10 +423,10 @@ function formatAiQuotaText(value) {
 function formatProjectLimitText(value) {
   const projectLimit = Number(value)
   if (!Number.isFinite(projectLimit) || projectLimit < 0) {
-    return '不限项目位'
+    return '项目数量不限'
   }
 
-  return `${projectLimit} 个项目位`
+  return `${projectLimit} 个项目`
 }
 
 function buildProductCardBillingText(product = {}, trialEndText = '') {
@@ -463,11 +463,11 @@ function buildProductSummaryText(product = {}) {
   }
 
   if (product.productType === 'subscription' && product.billingCycle === 'yearly') {
-    return '长期保持可写，减少到期中断。'
+    return '长期保持可继续使用，减少到期中断。'
   }
 
   if (product.productType === 'subscription') {
-    return '先恢复持续可写，适合日常稳定使用。'
+    return '先恢复编辑和保存功能，适合日常稳定使用。'
   }
 
   if (product.productType === 'voice_pack') {
@@ -487,7 +487,7 @@ function buildProductDetailRows(product = {}) {
   if (productType === 'trial' || productType === 'subscription') {
     return [
       {
-        label: '项目位',
+        label: '项目数量',
         value: formatProjectLimitText(product.projectLimit)
       },
       {
@@ -560,7 +560,7 @@ function buildProductSections(subscriptionPlans = [], addonPacks = [], focus = '
       id: 'subscription-section',
       group: 'subscriptions',
       title: '订阅套餐',
-      desc: '恢复持续可写、项目承载与外发能力。',
+      desc: '恢复编辑、项目数量与外发能力。',
       products: subscriptionPlans
     },
     {
@@ -619,7 +619,7 @@ function buildOrderConfirmRows(product = {}) {
   if (product.productType === 'subscription') {
     rows.push({
       key: 'projects',
-      label: '项目位',
+      label: '项目数量',
       value: formatProjectLimitText(product.projectLimit)
     })
   }
@@ -751,13 +751,13 @@ function buildEntryGuide(reason) {
     project_limit_reached: {
       visible: true,
       tone: 'soft',
-      title: '项目位已达上限，建议先恢复正式订阅',
+      title: '项目数量已达上限，建议先恢复正式订阅',
       desc: ''
     },
     write_disabled: {
       visible: true,
       tone: 'brand',
-      title: '账号当前只读，建议先恢复正式可写',
+      title: '当前仅可查看，建议先恢复编辑功能',
       desc: ''
     },
     share_out_disabled: {

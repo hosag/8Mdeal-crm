@@ -87,8 +87,8 @@ function buildCapabilityRows(entitlements) {
     {
       key: 'follow_up',
       title: '跟进与任务保存',
-      desc: source.bindRequiredForWrite ? '绑定手机号后可正式写入。' : '可继续保存跟进、任务和项目更新。',
-      detailText: source.bindRequiredForWrite ? '当前需先绑定手机号' : '写入链路正常',
+      desc: source.bindRequiredForWrite ? '绑定手机号后才可以保存。' : '可继续保存跟进、任务和项目更新。',
+      detailText: source.bindRequiredForWrite ? '需先绑定手机号' : '现在可以正常保存',
       enabled: !!source.canSaveFollowUp || !!source.canCreateTask
     },
     {
@@ -133,7 +133,7 @@ function buildHeroMetrics(account, entitlements) {
     },
     {
       key: 'projects',
-      label: '项目位',
+      label: '项目数量',
       value: overview.projectQuotaText
     },
     {
@@ -272,12 +272,12 @@ function buildEntryGuide(reason) {
     project_limit_reached: {
       visible: true,
       tone: 'soft',
-      title: '当前项目位已达上限'
+      title: '当前项目数量已达上限'
     },
     write_disabled: {
       visible: true,
       tone: 'brand',
-      title: '当前账号已切换为只读'
+      title: '当前仅可查看'
     },
     share_out_disabled: {
       visible: true,

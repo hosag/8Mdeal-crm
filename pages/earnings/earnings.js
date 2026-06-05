@@ -415,7 +415,7 @@ Page({
     const form = this.data.revenueForm || {}
     if (!form.projectId) {
       wx.showToast({
-        title: '缺少项目上下文',
+        title: '未选择项目',
         icon: 'none'
       })
       return

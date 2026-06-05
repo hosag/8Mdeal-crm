@@ -25,7 +25,7 @@
     <view wx:if="{{effectiveSubscriptionSummary}}" class="surface-card section rise-in stagger-2 plans-effective-strip">
       <view class="line-between plans-effective-strip-head">
         <view class="plans-effective-strip-title">{{effectiveSubscriptionSummary.title}}</view>
-        <view class="status-badge is-success">有效至 {{effectiveSubscriptionSummary.expiresAtText}}</view>
+        <view class="status-badge is-success">有效期至 {{effectiveSubscriptionSummary.expiresAtText}}</view>
       </view>
       <view class="plans-effective-strip-summary">{{effectiveSubscriptionSummary.detailText}}</view>
     </view>
@@ -122,7 +122,7 @@
       </view>
 
       <view wx:if="{{confirmProduct.capabilityLines.length}}" class="plans-confirm-capabilities">
-        <view class="plans-confirm-section-title">包含能力</view>
+        <view class="plans-confirm-section-title">包含功能</view>
         <view class="compact-inline-metrics plans-confirm-pills">
           <view class="compact-inline-item" wx:for="{{confirmProduct.capabilityLines}}" wx:key="*this">{{item}}</view>
         </view>

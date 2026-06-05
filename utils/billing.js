@@ -12,12 +12,12 @@ const DEFAULT_BILLING_PRODUCTS = [
     originalPrice: 0,
     isPricePending: false,
     displayPriceText: '首周全功能体验',
-    displayBillingText: '新用户默认入口',
-    summary: '用于低成本体验闪录、AI 自动整理、外发项目和基础 CRM 流程。',
+    displayBillingText: '新用户试用',
+    summary: '体验核心功能，包括语音记录与AI整理',
     featureLines: [
-      '支持完整试用，但会控制项目数、语音时长和 AI 总额度。',
-      '保存数据或开通付费前，需要先完成手机号绑定。',
-      '试用结束后保留查看，不再允许新增、语音和 AI。'
+      '体验核心功能。',
+      '绑定手机号后可保存数据和购买套餐。',
+      '试用结束后可查看，但不可新增内容。'
     ],
     projectLimit: 3,
     supportsShareOut: true,
@@ -38,9 +38,9 @@ const DEFAULT_BILLING_PRODUCTS = [
     price: 0,
     originalPrice: 0,
     isPricePending: true,
-    displayPriceText: '待确认金额',
+    displayPriceText: '价格待定',
     displayBillingText: '按月订阅',
-    summary: '适合个人销售工程师稳定日常使用，先解决“持续可写”和“可外发”的核心问题。',
+    summary: '适合长期使用的个人用户',
     featureLines: [
       '继续新增 / 编辑项目、跟进、任务和成交记录。',
       '支持闪录、AI 自动理解、外发项目与只读追踪。',
@@ -65,13 +65,12 @@ const DEFAULT_BILLING_PRODUCTS = [
     price: 0,
     originalPrice: 0,
     isPricePending: true,
-    displayPriceText: '待确认金额',
+    displayPriceText: '价格待定',
     displayBillingText: '按年订阅',
-    summary: '适合已经把系统纳入日常推进流程、希望长期保持可写状态的个人用户。',
+    summary: '适合长期使用的个人用户',
     featureLines: [
-      '年度持续可写，避免到期中断项目推进。',
-      '同样支持外发项目、闪录、AI 和联系人全量沉淀。',
-      '后续可叠加语音包和 AI 额度包，不和订阅互相绑定。'
+      '长期可继续使用，减少到期中断。',
+      '支持转交项目、闪录、AI 和联系人管理。'
     ],
     projectLimit: -1,
     supportsShareOut: true,
@@ -96,8 +95,8 @@ const DEFAULT_BILLING_PRODUCTS = [
     displayBillingText: '流量包',
     summary: '适合语音闪录频率高、希望单独扩容转写时长的用户。',
     featureLines: [
-      '按秒数或时长包补充，不影响订阅有效期。',
-      '额度消耗只发生在实际成功转写时。',
+      '按实际使用时长计费，不影响订阅。',
+      '按实际成功转写计费。',
       '适合把闪录作为主录入入口的用户。'
     ],
     includedVoiceSeconds: 1800
@@ -117,7 +116,7 @@ const DEFAULT_BILLING_PRODUCTS = [
     summary: '适合高频使用闪录整理、项目 AI 研判、复盘和下一步建议的用户。',
     featureLines: [
       '按 AI 额度包补充，不影响订阅有效期。',
-      '主要覆盖闪录理解、项目研判、复盘和自动建议。',
+      '用于AI整理、分析与建议。',
       '适合把 AI 作为日常推进辅助的重度用户。'
     ],
     includedAiTokens: 200000
@@ -172,7 +171,7 @@ function formatDateLabel(value) {
 function getBillingCycleLabel(value) {
   const current = toText(value)
   const labels = {
-    trial: '新用户默认入口',
+    trial: '新用户试用',
     monthly: '按月订阅',
     yearly: '按年订阅',
     one_time: '流量包'
@@ -239,37 +238,36 @@ function getPaymentPendingCopy(scene = 'general', options = {}) {
 
   if (scene === 'product_preview') {
     return [
-      `${productName} 当前先开放商品说明和订单留痕。`,
-      '真实微信支付会在商户配置完成后接通。',
-      '接通后，订阅和加购会直接归属到当前账户。'
+      `${productName} 当前暂不支持支付。`,
+      '订单已创建。',
+      '开通后，订阅和加购会直接归属到当前账户。'
     ].join('\n')
   }
 
   if (scene === 'order_created') {
     return [
-      '当前先完成订单留痕。',
-      '真实微信支付会在商户配置完成后接通。',
-      '这笔订单后续可以直接继续支付联调，不需要重新建单。'
+      '订单已创建。',
+      '当前暂不支持支付。'
     ].join('\n')
   }
 
   if (scene === 'order_prepare') {
-    return '当前已生成支付准备记录，但真实微信支付仍处于内测联调阶段；待商户配置完成后，这条会话可直接继续复用。'
+    return '支付暂未开通，订单已保留'
   }
 
   if (scene === 'session_placeholder') {
-    return '当前支付会话还是占位模式，真实微信支付仍处于内测联调阶段；待商户配置完成后，再回到这笔订单继续拉起支付。'
+    return '当前暂不支持支付，请稍后再试'
   }
 
   if (scene === 'env_unsupported') {
-    return '当前环境暂不支持微信支付拉起；即使商户配置完成，也需要在支持支付的微信真机环境中验证。'
+    return '当前暂不支持支付，请稍后再试'
   }
 
   if (scene === 'status_notice') {
-    return '当前先完成商品目录、订单主记录和支付准备留痕；真实微信支付会在商户配置完成后接通。'
+    return '订单已创建，当前暂不支持支付'
   }
 
-  return '当前先完成商品、订单和支付准备留痕；真实微信支付会在商户配置完成后接通。'
+  return '当前暂不支持支付'
 }
 
 function buildDefaultProfile(productType, billingCycle) {
@@ -307,7 +305,7 @@ function normalizeProduct(value, index = 0) {
     || fallback.displayPriceText
   const displayPriceText = price > 0
     ? formatPriceTextFromCents(price, toText(source.currency) || 'CNY')
-    : (fallbackDisplayPriceText || (isPricePending ? '待确认金额' : formatPriceTextFromCents(0, 'CNY')))
+    : (fallbackDisplayPriceText || (isPricePending ? '价格待定' : formatPriceTextFromCents(0, 'CNY')))
   const displayBillingText = toText(source.displayBillingText || fallback.displayBillingText)
     || getBillingCycleLabel(billingCycle)
 
@@ -365,7 +363,7 @@ function normalizeOrder(value, index = 0) {
   const source = value && typeof value === 'object' && !Array.isArray(value) ? value : {}
   const status = toText(source.status) || 'pending'
   const amount = toNumber(source.amount, 0)
-  const amountText = amount > 0 ? `¥${(amount / 100).toFixed(2)}` : '待确认金额'
+  const amountText = amount > 0 ? `¥${(amount / 100).toFixed(2)}` : '价格待定'
   const createdAtText = formatDateLabel(source.createdAt)
   const paidAtText = formatDateLabel(source.paidAt)
   const title = toText(source.title || source.productName || source.planName) || `订单 ${index + 1}`
