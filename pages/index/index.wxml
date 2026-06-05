@@ -29,8 +29,8 @@
             <view class="hero-heading-kicker">今日优先</view>
             <view class="hero-heading-rule"></view>
           </view>
-          <view class="hero-title">今天先处理 <text class="hero-title-emphasis">{{dashboard.taskBoard.summary.openCount || 0}} 条</text>推进动作</view>
-          <view class="hero-subtitle">把项目全局、推进动作和关键动态都收进八面成交，先看动作，再看项目，判断会更快。</view>
+          <view class="hero-title">今天先处理 <text class="hero-title-emphasis">{{dashboard.taskBoard.summary.openCount || 0}} 条</text>待办任务</view>
+          <view class="hero-subtitle">优先处理今日任务，再查看项目详情。</view>
         </view>
         <view class="hero-message-strip {{notificationHeadlineToneClass}}" bindtap="openHeadlineNotification">
           <view class="hero-message-copy">
@@ -48,9 +48,9 @@
           <view class="btn-ghost hero-secondary-btn" data-url="/pages/projects/projects" bindtap="openPage">我的项目</view>
         </view>
         <view class="pill-row hero-quick-pills">
-          <view class="field-pill" data-filter="open" data-sort="priority" bindtap="openTasksCenter">查看推进任务</view>
-          <view class="field-pill" data-filter="overdue" data-sort="priority" bindtap="openTasksCenter">查看逾期动作</view>
-          <view class="field-pill" data-quick-filter="shared" data-sort-mode="updated" data-source="home-shared" bindtap="openProjectsWithFilter">查看我接手的</view>
+          <view class="field-pill" data-filter="open" data-sort="priority" bindtap="openTasksCenter">待办任务</view>
+          <view class="field-pill" data-filter="overdue" data-sort="priority" bindtap="openTasksCenter">逾期任务</view>
+          <view class="field-pill" data-quick-filter="shared" data-sort-mode="updated" data-source="home-shared" bindtap="openProjectsWithFilter">我接手的</view>
         </view>
         <view class="hero-metrics section hero-metrics-compact">
           <view class="metric-card" wx:for="{{dashboard.metrics}}" wx:key="label">
@@ -78,7 +78,7 @@
       </view>
 
       <view wx:if="{{isLoadFailed}}" class="form-card section state-card rise-in stagger-1">
-        <view class="form-card-title">当前无法同步云端数据</view>
+        <view class="form-card-title">首页加载失败</view>
         <view class="form-card-desc">{{loadError}}</view>
         <view class="hero-actions state-actions">
           <view class="btn-primary state-btn" bindtap="retryFetch">重新加载</view>
@@ -88,7 +88,7 @@
 
       <view class="section rise-in stagger-1">
         <view class="section-header">
-          <view class="section-title">推进动作优先</view>
+          <view class="section-title">待办任务</view>
           <view class="section-link" data-filter="open" data-sort="priority" bindtap="openTasksCenter">查看全部</view>
         </view>
         <view class="task-summary-strip">
@@ -137,8 +137,8 @@
         <empty-state
           wx:if="{{!dashboard.taskBoard.cards.length}}"
           appearance-page-class="{{appearancePageClass}}"
-          title="暂无推进动作"
-          desc="补充推进任务后，会自动显示在这里。"
+          title="暂无任务"
+          desc="新增任务后将显示在这里。"
           image="/assets/illustrations/empty-projects.svg"
           actionText="查看我的项目"
           bind:action="openProjectsPage"
@@ -546,7 +546,7 @@
                 bindinput="onQuickEntryInput"
                 bindfocus="onQuickEntryFieldFocus"
                 cursor-spacing="{{quickEntryCursorSpacing}}"
-                placeholder="{{quickEntryManualInputEnabled ? '例如：客户说周五看方案，下周二再确认预算' : '把刚刚说的话整理一下，确认后再交给 AI'}}"
+                placeholder="{{quickEntryManualInputEnabled ? '例如：客户说周五看方案，下周二再确认预算' : '整理语音内容'}}"
                 placeholder-class="input-placeholder"
                 maxlength="-1"
               ></textarea>
@@ -557,7 +557,7 @@
               <view wx:if="{{quickEntryVoiceStatusText && (quickEntryVoicePhase !== 'idle' || isQuickEntryVoiceRecording || isQuickEntryVoiceRecognizing || isQuickEntryAiLoading || quickEntryAiError)}}" class="helper-text quick-entry-inline-note">{{quickEntryVoiceStatusText}}</view>
               <view wx:if="{{quickEntryForm.followUpContent && quickEntryFollowUpStage === 'content' && quickEntrySelectedProjectMeta}}" class="quick-entry-project-inline-hint is-hit">
                 <view class="quick-entry-project-inline-text">
-                  可能命中：{{quickEntrySelectedProjectMeta.name}}<text wx:if="{{quickEntrySelectedProjectMeta.client}}"> / {{quickEntrySelectedProjectMeta.client}}</text>
+                  可能关联：{{quickEntrySelectedProjectMeta.name}}<text wx:if="{{quickEntrySelectedProjectMeta.client}}"> / {{quickEntrySelectedProjectMeta.client}}</text>
                 </view>
               </view>
             </view>
@@ -595,13 +595,13 @@
                     <view class="status-badge quick-entry-project-state-badge {{quickEntryProjectSelectionMode === 'manual' ? 'is-manual' : (quickEntrySelectedProjectMeta ? 'is-hit' : 'is-pending')}}">
                       <block wx:if="{{quickEntryProjectSelectionMode === 'manual'}}">已调整</block>
                       <block wx:elif="{{quickEntryProjectSelectionMode === 'ai_auto'}}">已匹配</block>
-                      <block wx:elif="{{quickEntrySelectedProjectMeta}}">已命中</block>
+                      <block wx:elif="{{quickEntrySelectedProjectMeta}}">已匹配</block>
                       <block wx:else>待选择</block>
                     </view>
                   </view>
                 </view>
               </view>
-              <view wx:if="{{!quickEntrySelectedProjectMeta}}" class="helper-text quick-entry-project-meta">{{quickEntryAiProjectMatch && quickEntryAiProjectMatch.status === 'candidates' ? '未自动确认项目，请从项目库选择。' : '未匹配到项目，请从项目库选择。'}}</view>
+              <view wx:if="{{!quickEntrySelectedProjectMeta}}" class="helper-text quick-entry-project-meta">{{quickEntryAiProjectMatch && quickEntryAiProjectMatch.status === 'candidates' ? '未自动匹配项目，请从项目库选择。' : '未匹配到项目，请从项目库选择。'}}</view>
               <view wx:if="{{quickEntrySuggestedProjects.length > 1 && !quickEntryShowProjectSearch && quickEntryProjectSelectionMode !== 'manual' && ((quickEntryAiProjectMatch && quickEntryAiProjectMatch.status === 'candidates') || quickEntryProjectSelectionMode === 'auto')}}" class="quick-entry-project-choice-list">
                 <view
                   wx:for="{{quickEntrySuggestedProjects}}"
@@ -651,7 +651,7 @@
                     <view wx:if="{{item.nextText || item.focusText || item.latestSummary}}" class="quick-entry-project-option-brief">{{item.nextText || item.focusText || item.latestSummary}}</view>
                   </view>
                 </view>
-                <view wx:else class="helper-text quick-entry-empty">没有找到匹配项目，可以先切到“新建项目”。</view>
+                <view wx:else class="helper-text quick-entry-empty">未找到匹配项目，可新建项目</view>
               </block>
               <view class="quick-entry-project-footer">
                 <view class="section-link quick-entry-project-footer-link" bindtap="toggleQuickEntryProjectSearch">
@@ -704,7 +704,7 @@
             </view>
           </view>
           <view wx:if="{{quickEntrySelectedProjectMeta}}" class="helper-text quick-entry-project-meta">{{quickEntrySelectedProjectMeta.client}}<text wx:if="{{quickEntrySelectedProjectMeta.nextText}}"> · {{quickEntrySelectedProjectMeta.nextText}}</text><text wx:if="{{quickEntryProjectSelectionMode === 'auto'}}"> · 已按内容匹配</text></view>
-          <view wx:else class="helper-text quick-entry-project-meta">先把动作定下来，再从最近项目里选一个关联即可。</view>
+          <view wx:else class="helper-text quick-entry-project-meta">选择任务关联的项目</view>
           <view wx:if="{{quickEntrySuggestedProjects.length}}" class="chips quick-entry-project-suggest-wall">
             <view
               wx:for="{{quickEntrySuggestedProjects}}"
@@ -747,7 +747,7 @@
                 <view wx:if="{{item.nextText || item.focusText || item.latestSummary}}" class="quick-entry-project-option-brief">{{item.nextText || item.focusText || item.latestSummary}}</view>
               </view>
             </view>
-            <view wx:else class="helper-text quick-entry-empty">没有找到匹配项目，可以先切到“新建项目”。</view>
+            <view wx:else class="helper-text quick-entry-empty">未找到匹配项目，可新建项目</view>
           </block>
         </view>
         <view class="field-group quick-entry-field-group">
@@ -771,7 +771,7 @@
             bindinput="onQuickEntryInput"
             bindfocus="onQuickEntryFieldFocus"
             cursor-spacing="{{quickEntryCursorSpacing}}"
-            placeholder="可选：补一句当前为什么要做这件事。"
+            placeholder="补充原因"
             placeholder-class="input-placeholder"
             maxlength="-1"
           ></textarea>
@@ -785,7 +785,7 @@
             bindinput="onQuickEntryInput"
             bindfocus="onQuickEntryFieldFocus"
             cursor-spacing="{{quickEntryCursorSpacing}}"
-            placeholder="可选：补一句执行时需要注意的事项。"
+            placeholder="补充注意事项"
             placeholder-class="input-placeholder"
             maxlength="-1"
           ></textarea>
@@ -961,7 +961,7 @@
             bindinput="onTaskCompletionNextTaskInput"
             bindfocus="onTaskCompletionFieldFocus"
             cursor-spacing="{{taskCompletionCursorSpacing}}"
-            placeholder="可选：补一句下一步要重点确认什么。"
+            placeholder="补充下一步重点"
             placeholder-class="input-placeholder"
             maxlength="-1"
           ></textarea>

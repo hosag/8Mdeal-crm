@@ -331,7 +331,7 @@ function buildHomeAccessCard(snapshot = {}) {
   const projectLimit = Number(entitlements.projectLimit)
   const currentProjectCount = Math.max(0, Number(entitlements.currentProjectCount || 0))
   const projectText = Number.isFinite(projectLimit) && projectLimit > -1
-    ? `${currentProjectCount}/${projectLimit} 个项目位`
+    ? `${currentProjectCount}/${projectLimit} 个项目`
     : `${currentProjectCount} 个在用项目`
 
   let title = '当前账户状态'
@@ -343,18 +343,18 @@ function buildHomeAccessCard(snapshot = {}) {
 
   if (accessLevel === 'paid_active') {
     title = '当前权益已生效'
-    badgeText = '付费可写'
+    badgeText = '可编辑'
     badgeClass = 'is-success'
     actionText = '查看权益'
     actionUrl = '/pages/plans/plans'
   } else if (accessLevel === 'trial_full') {
     title = '当前处于试用期'
-    badgeText = '试用可写'
+    badgeText = '试用中'
     badgeClass = 'is-soft'
     actionText = account.phoneVerified ? '查看权益' : '绑定手机号'
     actionUrl = account.phoneVerified ? '/pages/plans/plans' : '/pages/phone-bind/phone-bind?returnTo=index'
   } else if (accessLevel === 'paid_readonly' || accessLevel === 'free_readonly') {
-    title = '当前账号已只读'
+    title = '当前仅可查看'
     badgeText = overview.accessLevelLabel
     badgeClass = 'is-brand'
     actionText = '订阅套餐'
@@ -398,7 +398,7 @@ function buildHomeAccessCard(snapshot = {}) {
       },
       {
         key: 'projects',
-        label: '项目位',
+        label: '项目数量',
         value: projectText
       },
       {
@@ -1063,7 +1063,7 @@ function formatAiGeneratedTime(value) {
 
 const QUICK_ENTRY_AI_MODEL_SOURCE_DEFAULTS = {
   sourceType: 'model',
-  sourceLabel: '云端模型',
+  sourceLabel: 'AI整理',
   providerLabel: 'CloudBase AI',
   modelName: 'hunyuan-exp / hunyuan-turbos-latest',
   canRegenerate: true
@@ -1071,7 +1071,7 @@ const QUICK_ENTRY_AI_MODEL_SOURCE_DEFAULTS = {
 
 const QUICK_ENTRY_AI_FALLBACK_SOURCE_DEFAULTS = {
   sourceType: 'fallback',
-  sourceLabel: '系统基础建议',
+  sourceLabel: '系统整理',
   providerLabel: '',
   modelName: '',
   canRegenerate: true
@@ -1107,8 +1107,8 @@ function normalizeQuickEntryAiSourceMeta(value) {
     generatedAtText,
     sourceMetaText: sourceMetaParts.join(' · '),
     sourceDisplayText: sourceType === 'fallback'
-      ? '来自：系统基础建议'
-      : `来自：云端模型${modelName ? ` · ${modelName}` : ''}`
+      ? '系统整理'
+      : `AI整理${modelName ? ` · ${modelName}` : ''}`
   }
 }
 
@@ -2918,7 +2918,7 @@ function buildNotificationHeadline(notifications, stats) {
       id: '',
       type: '',
       title: '站内提醒',
-      desc: `当前有 ${pendingCount} 条待收口消息，待查看 ${unreadCount} 条。`,
+      desc: `当前有 ${pendingCount} 条待处理消息，待查看 ${unreadCount} 条。`,
       projectName: '',
       actionText: '打开消息',
       actionUrl: '',
@@ -2932,13 +2932,13 @@ function buildNotificationHeadline(notifications, stats) {
     id: '',
     type: '',
     title: '站内提醒',
-    desc: '当前提醒都已收口，可以继续按首页任务和跟进节奏推进。',
+    desc: '当前提醒都已处理，可以继续查看任务和项目进展。',
     projectName: '',
     actionText: '打开消息',
     actionUrl: '',
     autoResolve: false,
     toneClass: 'is-success',
-    badgeText: '已收口'
+    badgeText: '已处理'
   }
 }
 
@@ -2956,7 +2956,7 @@ function buildHomeEntitlementHeadline(snapshot = {}) {
     return {
       title: '当前权益已生效',
       desc: effectiveToText
-        ? `正式订阅有效至 ${effectiveToText}，现在可以继续按首页动作和跟进节奏推进。`
+        ? `正式订阅有效期至 ${effectiveToText}，现在可以继续按首页动作和跟进节奏推进。`
         : '正式订阅已生效，现在可以继续按首页动作和跟进节奏推进。',
       actionText: '查看套餐与权益',
       actionUrl: '/pages/plans/plans',
@@ -2980,12 +2980,12 @@ function buildHomeEntitlementHeadline(snapshot = {}) {
 
   if (accessLevel === 'paid_readonly' || accessLevel === 'free_readonly') {
     return {
-      title: '当前账号已只读',
+      title: '当前仅可查看',
       desc: overview.reasonSummary || '你仍可查看全部进展，但当前不能继续新增或修改数据。',
       actionText: '订阅套餐',
       actionUrl: '/pages/plans/plans?focus=subscription&reason=write_disabled',
       toneClass: 'is-brand',
-      badgeText: '只读中'
+      badgeText: '仅查看'
     }
   }
 
@@ -3002,11 +3002,11 @@ function buildHomeEntitlementHeadline(snapshot = {}) {
 
   return {
     title: '站内提醒',
-    desc: '当前提醒都已收口，可以继续按首页任务和跟进节奏推进。',
+      desc: '当前提醒都已处理，可以继续查看任务和项目进展。',
     actionText: '打开消息',
     actionUrl: '',
     toneClass: 'is-success',
-    badgeText: '已收口'
+      badgeText: '已处理'
   }
 }
 
@@ -3034,13 +3034,13 @@ Page({
     notificationHeadlineId: '',
     notificationHeadlineType: '',
       notificationHeadlineTitle: '站内提醒',
-      notificationHeadlineDesc: '当前提醒都已收口，可以继续按首页任务和跟进节奏推进。',
+      notificationHeadlineDesc: '当前提醒都已处理，可以继续查看任务和项目进展。',
       notificationHeadlineProjectName: '',
       notificationHeadlineActionText: '查看',
     notificationHeadlineUrl: '',
     notificationHeadlineAutoResolve: false,
     notificationHeadlineToneClass: 'is-success',
-    notificationHeadlineBadgeText: '已收口',
+    notificationHeadlineBadgeText: '已处理',
     notificationSyncVersion: 0,
     nextTaskTemplates: NEXT_TASK_TEMPLATES,
     quickEntryModes: QUICK_ENTRY_MODES,
@@ -3095,7 +3095,7 @@ Page({
     quickEntryFollowUpCanSubmit: false,
     quickEntryFollowUpSubmitText: '先录入内容',
     quickEntryFollowUpSubmitIsAiAction: false,
-    quickEntryFollowUpSubmitHint: '先说一句，或手动补一句关键跟进。',
+    quickEntryFollowUpSubmitHint: '先录入内容，或手动补充关键跟进。',
     quickEntryManualInputEnabled: false,
     quickEntryShowFollowUpDetails: false,
     quickEntryActionId: '',
@@ -3175,7 +3175,9 @@ Page({
     this.quickEntryProjectCloudAliasMemory = {}
     const restoredHomeCache = this.restoreHomePageCache()
     if (!restoredHomeCache) {
-      this.scheduleHomeInitialLoading()
+      this.setData({
+        homeInitialLoadingVisible: true
+      })
     }
     this.initHomeNavigationMetrics()
     this.loadQuickEntryProjectAliases()
@@ -3279,20 +3281,6 @@ Page({
   },
 
   noop() {},
-
-  scheduleHomeInitialLoading() {
-    this.clearHomeInitialLoadingTimer()
-    this.homeInitialLoadingTimer = schedule(() => {
-      this.homeInitialLoadingTimer = null
-      if (!this.isPageActive || this.data.hasLoadedOnce || this.data.homeInitialLoadingVisible) {
-        return
-      }
-
-      this.setData({
-        homeInitialLoadingVisible: true
-      })
-    }, 700)
-  },
 
   clearHomeInitialLoadingTimer() {
     if (this.homeInitialLoadingTimer) {
@@ -3711,13 +3699,13 @@ Page({
       notificationHeadlineId: '',
       notificationHeadlineType: '',
       notificationHeadlineTitle: '站内提醒',
-      notificationHeadlineDesc: '当前提醒都已收口，可以继续按首页任务和跟进节奏推进。',
+      notificationHeadlineDesc: '当前提醒都已处理，可以继续查看任务和项目进展。',
       notificationHeadlineProjectName: '',
       notificationHeadlineActionText: '查看',
       notificationHeadlineUrl: '',
       notificationHeadlineAutoResolve: false,
       notificationHeadlineToneClass: 'is-success',
-      notificationHeadlineBadgeText: '已收口',
+      notificationHeadlineBadgeText: '已处理',
       showQuickEntrySheet: false,
       quickEntryProjects: [],
       ...buildQuickEntryEmptyState(this.data.quickEntryMode || 'follow_up', []),
@@ -3981,7 +3969,7 @@ Page({
         return
       }
 
-      const message = error && error.message ? error.message : '当前无法同步云端数据，请稍后重试'
+      const message = error && error.message ? error.message : '首页加载失败，请稍后重试'
       this.setData({
         dashboard: {
           metrics: [],
@@ -4016,7 +4004,7 @@ Page({
         loadError: message
       })
       wx.showToast({
-        title: '当前无法同步首页数据',
+        title: '首页加载失败',
         icon: 'none'
       })
     }
@@ -4058,13 +4046,13 @@ Page({
         notificationHeadlineId: headline.id || '',
         notificationHeadlineType: headline.type || '',
         notificationHeadlineTitle: headline.title || '站内提醒',
-        notificationHeadlineDesc: headline.desc || '当前提醒都已收口，可以继续按首页任务和跟进节奏推进。',
+        notificationHeadlineDesc: headline.desc || '当前提醒都已处理，可以继续查看任务和项目进展。',
         notificationHeadlineProjectName: headline.projectName || '',
         notificationHeadlineActionText: headline.actionText || '打开消息',
         notificationHeadlineUrl: headline.actionUrl || '',
         notificationHeadlineAutoResolve: !!headline.autoResolve,
         notificationHeadlineToneClass: headline.toneClass || 'is-success',
-        notificationHeadlineBadgeText: headline.badgeText || '已收口'
+        notificationHeadlineBadgeText: headline.badgeText || '已处理'
       }, () => {
         this.persistHomePageCache()
       })
@@ -4274,7 +4262,7 @@ Page({
   openTaskCompletionVoiceGuide() {
     wx.showModal({
       title: '语音服务未就绪',
-      content: '当前设备暂不支持原生录音，或云端语音识别服务尚未完成配置。请先确认真机环境与云函数配置。',
+      content: '当前设备暂不支持语音录入，请稍后再试。',
       showCancel: false,
       confirmText: '知道了'
     })
@@ -4477,7 +4465,7 @@ Page({
 
   async uploadTaskCompletionVoiceFile(filePath) {
     if (!wx.cloud || typeof wx.cloud.uploadFile !== 'function') {
-      throw new Error('当前环境未连接云存储')
+      throw new Error('录音上传失败，请检查网络后重试')
     }
 
     const extension = getVoiceFileExtension(filePath)
@@ -5549,7 +5537,7 @@ Page({
 
     this.ensureQuickEntryProjects().catch((error) => {
       wx.showToast({
-        title: error.message || '当前无法加载项目列表',
+        title: error.message || '项目列表加载失败，请重试',
         icon: 'none'
       })
     })
@@ -6135,7 +6123,7 @@ Page({
   openQuickEntryVoiceGuide() {
     wx.showModal({
       title: '语音服务未就绪',
-      content: '当前设备暂不支持原生录音，或云端语音识别服务尚未完成配置。请先确认真机环境、云函数和腾讯云 ASR 配置。',
+      content: '当前设备暂不支持闪录语音，请稍后再试。',
       showCancel: false,
       confirmText: '知道了'
     })
@@ -6457,7 +6445,7 @@ Page({
 
   async uploadQuickEntryVoiceFile(filePath) {
     if (!wx.cloud || typeof wx.cloud.uploadFile !== 'function') {
-      throw new Error('当前环境未连接云存储')
+      throw new Error('录音上传失败，请检查网络后重试')
     }
 
     const extension = getVoiceFileExtension(filePath)
@@ -7955,7 +7943,7 @@ Page({
       await this.fetchDashboard({ reason: 'quick_task_success' })
       this.showTaskFeedback({
         title: '下一步动作已加入推进清单',
-        detail: `${taskTitle} 已进入首页“推进动作优先”，后续可直接完成并回填结果。`
+        detail: `${taskTitle} 已加入首页“待办任务”，后续可直接完成并补充结果。`
       })
       this.showQuickEntrySuccess({
         mode: 'task',
@@ -8012,14 +8000,14 @@ Page({
       nextData.notificationHeadlineType = ''
       nextData.notificationHeadlineTitle = nextPendingCount ? '提醒状态已更新' : '站内提醒'
       nextData.notificationHeadlineDesc = nextPendingCount
-        ? '这条提醒已收口，返回首页后会自动同步下一条。'
-        : '当前提醒都已收口，可以继续按首页动作和跟进节奏推进。'
+        ? '这条提醒已处理，返回首页后会自动同步下一条。'
+        : '当前提醒都已处理，可以继续查看任务和项目进展。'
       nextData.notificationHeadlineProjectName = ''
       nextData.notificationHeadlineActionText = '打开消息'
       nextData.notificationHeadlineUrl = ''
       nextData.notificationHeadlineAutoResolve = false
       nextData.notificationHeadlineToneClass = nextPendingCount ? 'is-neutral' : 'is-success'
-      nextData.notificationHeadlineBadgeText = nextPendingCount ? '待处理' : '已收口'
+      nextData.notificationHeadlineBadgeText = nextPendingCount ? '待处理' : '已处理'
     }
 
     this.setData(nextData, () => {

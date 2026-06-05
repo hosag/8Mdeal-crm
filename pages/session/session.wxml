@@ -2,8 +2,8 @@
   <view class="session-nav-spacer" style="height: {{navigationSpacerHeight}}px;"></view>
   <view class="session-panel">
     <view class="session-mark">八面成交</view>
-    <view class="session-title">已退出当前账号</view>
-    <view class="session-desc">本机账号状态、草稿和页面缓存已清除。云端项目数据不会删除，重新进入后会使用当前微信身份同步。</view>
+    <view class="session-title">你已退出登录</view>
+    <view class="session-desc">已退出。重新进入可恢复登录。</view>
     <view class="session-actions">
       <view class="btn-primary session-primary-action {{isEntering ? 'is-disabled' : ''}}" bindtap="reenterApp">{{isEntering ? '正在进入...' : '重新进入'}}</view>
     </view>
