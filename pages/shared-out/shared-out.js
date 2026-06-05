@@ -344,7 +344,7 @@ Page({
         return
       }
 
-      const message = error && error.message ? error.message : '当前无法同步云端数据，请稍后重试'
+      const message = error && error.message ? error.message : '外发项目加载失败，请稍后重试'
       this.safeSetData({
         outboundProjects: [],
         filteredRecords: [],
@@ -447,7 +447,7 @@ Page({
     const summaryCards = [
       { label: '全部外发', value: String(allRecords.length), note: '当前追踪池' },
       { label: '待查看', value: String(allRecords.filter((item) => item.statusKey === 'unopened').length), note: '对方还未打开' },
-      { label: '已接手', value: String(allRecords.filter((item) => item.statusKey === 'taken_over' || item.statusKey === 'followed').length), note: '已进入对方项目池' }
+      { label: '已接手', value: String(allRecords.filter((item) => item.statusKey === 'taken_over' || item.statusKey === 'followed').length), note: '已进入对方项目列表' }
     ]
 
     const hasCustomFilter = Boolean(keyword) || statusFilter !== 'all'

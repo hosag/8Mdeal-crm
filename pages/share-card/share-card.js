@@ -125,9 +125,9 @@ function normalizeShareBrief(value) {
   const brief = value && typeof value === 'object' && !Array.isArray(value) ? value : {}
   const tone = String(brief.tone || '').trim()
   const sourceType = String(brief.sourceType || '').trim() === 'fallback' ? 'fallback' : 'model'
-  const providerLabel = String(brief.providerLabel || (sourceType === 'fallback' ? '' : 'CloudBase AI')).trim()
+  const providerLabel = String(brief.providerLabel || (sourceType === 'fallback' ? '' : 'AI整理')).trim()
   const modelName = String(brief.modelName || (sourceType === 'fallback' ? '' : 'hunyuan-exp / hunyuan-turbos-latest')).trim()
-  const sourceLabel = String(brief.sourceLabel || (sourceType === 'fallback' ? '系统基础建议' : '云端模型')).trim()
+  const sourceLabel = String(brief.sourceLabel || (sourceType === 'fallback' ? '系统整理' : 'AI整理')).trim()
   const generatedAt = String(brief.generatedAt || '').trim()
   const generatedAtText = formatAiGeneratedTime(brief.generatedAt)
   const overviewLines = Array.isArray(brief.overviewLines)
@@ -155,7 +155,7 @@ function normalizeShareBrief(value) {
     summaryText,
     cta: String(brief.cta || '').trim(),
     tone,
-    toneText: tone === 'outbound_handover' ? '接手导向' : '同步导向',
+    toneText: tone === 'outbound_handover' ? '转交摘要' : '分享摘要',
     sourceType,
     sourceLabel,
     providerLabel,
@@ -165,8 +165,8 @@ function normalizeShareBrief(value) {
     sourceMetaText: sourceMetaParts.join(' · '),
     sourceCaption: modelName ? `${providerLabel} · ${modelName}` : providerLabel,
     sourceOriginText: sourceType === 'fallback'
-      ? '来自：系统基础建议'
-      : `来自：云端模型${modelName ? ` · ${modelName}` : ''}`,
+      ? '系统整理'
+      : `AI整理${modelName ? ` · ${modelName}` : ''}`,
     regenerateLabel: '重新生成'
   }
 }
@@ -395,7 +395,7 @@ function buildSenderState(preview) {
 
   return {
     heroEyebrow: '分享项目',
-    heroTitle: isCloneSeed ? '新建转交' : (mode === 'outbound' ? '转交项目' : '发送资料'),
+    heroTitle: isCloneSeed ? '创建副本转交' : (mode === 'outbound' ? '转交项目' : '发送资料'),
     heroSubtitle: '确认当前内容后发送。',
     stateTitle: '',
     stateDesc: '',
@@ -408,7 +408,7 @@ function buildSenderState(preview) {
     showImportedActions: false,
     showSenderActions: true,
     showShareFooter: true,
-    footerShareText: isCloneSeed ? '发送新建转交卡' : (mode === 'outbound' ? '发送交接卡' : '发送资料卡')
+    footerShareText: isCloneSeed ? '发送副本转交卡' : (mode === 'outbound' ? '发送交接卡' : '发送资料卡')
   }
 }
 
@@ -800,7 +800,7 @@ Page({
           heroTitle: activeMode === 'outbound' ? '转交项目暂不可用' : '发送资料暂不可用',
           heroSubtitle: decision.message || '当前账号权益不足，请先确认套餐后再继续。',
           stateTitle: '当前权益不足',
-          stateDesc: decision.message || '请先订阅套餐或恢复账号可写权限，再生成分享卡。',
+          stateDesc: decision.message || '请先订阅套餐或恢复编辑权限，再生成分享卡。',
           stateTag: '受限',
           visibleFields: [],
           visibleFieldsSummary: '',

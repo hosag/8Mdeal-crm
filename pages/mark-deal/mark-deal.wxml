@@ -8,8 +8,8 @@
     <view class="eyebrow-row">
       <view class="eyebrow">成交记录</view>
     </view>
-    <view class="hero-title">成交记录聚焦金额、提成与回款</view>
-    <view class="hero-subtitle">页面围绕“快速登记、便于复盘”设计，不要求复杂财务字段，优先满足个人收益追踪。</view>
+    <view class="hero-title">记录成交金额、提成与回款</view>
+    <view class="hero-subtitle">保存后将计入收益统计。</view>
     <view class="pill-row">
       <view class="soft-badge">{{form.projectName}}</view>
     </view>
@@ -39,8 +39,8 @@
   </view>
 
   <view class="form-card section">
-    <view class="form-card-title">页面引导</view>
-    <view class="form-card-desc">成交保存后，会自动进入收益统计，并在首页时间线中形成一条“成交记录”事件。</view>
+    <view class="form-card-title">保存后同步</view>
+    <view class="form-card-desc">保存后将计入收益统计，并显示在首页时间线中。</view>
   </view>
 
   <view class="bottom-space"></view>

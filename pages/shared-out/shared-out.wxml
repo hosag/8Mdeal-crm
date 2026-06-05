@@ -14,7 +14,7 @@
     </view>
 
     <view wx:if="{{isLoadFailed}}" class="form-card section state-card rise-in stagger-1">
-      <view class="form-card-title">当前无法同步云端数据</view>
+      <view class="form-card-title">外发项目加载失败</view>
       <view class="form-card-desc">{{loadError}}</view>
       <view class="hero-actions state-actions">
         <view class="btn-primary state-btn" bindtap="retryFetch">重新加载</view>

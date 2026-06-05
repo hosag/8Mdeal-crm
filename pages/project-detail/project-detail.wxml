@@ -36,7 +36,7 @@
         </view>
         <view wx:if="{{projectAccess.canEditProject}}" class="section-link" bindtap="copyProject">{{isCopyingProject ? '复制中...' : '复制项目'}}</view>
         <view wx:if="{{projectAccess.canEditProject}}" class="section-link {{!projectId ? 'is-muted' : ''}}" bindtap="goEditProject">编辑项目</view>
-        <view wx:if="{{!projectAccess.canEditProject}}" class="section-link is-muted">当前只读</view>
+        <view wx:if="{{!projectAccess.canEditProject}}" class="section-link is-muted">当前仅可查看</view>
       </view>
     </view>
     <view wx:if="{{projectDetail.description}}" class="helper-text detail-overview-desc">{{projectDetail.description}}</view>
@@ -66,20 +66,20 @@
         <view class="helper-text contact-security-headline">联系方式加密存储</view>
       </view>
       <view wx:if="{{projectAccess.canManageContacts}}" class="section-link" bindtap="openAddContactSheet">新增联系人</view>
-      <view wx:if="{{!projectAccess.canManageContacts}}" class="section-link is-muted">当前只读</view>
+      <view wx:if="{{!projectAccess.canManageContacts}}" class="section-link is-muted">当前仅可查看</view>
     </view>
     <view class="compact-inline-metrics detail-section-meta" wx:if="{{contactMeta.countText}}">
       <view class="compact-inline-item">{{contactMeta.countText}}</view>
       <view class="compact-inline-item">{{contactMeta.primaryText}}</view>
     </view>
-    <view wx:if="{{!contacts.length}}" class="card-subtitle compact-empty-text">还没有联系人，先补关键决策人即可。</view>
-    <view class="contact-summary contact-card" wx:for="{{contacts}}" wx:key="id" bindtap="toggleContacts">
-      <view class="line-between">
-        <view>
-          <view class="contact-name">{{item.name}}</view>
-          <view class="contact-role">{{item.role}} · {{item.company}}</view>
+    <view wx:if="{{!contacts.length}}" class="card-subtitle compact-empty-text">添加关键决策人</view>
+    <view wx:if="{{contacts.length}}" class="contact-summary contact-card contact-summary-card" bindtap="openContactsSheet">
+      <view class="line-between contact-summary-head">
+        <view class="contact-summary-main">
+          <view class="contact-name">{{contactMeta.primaryText}}</view>
+          <view class="contact-role">{{contactMeta.summaryText}}</view>
         </view>
-        <view class="chip">查看信息</view>
+        <view class="chip">{{contactMeta.actionText}}</view>
       </view>
     </view>
   </view>
@@ -88,7 +88,7 @@
     <view class="section-header">
       <view class="section-title">推进任务</view>
       <view wx:if="{{projectAccess.canManageTasks}}" class="section-link" bindtap="openFollowUp">新增任务</view>
-      <view wx:if="{{!projectAccess.canManageTasks}}" class="section-link is-muted">当前只读</view>
+      <view wx:if="{{!projectAccess.canManageTasks}}" class="section-link is-muted">当前仅可查看</view>
     </view>
     <view wx:if="{{taskFeedback.title}}" class="task-feedback-banner">
       <view class="task-feedback-main">
@@ -129,7 +129,7 @@
     <view class="section-header">
       <view class="section-title">跟进时间线</view>
       <view wx:if="{{projectAccess.canAdvanceProject}}" class="section-link" bindtap="openFollowUp">新增跟进</view>
-      <view wx:if="{{!projectAccess.canAdvanceProject}}" class="section-link is-muted">当前只读</view>
+      <view wx:if="{{!projectAccess.canAdvanceProject}}" class="section-link is-muted">当前仅可查看</view>
     </view>
     <view class="compact-inline-metrics detail-section-meta">
       <view class="compact-inline-item">{{timelineMeta.totalText}}</view>
@@ -182,7 +182,7 @@
               <view class="timeline-section-text">{{item.stageChangeReason}}</view>
             </view>
             <view class="timeline-section" wx:if="{{item.missingInfo && item.missingInfo.length}}">
-              <view class="timeline-section-label">待补信息</view>
+              <view class="timeline-section-label">还缺哪些信息</view>
               <view class="timeline-list">
                 <view class="timeline-list-item" wx:for="{{item.missingInfo}}" wx:key="*this">{{item}}</view>
               </view>
@@ -274,16 +274,16 @@
   <view class="btn-primary footer-primary-action {{!projectAccess.canAdvanceProject ? 'is-disabled' : ''}}" bindtap="openFollowUp">新增跟进</view>
   <view class="btn-secondary footer-secondary-action {{!projectAccess.canShareProject ? 'is-disabled' : ''}}" bindtap="openShareSheet">分享</view>
   <view wx:if="{{canMarkDeal && projectAccess.canMarkDeal}}" class="btn-ghost footer-tertiary-action" bindtap="openDealPage">登记成交</view>
-  <view wx:else class="btn-ghost footer-tertiary-action is-disabled">{{projectAccess.canMarkDeal ? '已成交' : '当前只读'}}</view>
+  <view wx:else class="btn-ghost footer-tertiary-action is-disabled">{{projectAccess.canMarkDeal ? '已成交' : '当前仅可查看'}}</view>
 </view>
 
 <view wx:if="{{showContacts}}">
-  <view class="sheet-mask" bindtap="toggleContacts"></view>
+  <view class="sheet-mask" bindtap="closeContactsSheet"></view>
   <view class="sheet-panel project-detail-contact-sheet {{appearancePageClass}}">
     <view class="sheet-handle"></view>
     <view class="sheet-header">
       <view class="sheet-title">联系人完整信息</view>
-      <view class="sheet-close" bindtap="toggleContacts">关闭</view>
+      <view class="sheet-close" bindtap="closeContactsSheet">关闭</view>
     </view>
     <view class="sheet-list contact-sheet-list">
       <view class="sheet-card contact-sheet-security-card contact-sheet-intro-card">
@@ -293,14 +293,31 @@
       <view class="sheet-card contact-sheet-card" wx:for="{{contacts}}" wx:key="id">
         <view class="contact-name">{{item.name}}</view>
         <view class="sheet-meta">{{item.role}} · {{item.company}}</view>
-        <view class="contact-sheet-grid">
-          <view class="contact-sheet-item">
-            <view class="contact-sheet-label">电话</view>
-            <view class="contact-sheet-value">{{item.phone}}</view>
+        <view class="contact-sheet-info-list">
+          <view class="contact-sheet-info-row">
+            <view class="contact-sheet-info-main">
+              <view class="contact-sheet-label">电话</view>
+              <view class="contact-sheet-value">{{item.phone || '未填写'}}</view>
+            </view>
+            <view class="contact-sheet-actions">
+              <view class="contact-sheet-icon-action" data-phone="{{item.phone}}" catchtap="callContactPhone">
+                <image class="contact-sheet-action-icon" src="/assets/icons/contact-phone-action.svg" mode="aspectFit" />
+              </view>
+              <view class="contact-sheet-icon-action" data-value="{{item.phone}}" data-label="手机号" catchtap="copyContactField">
+                <image class="contact-sheet-action-icon" src="/assets/icons/contact-copy-action.svg" mode="aspectFit" />
+              </view>
+            </view>
           </view>
-          <view class="contact-sheet-item">
-            <view class="contact-sheet-label">微信</view>
-            <view class="contact-sheet-value">{{item.wechat}}</view>
+          <view class="contact-sheet-info-row">
+            <view class="contact-sheet-info-main">
+              <view class="contact-sheet-label">微信</view>
+              <view class="contact-sheet-value">{{item.wechat || '未填写'}}</view>
+            </view>
+            <view class="contact-sheet-actions">
+              <view class="contact-sheet-icon-action" data-value="{{item.wechat}}" data-label="微信号" catchtap="copyContactField">
+                <image class="contact-sheet-action-icon" src="/assets/icons/contact-copy-action.svg" mode="aspectFit" />
+              </view>
+            </view>
           </view>
         </view>
       </view>
@@ -379,7 +396,7 @@
           </view>
         </view>
         <view class="form-card-title project-ai-state-title">正在生成项目研判</view>
-        <view class="form-card-desc project-ai-state-desc">会结合最近时间线和未完成动作，给你一条更聚焦的判断。</view>
+        <view class="form-card-desc project-ai-state-desc">正在分析项目进展...</view>
       </view>
 
       <view wx:elif="{{projectAiError && !projectAiResult}}" class="surface-card project-ai-state-card">
@@ -481,7 +498,7 @@
           </view>
         </view>
         <view class="form-card-title project-ai-state-title">正在生成项目复盘</view>
-        <view class="form-card-desc project-ai-state-desc">会结合关键时间线和推进动作，把这条项目收成可复用经验。</view>
+        <view class="form-card-desc project-ai-state-desc">正在根据关键记录整理这次项目的经验。</view>
       </view>
 
       <view wx:elif="{{projectReviewError && !projectReviewResult}}" class="surface-card project-ai-state-card">
@@ -537,7 +554,7 @@
             <view wx:if="{{projectReviewResult.effectiveActions.length}}" class="project-ai-list">
               <view class="project-ai-list-item" wx:for="{{projectReviewResult.effectiveActions}}" wx:key="*this">{{item}}</view>
             </view>
-            <view wx:else class="project-ai-text">当前记录不足以判断明确成功原因，可能更多来自价格合适、品牌认可或客户窗口期。</view>
+            <view wx:else class="project-ai-text">当前记录不足，无法判断成功原因</view>
           </view>
 
           <view wx:if="{{projectDetail.stage === '成交'}}" class="project-ai-panel">
@@ -591,8 +608,8 @@
       <view class="mode-card transfer-mode-card {{transferMode === 'transfer_original' ? 'is-active' : ''}}" data-mode="transfer_original" bindtap="setTransferMode">
         <view class="line-between">
           <view>
-            <view class="mode-title">全部转交</view>
-            <view class="mode-desc">对方接手原项目，你保留只读查看。</view>
+            <view class="mode-title">直接转交原项目</view>
+            <view class="mode-desc">对方接手后继续管理项目，你仍可查看。</view>
           </view>
           <view class="status-badge {{transferMode === 'transfer_original' ? 'is-brand' : ''}}">原项目</view>
         </view>
@@ -601,8 +618,8 @@
       <view class="mode-card transfer-mode-card {{transferMode === 'clone_seed' ? 'is-active' : ''}}" data-mode="clone_seed" bindtap="setTransferMode">
         <view class="line-between">
           <view>
-            <view class="mode-title">新建转交</view>
-            <view class="mode-desc">只带客户和联系方式，你继续管理当前项目。</view>
+            <view class="mode-title">创建副本转交</view>
+            <view class="mode-desc">仅分享客户信息，原项目仍由你管理。</view>
           </view>
           <view class="status-badge {{transferMode === 'clone_seed' ? 'is-brand' : ''}}">新项目</view>
         </view>
@@ -613,10 +630,10 @@
       <view class="field-label">新项目名称</view>
       <input class="input-sim input-native" value="{{transferProjectName}}" bindinput="onTransferProjectNameInput" placeholder="请输入给对方的新项目名称" placeholder-class="input-placeholder" />
     </view>
-    <view class="helper-text transfer-mode-note">新建转交不会同步当前项目历史，双方后续独立推进。</view>
+    <view class="helper-text transfer-mode-note">转交后双方独立管理，历史不共享。</view>
     <view class="inline-actions transfer-mode-actions">
       <view class="btn-ghost" bindtap="closeTransferSheet">取消</view>
-      <view class="btn-primary" bindtap="confirmTransferFlow">{{isTransferOpening ? '处理中...' : (transferMode === 'clone_seed' ? '新建转交' : '确认转交')}}</view>
+      <view class="btn-primary" bindtap="confirmTransferFlow">{{isTransferOpening ? '处理中...' : (transferMode === 'clone_seed' ? '创建副本转交' : '确认转交')}}</view>
     </view>
   </view>
 </view>
@@ -715,7 +732,7 @@
             bindinput="onTaskCompletionNextTaskInput"
             bindfocus="onTaskCompletionFieldFocus"
             cursor-spacing="{{taskCompletionCursorSpacing}}"
-            placeholder="可选：补一句下一步要重点确认什么。"
+            placeholder="补充下一步重点"
             placeholder-class="input-placeholder"
             maxlength="-1"
           ></textarea>

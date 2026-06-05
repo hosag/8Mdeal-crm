@@ -8,7 +8,7 @@
       <view class="eyebrow-row">
         <view class="eyebrow">任务中心</view>
       </view>
-      <view class="tasks-title">全部推进动作</view>
+      <view class="tasks-title">全部任务</view>
       <view class="tasks-summary-strip">
         <view class="tasks-summary-item">
           <view class="tasks-summary-value">{{summary.openCount || 0}}</view>
@@ -26,7 +26,7 @@
     </view>
 
     <view wx:if="{{isLoadFailed}}" class="form-card section state-card rise-in stagger-1">
-      <view class="form-card-title">当前无法同步任务数据</view>
+      <view class="form-card-title">任务加载失败</view>
       <view class="form-card-desc">{{loadError}}</view>
       <view class="inline-actions state-actions">
         <view class="btn-primary state-btn" bindtap="retryFetch">重新加载</view>
@@ -205,7 +205,7 @@
             bindinput="onTaskCompletionNextTaskInput"
             bindfocus="onTaskCompletionFieldFocus"
             cursor-spacing="{{taskCompletionCursorSpacing}}"
-            placeholder="可选：补一句下一步要重点确认什么。"
+            placeholder="补充下一步重点"
             placeholder-class="input-placeholder"
             maxlength="-1"
           ></textarea>

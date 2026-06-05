@@ -104,7 +104,7 @@ Page({
       this.setData({
         isLoading: false,
         isLoadFailed: true,
-        loadError: error && error.message ? error.message : '当前无法加载项目资料'
+        loadError: error && error.message ? error.message : '项目资料加载失败，请重试'
       })
     }
   },

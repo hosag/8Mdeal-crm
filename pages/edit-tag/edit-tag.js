@@ -69,7 +69,7 @@ Page({
         isLoading: false
       })
       wx.showToast({
-        title: '当前无法加载标签设置',
+        title: '标签设置加载失败，请重试',
         icon: 'none'
       })
     }

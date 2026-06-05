@@ -43,7 +43,7 @@ Page({
         isLoading: false
       })
       wx.showToast({
-        title: '缺少项目上下文',
+        title: '未选择项目',
         icon: 'none'
       })
       return
@@ -79,7 +79,7 @@ Page({
         isLoading: false
       })
       wx.showToast({
-        title: '当前无法加载成交信息',
+        title: '成交信息加载失败，请重试',
         icon: 'none'
       })
     }

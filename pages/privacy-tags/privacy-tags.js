@@ -51,7 +51,7 @@ Page({
         isLoading: false
       })
       wx.showToast({
-        title: '当前无法加载隐私标签',
+        title: '隐私标签加载失败，请重试',
         icon: 'none'
       })
     }

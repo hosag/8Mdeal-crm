@@ -32,7 +32,7 @@ const QUICK_FILTERS = [
   { key: 'today', label: '今天推进' },
   { key: 'overdue', label: '已逾期' },
   { key: 'task_open', label: '有待办' },
-  { key: 'no_task', label: '待补动作' },
+  { key: 'no_task', label: '待添加任务' },
   { key: 'quote', label: '待报价' },
   { key: 'callback', label: '待回访' },
   { key: 'high_value', label: '高金额' },
@@ -63,14 +63,14 @@ const HIGH_VALUE_THRESHOLD = 500000
 const MAX_RECORD_DURATION = 60000
 const PROJECT_AI_MODEL_SOURCE_DEFAULTS = {
   sourceType: 'model',
-  sourceLabel: '云端模型',
+  sourceLabel: 'AI整理',
   providerLabel: 'CloudBase AI',
   modelName: 'hunyuan-exp / hunyuan-turbos-latest',
   canRegenerate: true
 }
 const PROJECT_AI_FALLBACK_SOURCE_DEFAULTS = {
   sourceType: 'fallback',
-  sourceLabel: '系统基础建议',
+  sourceLabel: '系统整理',
   providerLabel: '',
   modelName: '',
   canRegenerate: true
@@ -317,8 +317,8 @@ function normalizeProjectAiSourceMeta(value) {
     generatedAtText,
     sourceMetaText: sourceMetaParts.join(' · '),
     sourceDisplayText: sourceType === 'fallback'
-      ? '来自：系统基础建议'
-      : `来自：云端模型${modelName ? ` · ${modelName}` : ''}`,
+      ? '系统整理'
+      : `AI整理${modelName ? ` · ${modelName}` : ''}`,
     regenerateLabel: '重新生成'
   }
 }
@@ -603,7 +603,7 @@ function getStageFocus(stage, ownerType) {
   }
 
   if (ownerType === 'shared_out_readonly') {
-    return '项目已转交，当前页仅保留只读追踪'
+    return '项目已转交，当前只能查看进展'
   }
 
   const focusMap = {
@@ -611,8 +611,8 @@ function getStageFocus(stage, ownerType) {
     洽谈: '把需求边界和关键联系人补完整',
     方案: '推动方案确认，准备商务前置条件',
     商务: '围绕报价、合同条款和预算拍板推进',
-    成交: '跟进回款、交付与复盘沉淀',
-    流失: '沉淀流失原因，保留后续再激活机会'
+    成交: '跟进回款、交付与复盘',
+    流失: '记录流失原因，保留后续再激活机会'
   }
 
   return focusMap[stage] || '围绕当前阶段继续推进关键动作'
@@ -624,7 +624,7 @@ function getPrimaryTaskStatusMeta(project, nextTaskDate, today) {
     return {
       text: project.dueStatus === 'closed'
         ? (project.stage === '成交' ? '已成交' : '已流失')
-        : '待补动作',
+        : '待添加任务',
       badgeClass: project.dueStatus === 'closed'
         ? (project.stage === '成交' ? 'is-success' : '')
         : ''
@@ -690,7 +690,7 @@ function normalizeProject(project, index) {
       dueStatusText = stage === '成交' ? '已成交' : '已流失'
     } else if (!openTaskCount) {
       dueStatus = 'unplanned'
-      dueStatusText = '待补动作'
+      dueStatusText = '待添加任务'
     } else if (overdueTaskCount > 0 || (nextTaskDate && nextTaskDate.getTime() < now.getTime())) {
       dueStatus = 'overdue'
       dueStatusText = '优先处理'
@@ -760,7 +760,7 @@ function normalizeProject(project, index) {
     canReviewProject,
     reviewActionText: 'AI复盘',
     dealStatusText: !canMarkDealPermission
-      ? '当前只读'
+      ? '当前仅可查看'
       : (stage === '成交' ? '已成交' : (stage === '流失' ? '已流失' : '登记成交')),
     nextDisplay: isClosed
       ? closedStageText
@@ -842,7 +842,7 @@ function normalizeProject(project, index) {
     taskActionText: isClosed
       ? ''
       : (!canAdvanceProject
-      ? '当前只读'
+      ? '当前仅可查看'
       : '推进任务'),
     taskActionBadgeText: canAdvanceProject && openTaskCount
       ? String(openTaskCount)
@@ -1229,7 +1229,7 @@ Page({
         return
       }
 
-      const message = error && error.message ? error.message : '当前无法同步云端数据，请稍后重试'
+      const message = error && error.message ? error.message : '项目加载失败，请稍后重试'
       this.setData({
         projectCards: [],
         filteredProjects: [],
@@ -1440,7 +1440,7 @@ Page({
       }
     })
     const summaryCards = [
-      { label: '全部项目', value: String(totalCount), note: '当前项目池' },
+      { label: '全部项目', value: String(totalCount), note: '项目总数' },
       { label: '待推进', value: String(activeCount), note: '仍在持续跟进' },
       { label: '已成交', value: String(dealCount), note: `已流失 ${lostCount}` }
     ]
@@ -1459,7 +1459,7 @@ Page({
       emptyDesc = '可以切回待推进或全部项目继续查看。'
     } else if (quickFilter === 'overdue') {
       emptyTitle = '暂无优先处理项目'
-      emptyDesc = '当前没有逾期推进动作，可切回全部项目继续查看。'
+      emptyDesc = '当前没有逾期任务，可切回全部项目继续查看。'
     }
 
     this.setData({
@@ -2219,7 +2219,7 @@ Page({
   openTaskCompletionVoiceGuide() {
     wx.showModal({
       title: '语音服务未就绪',
-      content: '当前设备暂不支持原生录音，或云端语音识别服务尚未完成配置。请先确认真机环境与云函数配置。',
+      content: '当前设备暂不支持语音录入，请稍后再试。',
       showCancel: false,
       confirmText: '知道了'
     })
@@ -2429,7 +2429,7 @@ Page({
 
   async uploadTaskCompletionVoiceFile(filePath) {
     if (!wx.cloud || typeof wx.cloud.uploadFile !== 'function') {
-      throw new Error('当前环境未连接云存储')
+      throw new Error('录音上传失败，请检查网络后重试')
     }
 
     const extension = getVoiceFileExtension(filePath)

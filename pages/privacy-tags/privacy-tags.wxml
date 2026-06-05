@@ -29,7 +29,7 @@
       wx:if="{{!privacyScopes.length}}"
       appearance-page-class="{{appearancePageClass}}"
       title="暂无可用范围"
-      desc="当前无法加载分享范围设置。"
+      desc="分享范围加载失败，请重试。"
       image="/assets/illustrations/empty-tags.svg"
     />
   </view>

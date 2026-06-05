@@ -177,7 +177,7 @@ Page({
         isLoading: false
       })
       wx.showToast({
-        title: '当前无法加载时间线',
+        title: '时间线加载失败，请重试',
         icon: 'none'
       })
     }

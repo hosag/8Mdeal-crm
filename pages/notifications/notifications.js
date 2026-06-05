@@ -13,8 +13,8 @@ const { openTabPage } = require('../../utils/tab-bar-navigation')
 const STATUS_FILTERS = [
   { key: 'all', label: '全部消息' },
   { key: 'unread', label: '待查看' },
-  { key: 'pending', label: '待收口' },
-  { key: 'resolved', label: '已收口' }
+  { key: 'pending', label: '待处理' },
+  { key: 'resolved', label: '已处理' }
 ]
 const TYPE_FILTERS = [
   { key: 'all', label: '全部类型' },
@@ -72,7 +72,7 @@ function getNotificationLevelText(level) {
 function getNotificationStatusText(status) {
   const currentStatus = String(status || '').trim()
   if (currentStatus === 'resolved') {
-    return '已收口'
+    return '已处理'
   }
 
   if (currentStatus === 'read') {
@@ -101,7 +101,7 @@ function getNotificationToneMeta(type, status) {
     return {
       cardClass: 'is-resolved',
       toneClass: 'is-resolved',
-      toneText: '已收口'
+      toneText: '已处理'
     }
   }
 
@@ -179,16 +179,16 @@ function buildSharedNotificationPresentation(item) {
     project_taken_over: '已接手到我的项目'
   }
   const summaryMap = {
-    shared_opened: `${actorName || '对方'}已查看 ${projectName}，当前等待接手。`,
-    shared_imported: `${actorName || '对方'}已接手 ${projectName}，后续会在对方“我的项目”继续推进。`,
-    shared_followed: `${actorName || '对方'}已更新 ${projectName} 的推进记录，可查看最新时间线。`,
-    project_taken_over: `${projectName} 已进入“我的项目”，现在可以直接继续推进。`
+    shared_opened: `${actorName || '对方'}已查看 ${projectName}。`,
+    shared_imported: `${actorName || '对方'}已接手 ${projectName}。`,
+    shared_followed: `${actorName || '对方'}已更新 ${projectName}，点击查看。`,
+    project_taken_over: `${projectName} 已进入“我的项目”，现在可以继续跟进。`
   }
   const hintMap = {
-    shared_opened: '可查看当前状态与后续接手进展。',
-    shared_imported: '可查看接手状态与后续推进时间线。',
-    shared_followed: '可查看最新推进记录与后续动态。',
-    project_taken_over: '建议先补第一条跟进，后续继续在“我的项目”维护。'
+    shared_opened: '点击查看当前状态。',
+    shared_imported: '点击查看接手后的进展。',
+    shared_followed: '点击查看最新更新。',
+    project_taken_over: '已进入“我的项目”，可继续跟进。'
   }
   const actionTextMap = {
     shared_opened: '进入外发项目',
@@ -332,7 +332,7 @@ function buildNotificationActions(item, categoryMeta, actionUrl) {
     } else if (status !== 'resolved' && canResolve) {
       actions.push({
         key: 'resolve',
-        label: '标为已收口',
+        label: '标为已处理',
         kind: 'ghost'
       })
     }
@@ -559,7 +559,7 @@ Page({
         },
         isLoading: false,
         isLoadFailed: true,
-        loadError: error && error.message ? error.message : '当前无法同步云端数据，请稍后重试'
+        loadError: error && error.message ? error.message : '消息加载失败，请稍后重试'
       })
 
       wx.showToast({
@@ -753,11 +753,11 @@ Page({
       })
 
       if (!result || !result.ok) {
-        throw new Error(result && result.message ? result.message : '标为已收口失败')
+        throw new Error(result && result.message ? result.message : '标为已处理失败')
       }
 
       wx.showToast({
-        title: '已标为已收口',
+        title: '已标为已处理',
         icon: 'success'
       })
 
@@ -766,7 +766,7 @@ Page({
       await this.fetchNotifications()
     } catch (error) {
       wx.showToast({
-        title: error && error.message ? error.message : '标为已收口失败',
+        title: error && error.message ? error.message : '标为已处理失败',
         icon: 'none'
       })
     }

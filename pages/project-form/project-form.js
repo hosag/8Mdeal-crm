@@ -69,7 +69,7 @@ Page({
     } catch (error) {
       this.safeSetData({ isLoading: false })
       wx.showToast({
-        title: '当前无法加载项目信息',
+        title: '项目信息加载失败，请重试',
         icon: 'none'
       })
     }

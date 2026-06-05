@@ -1,5 +1,6 @@
 const {
   loadProjectDetailData,
+  saveProjectData,
   updateTaskStatusData,
   markNotificationReadData,
   resolveNotificationData,
@@ -58,7 +59,7 @@ const SHARE_ACTION_OPTIONS = [
 
 const PROJECT_AI_MODEL_SOURCE_DEFAULTS = {
   sourceType: 'model',
-  sourceLabel: '云端模型',
+  sourceLabel: 'AI整理',
   providerLabel: 'CloudBase AI',
   modelName: 'hunyuan-exp / hunyuan-turbos-latest',
   canRegenerate: true
@@ -66,7 +67,7 @@ const PROJECT_AI_MODEL_SOURCE_DEFAULTS = {
 
 const PROJECT_AI_FALLBACK_SOURCE_DEFAULTS = {
   sourceType: 'fallback',
-  sourceLabel: '系统基础建议',
+  sourceLabel: '系统整理',
   providerLabel: '',
   modelName: '',
   canRegenerate: true
@@ -123,8 +124,8 @@ function normalizeProjectAiSourceMeta(value) {
     generatedAtText,
     sourceMetaText: sourceMetaParts.join(' · '),
     sourceDisplayText: sourceType === 'fallback'
-      ? '来自：系统基础建议'
-      : `来自：云端模型${modelName ? ` · ${modelName}` : ''}`,
+      ? '系统整理'
+      : `AI整理${modelName ? ` · ${modelName}` : ''}`,
     regenerateLabel: '重新生成'
   }
 }
@@ -246,12 +247,12 @@ function getVoiceFileExtension(filePath = '') {
 
 function getStageFocus(stage) {
   const focusMap = {
-    线索: '先确认客户背景、真实需求和决策链路',
+    线索: '先确认客户背景、真实需求和决策流程',
     洽谈: '把需求边界和关键联系人补完整',
     方案: '推动方案确认，准备商务前置条件',
     商务: '围绕报价、合同条款和预算拍板推进',
-    成交: '跟进回款、交付与复盘沉淀',
-    流失: '沉淀流失原因，保留后续再激活机会'
+    成交: '跟进回款、交付与复盘',
+    流失: '记录流失原因，保留后续再激活机会'
   }
 
   return focusMap[stage] || '围绕当前阶段继续推进关键动作'
@@ -291,7 +292,7 @@ function buildProjectBadges(projectDetail, isReadOnlySharedOut) {
     })
   } else if (isReadOnlySharedOut) {
     badges.push({
-      text: '外发只读',
+      text: '已转交',
       className: 'soft-badge'
     })
   } else {
@@ -330,12 +331,12 @@ function buildHeroMetrics(projectDetail, contacts, shareHistory, isReadOnlyShare
     {
       label: '联系人',
       value: `${contactCount} 位`,
-      note: contactCount ? '已录入' : '待补录'
+      note: contactCount ? '已录入' : '待补充'
     },
     {
       label: isReadOnlySharedOut ? '外发状态' : '资料发送',
       value: isReadOnlySharedOut ? '外发中' : `${infoShareCount} 次`,
-      note: isReadOnlySharedOut ? '只读追踪' : (infoShareCount ? '资料记录' : '未发送')
+      note: isReadOnlySharedOut ? '查看进展' : (infoShareCount ? '资料记录' : '未发送')
     }
   ]
 }
@@ -399,7 +400,7 @@ function buildProjectAccess(projectDetail = {}, accessMeta = {}) {
   let readOnlyReasonText = ''
 
   if (isReadOnlySharedOut) {
-    readOnlyReasonText = `该项目已转交给 ${detail.handoverToName || '接收方'}，当前页仅保留只读追踪。后续进展请在“外发项目”查看。`
+    readOnlyReasonText = `该项目已转交给 ${detail.handoverToName || '接收方'}，当前只能查看进展。`
   } else if (isClosedProject) {
     readOnlyReasonText = detail.stage === '流失'
       ? '项目已流失，当前不再新增跟进和推进任务。'
@@ -426,11 +427,11 @@ function buildProjectAccess(projectDetail = {}, accessMeta = {}) {
 function getProjectReadonlyToast(projectAccess = {}, projectDetail = {}) {
   if (projectAccess && projectAccess.isReadOnlySharedOut) {
     return projectDetail && projectDetail.handoverToName
-      ? `该项目已转交给 ${projectDetail.handoverToName}，当前仅保留查看`
-      : '该项目已转交给接手方，当前仅保留查看'
+      ? `该项目已转交给 ${projectDetail.handoverToName}，当前仅可查看`
+      : '该项目已转交给接手方，当前仅可查看'
   }
 
-  return '当前项目为只读状态'
+  return '当前项目仅可查看'
 }
 
 function buildContactMeta(contacts) {
@@ -438,14 +439,18 @@ function buildContactMeta(contacts) {
   if (!list.length) {
     return {
       countText: '',
-      primaryText: ''
+      primaryText: '',
+      summaryText: '',
+      actionText: '查看信息'
     }
   }
 
   const first = list[0]
   return {
     countText: `已录入 ${list.length} 位`,
-    primaryText: `主要对接 ${first.name || '联系人'}${first.role ? ` / ${first.role}` : ''}`
+    primaryText: `主要对接 ${first.name || '联系人'}${first.role ? ` / ${first.role}` : ''}`,
+    summaryText: list.length > 1 ? `点击查看全部 ${list.length} 位联系人信息` : '点击查看联系人完整信息',
+    actionText: list.length > 1 ? '查看列表' : '查看信息'
   }
 }
 
@@ -1043,7 +1048,7 @@ Page({
         isRefreshing: false
       })
       wx.showToast({
-        title: '当前无法加载项目详情',
+        title: '项目详情加载失败，请重试',
         icon: 'none'
       })
     }
@@ -1127,6 +1132,22 @@ Page({
   toggleContacts() {
     this.setData({
       showContacts: !this.data.showContacts
+    })
+  },
+
+  openContactsSheet() {
+    if (!Array.isArray(this.data.contacts) || !this.data.contacts.length) {
+      return
+    }
+
+    this.setData({
+      showContacts: true
+    })
+  },
+
+  closeContactsSheet() {
+    this.setData({
+      showContacts: false
     })
   },
 
@@ -1258,6 +1279,53 @@ Page({
         isSavingContact: false
       })
     }
+  },
+
+  callContactPhone(event) {
+    const phone = normalizeText(event.currentTarget.dataset.phone)
+    const phoneNumber = phone.replace(/\s+/g, '')
+    if (!phoneNumber) {
+      wx.showToast({
+        title: '当前未填写电话',
+        icon: 'none'
+      })
+      return
+    }
+
+    wx.makePhoneCall({
+      phoneNumber,
+      fail: () => {
+        wx.showToast({
+          title: '暂时无法拨号',
+          icon: 'none'
+        })
+      }
+    })
+  },
+
+  copyContactField(event) {
+    const value = normalizeText(event.currentTarget.dataset.value)
+    const label = normalizeText(event.currentTarget.dataset.label) || '内容'
+    if (!value) {
+      wx.showToast({
+        title: `当前未填写${label}`,
+        icon: 'none'
+      })
+      return
+    }
+
+    wx.setClipboardData({
+      data: value,
+      success: () => {
+        setTimeout(() => {
+          wx.showToast({
+            title: `${label}已复制`,
+            icon: 'none',
+            duration: 1800
+          })
+        }, 80)
+      }
+    })
   },
 
   goEditProject() {
@@ -1747,7 +1815,7 @@ Page({
   openTaskCompletionVoiceGuide() {
     wx.showModal({
       title: '语音服务未就绪',
-      content: '当前设备暂不支持原生录音，或云端语音识别服务尚未完成配置。请先确认真机环境与云函数配置。',
+      content: '当前设备暂不支持语音录入，请稍后再试。',
       showCancel: false,
       confirmText: '知道了'
     })
@@ -1949,7 +2017,7 @@ Page({
 
   async uploadTaskCompletionVoiceFile(filePath) {
     if (!wx.cloud || typeof wx.cloud.uploadFile !== 'function') {
-      throw new Error('当前环境未连接云存储')
+      throw new Error('录音上传失败，请检查网络后重试')
     }
 
     const extension = getVoiceFileExtension(filePath)

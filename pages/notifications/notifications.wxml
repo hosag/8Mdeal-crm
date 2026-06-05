@@ -8,8 +8,8 @@
       <view class="eyebrow-row">
         <view class="eyebrow">消息中心</view>
       </view>
-      <view class="hero-title">提醒只保留真正需要你动作的事</view>
-      <view class="hero-subtitle">这里沉淀今日待办、逾期动作和后续业务消息。完成动作后会自动收口，不再堆积成噪音。</view>
+      <view class="hero-title">聚焦待办提醒</view>
+      <view class="hero-subtitle">待办任务与消息提醒都会显示在这里，完成后会自动清除。</view>
       <view class="hero-metrics section notifications-hero-metrics">
         <view class="metric-card">
           <view class="metric-label">待查看</view>
@@ -17,20 +17,20 @@
           <view class="metric-note">还没确认的消息</view>
         </view>
         <view class="metric-card">
-          <view class="metric-label">待收口</view>
+          <view class="metric-label">待处理</view>
           <view class="metric-value">{{stats.pendingCount || 0}}</view>
-          <view class="metric-note">还没完成动作闭环</view>
+          <view class="metric-note">还没处理完的提醒</view>
         </view>
         <view class="metric-card">
-          <view class="metric-label">已收口</view>
+          <view class="metric-label">已处理</view>
           <view class="metric-value">{{stats.resolvedCount || 0}}</view>
-          <view class="metric-note">已经完成动作闭环</view>
+          <view class="metric-note">已经处理完成</view>
         </view>
       </view>
     </view>
 
     <view wx:if="{{isLoadFailed}}" class="form-card section state-card rise-in stagger-1">
-      <view class="form-card-title">当前无法同步云端数据</view>
+      <view class="form-card-title">消息加载失败</view>
       <view class="form-card-desc">{{loadError}}</view>
       <view class="hero-actions state-actions">
         <view class="btn-primary state-btn" bindtap="fetchNotifications">重新加载</view>

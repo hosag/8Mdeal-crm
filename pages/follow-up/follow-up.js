@@ -72,7 +72,7 @@ const defaultDates = createDefaultDates()
 
 const MODEL_SOURCE_DEFAULTS = {
   sourceType: 'model',
-  sourceLabel: '云端模型',
+  sourceLabel: 'AI整理',
   providerLabel: 'CloudBase AI',
   modelName: 'hunyuan-exp / hunyuan-turbos-latest',
   canRegenerate: true
@@ -80,7 +80,7 @@ const MODEL_SOURCE_DEFAULTS = {
 
 const FALLBACK_SOURCE_DEFAULTS = {
   sourceType: 'fallback',
-  sourceLabel: '系统基础建议',
+  sourceLabel: '系统整理',
   providerLabel: '',
   modelName: '',
   canRegenerate: true
@@ -132,7 +132,7 @@ function normalizeVoiceUploadError(error) {
   const rawMessage = extractWxErrorMessage(error)
 
   if (/ERR_PROXY_CONNECTION_FAILED|proxy|代理/i.test(rawMessage)) {
-    const normalized = new Error('录音上传失败：当前网络代理连接失败，请关闭开发者工具代理或系统代理后重试')
+    const normalized = new Error('录音上传失败：网络连接失败，请检查后重试')
     normalized.code = 'VOICE_UPLOAD_PROXY_FAILED'
     normalized.rawMessage = rawMessage
     return normalized
@@ -161,20 +161,20 @@ function normalizeVoiceRecognitionError(error) {
 
   if (code === 'CLOUD_PROXY_CONNECTION_FAILED' || /ERR_PROXY_CONNECTION_FAILED|proxy|代理/i.test(message)) {
     return {
-      message: '云端识别请求失败：当前网络代理连接失败，请关闭开发者工具代理或系统代理后重试',
-      toastTitle: '代理连接失败',
-      modalTitle: '云端识别请求失败',
-      modalContent: '录音已上传，但调用 speechToText 云函数时无法连接代理。请关闭微信开发者工具代理或系统代理/VPN，确认 CloudBase 可访问后再重试。',
+      message: '语音识别失败：网络连接异常，请检查后重试',
+      toastTitle: '网络连接失败',
+      modalTitle: '语音识别失败',
+      modalContent: '网络连接失败，请检查后重试。',
       showModal: true
     }
   }
 
   if (code === 'NETWORK_ERROR' || /网络连接异常|Network Error|request:fail|Failed to fetch|socket|abort/i.test(message)) {
     return {
-      message: '云端识别请求失败：网络连接异常，请检查网络、代理和 CloudBase 连接后重试',
-      toastTitle: '云端识别失败',
-      modalTitle: '云端识别请求失败',
-      modalContent: '录音已上传，但调用 speechToText 云函数时网络异常。请先确认微信开发者工具没有使用失效代理，系统代理/VPN 可用，并且当前环境能访问 CloudBase。',
+      message: '语音识别失败：网络连接异常，请检查后重试',
+      toastTitle: '语音识别失败',
+      modalTitle: '语音识别失败',
+      modalContent: '网络连接失败，请检查后重试。',
       showModal: true
     }
   }
@@ -341,8 +341,8 @@ function normalizeAiSourceMeta(value) {
     sourceMetaText: sourceMetaParts.join(' · '),
     sourceCaption: modelName ? `${providerLabel} · ${modelName}` : providerLabel,
     sourceDisplayText: sourceType === 'fallback'
-      ? '来自：系统基础建议'
-      : `来自：云端模型${modelName ? ` · ${modelName}` : ''}`,
+      ? '系统整理'
+      : `AI整理${modelName ? ` · ${modelName}` : ''}`,
     regenerateLabel: '重新生成'
   }
 }
@@ -507,7 +507,7 @@ Page({
       })
     } catch (error) {
       wx.showToast({
-        title: '当前无法加载完整项目上下文，将使用简化模式',
+        title: '项目信息加载失败，将使用简化模式',
         icon: 'none'
       })
     }
@@ -925,7 +925,7 @@ Page({
 
     if (!wx.cloud || !wx.cloud.uploadFile) {
       wx.showToast({
-        title: '当前环境未连接云存储',
+        title: '录音上传失败',
         icon: 'none'
       })
       return
@@ -1118,7 +1118,7 @@ Page({
   openVoicePluginGuide() {
     wx.showModal({
       title: '语音服务未就绪',
-      content: '当前设备暂不支持原生录音，或云端语音识别服务尚未完成配置。请先确认真机环境与云函数配置。',
+      content: '当前设备暂不支持语音录入，请稍后再试。',
       showCancel: false,
       confirmText: '知道了'
     })
@@ -1227,7 +1227,7 @@ Page({
 
   async uploadVoiceFile(filePath) {
     if (!wx.cloud || typeof wx.cloud.uploadFile !== 'function') {
-      throw new Error('当前环境未连接云存储')
+      throw new Error('录音上传失败，请检查网络后重试')
     }
 
     const extension = getVoiceFileExtension(filePath)
@@ -1331,8 +1331,8 @@ Page({
 
       if (error && error.code === 'VOICE_UPLOAD_PROXY_FAILED') {
         wx.showModal({
-          title: '网络代理连接失败',
-          content: '录音已生成，但上传云存储时无法连接代理。请关闭微信开发者工具代理或系统代理/VPN，确认网络可访问 CloudBase 后再重试。',
+          title: '网络连接失败',
+          content: '录音上传失败，请检查网络后重试。',
           showCancel: false,
           confirmText: '知道了'
         })
@@ -1558,7 +1558,7 @@ Page({
     }
 
     if (this.data.aiResult.missingInfo && this.data.aiResult.missingInfo.length) {
-      sections.push(`待补信息：${this.data.aiResult.missingInfo.join('；')}`)
+      sections.push(`还需补充：${this.data.aiResult.missingInfo.join('；')}`)
     }
 
     return sections.filter(Boolean).join('\n')

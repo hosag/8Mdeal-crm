@@ -99,7 +99,7 @@ Page({
         contact: null,
         isLoading: false,
         isLoadFailed: true,
-        loadError: error && error.message ? error.message : '当前无法加载联系人详情'
+        loadError: error && error.message ? error.message : '联系人加载失败，请重试'
       })
     }
   },

@@ -44,7 +44,7 @@
       <view class="share-config-overview">
         <view class="line-between share-config-topline">
           <view class="share-config-project-name">{{preview.project.name}}</view>
-          <view class="status-badge is-brand share-preview-mode">{{activeMode === 'outbound' ? (activeFlowMode === 'clone_seed' ? '新建转交' : '转交项目') : '发送资料'}}</view>
+          <view class="status-badge is-brand share-preview-mode">{{activeMode === 'outbound' ? (activeFlowMode === 'clone_seed' ? '创建副本转交' : '转交项目') : '发送资料'}}</view>
         </view>
         <view class="compact-inline-metrics share-config-meta-pills">
           <view wx:if="{{preview.showClient}}" class="compact-inline-item">客户 {{preview.project.client}}</view>
@@ -75,7 +75,7 @@
 
       <view class="share-preview-section share-preview-summary">
         <view class="card-title">卡片摘要</view>
-        <view class="card-subtitle">{{preview.project.summary || '暂无可展示摘要。'}}</view>
+        <view class="card-subtitle">{{preview.project.summary || '暂无摘要。'}}</view>
       </view>
     </view>
 
@@ -169,7 +169,7 @@
 
     <view wx:if="{{!showTimelineEntry && !isSenderEntry}}" class="form-card section rise-in stagger-3 share-history-note">
       <view class="form-card-title">项目历史</view>
-      <view class="form-card-desc">本次未附带项目历史。</view>
+      <view class="form-card-desc">未分享项目历史。</view>
     </view>
 
     <view wx:if="{{showReceiverConversion}}" class="form-card section rise-in stagger-3 share-conversion-card">
@@ -198,7 +198,7 @@
         <view class="share-preview-sheet-head-main">
           <view class="sheet-title">发送预览</view>
         </view>
-        <view class="share-preview-sheet-mode">{{activeMode === 'outbound' ? (activeFlowMode === 'clone_seed' ? '新建转交' : '转交项目') : '发送资料'}}</view>
+        <view class="share-preview-sheet-mode">{{activeMode === 'outbound' ? (activeFlowMode === 'clone_seed' ? '创建副本转交' : '转交项目') : '发送资料'}}</view>
       </view>
       <view class="sheet-close" bindtap="closePreviewSheet">关闭</view>
     </view>
@@ -220,7 +220,7 @@
         </view>
         <view class="share-preview-section share-preview-summary">
           <view class="card-title">卡片摘要</view>
-          <view class="card-subtitle">{{preview.project.summary || '暂无可展示摘要。'}}</view>
+          <view class="card-subtitle">{{preview.project.summary || '暂无摘要。'}}</view>
         </view>
       </view>
 
@@ -234,7 +234,7 @@
 
       <view wx:if="{{!showTimelineEntry}}" class="form-card section share-history-note">
         <view class="form-card-title">项目历史</view>
-        <view class="form-card-desc">本次未附带项目历史。</view>
+        <view class="form-card-desc">未分享项目历史。</view>
       </view>
 
       <view class="bottom-space preview-bottom-space"></view>

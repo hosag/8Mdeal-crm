@@ -8,8 +8,8 @@
     <view class="eyebrow-row">
       <view class="eyebrow">{{isEdit ? '编辑项目' : '新建项目'}}</view>
     </view>
-    <view class="hero-title">{{isEdit ? '编辑项目，让关键信息保持最新' : '创建项目时，把后续动作一起铺好'}}</view>
-    <view class="hero-subtitle">先把项目主信息录完整，后面再继续跟进、成交和分享。保存后会直接进入项目详情。</view>
+    <view class="hero-title">{{isEdit ? '编辑项目，让关键信息保持最新' : '创建项目并填写基本信息'}}</view>
+    <view class="hero-subtitle">保存后会直接进入项目详情。</view>
   </view>
 
   <view class="form-card section rise-in stagger-2">
@@ -48,7 +48,7 @@
       <textarea class="textarea-sim textarea-native" value="{{form.description}}" data-field="description" bindinput="onFieldInput" placeholder="补充项目背景、当前重点和下一步判断" placeholder-class="input-placeholder" maxlength="-1"></textarea>
     </view>
     <view class="field-group">
-      <view class="field-label">沉默提醒</view>
+      <view class="field-label">久未跟进提醒</view>
       <view class="project-silence-options">
         <view
           class="chip project-silence-chip {{form.followUpSilenceDays === item.value ? 'is-active' : ''}}"
@@ -58,7 +58,7 @@
           bindtap="setSilenceReminder"
         >{{item.label}}</view>
       </view>
-      <view class="helper-text">没有未完成任务，且超过设定天数没有新增跟进时，才会提醒回看项目。</view>
+      <view class="helper-text">无任务且超过设定天数未跟进时提醒</view>
     </view>
   </view>
 

@@ -79,10 +79,10 @@ function buildFollowUpEntryHint(entry, source, type) {
   if (currentEntry === 'notification') {
     const prefix = sourcePrefix || '来自消息中心'
     if (currentType === 'todo_overdue') {
-      return `${prefix}：提交后会自动收口对应逾期提醒，并同步首页待办节奏。`
+      return `${prefix}：提交后会自动消除对应逾期提醒，并同步首页待办。`
     }
 
-    return `${prefix}：提交后会自动收口对应提醒，并同步首页待办节奏。`
+    return `${prefix}：提交后会自动消除对应提醒，并同步首页待办。`
   }
 
   return ''
@@ -95,7 +95,7 @@ function buildProjectDetailEntryContext(viewMode, source, notificationType) {
 
   if (sourcePrefix) {
     if (currentType === 'task_overdue' || currentType === 'task_due') {
-      return `${sourcePrefix}：这里展示这条推进动作对应的完整项目上下文，处理后会自动收口对应提醒。`
+      return `${sourcePrefix}：这里展示这条任务对应的完整项目信息，处理后提醒会自动消除。`
     }
 
     if (currentType === 'task_upcoming') {
@@ -103,7 +103,7 @@ function buildProjectDetailEntryContext(viewMode, source, notificationType) {
     }
 
     if (currentType === 'todo_overdue' || currentType === 'todo_due') {
-      return `${sourcePrefix}：这里展示这次跟进对应的完整项目上下文，处理后会自动收口对应提醒。`
+      return `${sourcePrefix}：这里展示这次跟进对应的完整项目信息，处理后提醒会自动消除。`
     }
 
     if (currentType === 'todo_upcoming') {

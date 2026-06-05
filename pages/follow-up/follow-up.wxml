@@ -42,7 +42,7 @@
       </view>
 
       <view id="follow-up-content-field" class="field-group editor-field-group editor-field-group-compact content-inline-group">
-        <textarea class="textarea-sim textarea-native editor-textarea editor-textarea-compact" value="{{content}}" bindinput="onContentInput" placeholder="记录本次沟通原话、客户反馈、报价或风险点。" placeholder-class="input-placeholder" maxlength="-1"></textarea>
+        <textarea class="textarea-sim textarea-native editor-textarea editor-textarea-compact" value="{{content}}" bindinput="onContentInput" placeholder="记录沟通要点" placeholder-class="input-placeholder" maxlength="-1"></textarea>
         <view wx:if="{{voicePreviewText}}" class="voice-preview-card">
           <view class="voice-preview-label">本次识别</view>
           <view class="voice-preview-text">{{voicePreviewText}}</view>
@@ -110,7 +110,7 @@
                 </view>
               </picker>
             </view>
-            <textarea class="textarea-sim textarea-native task-desc-input" value="{{item.description}}" data-index="{{index}}" data-field="description" bindinput="updateTaskDraftField" placeholder="可选：补一句动作说明，方便自己后续执行。" placeholder-class="input-placeholder" maxlength="-1"></textarea>
+            <textarea class="textarea-sim textarea-native task-desc-input" value="{{item.description}}" data-index="{{index}}" data-field="description" bindinput="updateTaskDraftField" placeholder="补充动作说明" placeholder-class="input-placeholder" maxlength="-1"></textarea>
           </view>
         </view>
         <view class="task-add-row">

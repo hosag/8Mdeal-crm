@@ -8,12 +8,12 @@ function getNotificationCategoryMeta(type) {
   if (currentType === 'task_due' || currentType === 'task_overdue' || currentType === 'task_upcoming') {
     return {
       key: 'todo',
-      label: '动作提醒',
+      label: '任务提醒',
       hintText: currentType === 'task_overdue'
-        ? '进入后直接提交完成情况；动作完成后这类提醒会自动收口。'
+        ? '点击完成任务，提醒自动消除'
         : (currentType === 'task_upcoming'
-          ? '这是提前一天的动作提醒，可先查看项目并准备本次推进。'
-          : '进入后直接完成动作；完成后这类提醒会自动收口。'),
+          ? '明天到期，可提前准备'
+          : '点击完成任务，提醒自动消除'),
       fallbackActionLabel: currentType === 'task_overdue'
         ? '立即完成'
         : (currentType === 'task_upcoming' ? '查看动作' : '完成动作'),
@@ -26,10 +26,10 @@ function getNotificationCategoryMeta(type) {
       key: 'todo',
       label: '跟进提醒',
       hintText: currentType === 'todo_overdue'
-        ? '进入后直接补跟进，保存成功后这类提醒会自动收口。'
+        ? '点击补录跟进，提醒自动消除'
         : (currentType === 'todo_upcoming'
-          ? '这是提前一天的跟进提醒，可先查看项目并准备明天的推进。'
-          : '进入后直接补本次跟进，保存成功后这类提醒会自动收口。'),
+          ? '明天到期，可提前准备'
+          : '点击补录跟进，提醒自动消除'),
       fallbackActionLabel: currentType === 'todo_overdue'
         ? '立即跟进'
         : (currentType === 'todo_upcoming' ? '查看项目' : '去跟进'),
@@ -41,7 +41,7 @@ function getNotificationCategoryMeta(type) {
     return {
       key: 'todo',
       label: '项目回看',
-      hintText: '项目较久没有推进痕迹，可进入详情回看后自行决定是否补跟进或建任务。',
+      hintText: '项目许久未更新，点击查看',
       fallbackActionLabel: '查看项目',
       autoResolveOnOpen: true
     }
@@ -52,8 +52,8 @@ function getNotificationCategoryMeta(type) {
       key: 'shared',
       label: currentType === 'project_taken_over' ? '接手项目' : '外发动态',
       hintText: currentType === 'project_taken_over'
-        ? '进入后直接继续推进项目，补第一条跟进后这类提醒会自动收口。'
-        : '进入后直接查看外发项目与最新进展，查看后这条动态会自动收口。',
+        ? '已进入我的项目，可继续跟进'
+        : '点击查看外发项目进展',
       fallbackActionLabel: currentType === 'project_taken_over' ? '进入我的项目' : '进入外发项目',
       autoResolveOnOpen: currentType !== 'project_taken_over'
     }
@@ -63,7 +63,7 @@ function getNotificationCategoryMeta(type) {
     return {
       key: 'system',
       label: '系统异常',
-      hintText: '进入原业务页后继续处理；真正成功后，这类失败提醒会自动收口。',
+      hintText: '点击返回原页面继续处理',
       fallbackActionLabel: '继续处理',
       autoResolveOnOpen: false
     }
@@ -72,7 +72,7 @@ function getNotificationCategoryMeta(type) {
   return {
     key: 'all',
     label: '业务消息',
-    hintText: '进入对应业务页面继续处理，完成后这条消息会自动收口。',
+    hintText: '点击进入对应页面继续处理',
     fallbackActionLabel: '查看',
     autoResolveOnOpen: false
   }

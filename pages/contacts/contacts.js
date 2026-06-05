@@ -110,7 +110,7 @@ function buildSummaryCards(contacts) {
     {
       label: '联系人',
       value: String(contacts.length),
-      note: '沉淀关键人'
+      note: '关键联系人'
     },
     {
       label: '关键人',
@@ -126,7 +126,7 @@ function buildSummaryCards(contacts) {
 }
 
 function buildResultSummaryText({ count, total, keyword }) {
-  const parts = [`共 ${count} 位联系人 / ${total} 位沉淀`]
+  const parts = [`共 ${count} 位联系人 / 全部 ${total} 位`]
   if (keyword) {
     parts.push(`搜索“${keyword}”`)
   }

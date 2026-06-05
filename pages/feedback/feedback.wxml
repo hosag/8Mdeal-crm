@@ -4,13 +4,12 @@
       <view class="eyebrow">反馈与建议</view>
     </view>
     <view class="hero-title">说说哪里不顺手</view>
-    <view class="hero-subtitle">被采纳的问题反馈或功能建议，平台将根据价值发放 AI 额度奖励。</view>
+    <view class="hero-subtitle">反馈被采纳后将获得奖励。</view>
   </view>
 
   <block wx:if="{{!isSubmitted}}">
     <view class="form-card section rise-in stagger-1 feedback-tip-card">
-      <view class="card-title">有效反馈会被认真处理</view>
-      <view class="card-subtitle">你可以提交新需求、使用想法，也可以直接反馈遇到的问题。</view>
+      <view class="card-title">我们会认真阅读每条反馈</view>
     </view>
 
     <view class="form-card section rise-in stagger-2">
@@ -46,7 +45,7 @@
           class="textarea-sim textarea-native feedback-textarea"
           value="{{content}}"
           bindinput="onContentInput"
-          placeholder="请尽量说清楚发生在哪个页面、你想完成什么、哪里不符合预期。"
+          placeholder="描述问题现象与你的期望"
           placeholder-class="input-placeholder"
           maxlength="1000"
         ></textarea>
@@ -79,7 +78,7 @@
   <view wx:else class="form-card section feedback-success-card rise-in stagger-1">
     <view class="feedback-success-mark">已收到</view>
     <view class="form-card-title">反馈已提交</view>
-    <view class="form-card-desc">如果反馈被采纳，我们会为当前账号发放 AI 额度奖励。</view>
+    <view class="form-card-desc">反馈被采纳后将获得奖励。</view>
     <view class="hero-actions feedback-success-actions">
       <view class="btn-primary feedback-action" bindtap="resetForm">继续提交</view>
       <view class="btn-ghost feedback-action" bindtap="goBackMine">返回我的</view>

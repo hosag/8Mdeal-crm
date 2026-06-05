@@ -1,5 +1,5 @@
 {
-  "navigationBarTitleText": "完整时间线",
+  "navigationBarTitleText": "全部跟进记录",
   "usingComponents": {
     "loading-panel": "/components/loading-panel/index"
   }

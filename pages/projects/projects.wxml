@@ -9,8 +9,8 @@
       <view class="eyebrow-row">
         <view class="eyebrow">我的项目</view>
       </view>
-      <view class="hero-title">把项目池收成一页可执行清单</view>
-      <view class="hero-subtitle">这里只显示当前仍由你推进或由你接手的项目；已转交项目请到“外发项目”查看后续进展。</view>
+      <view class="hero-title">你的项目一览</view>
+      <view class="hero-subtitle">你负责的项目都在这里，已转交的项目可在“外发项目”查看。</view>
       <view class="hero-actions">
         <view class="btn-secondary hero-primary-btn" bindtap="openProjectForm">新建项目</view>
         <view class="btn-ghost hero-secondary-btn" data-url="/pages/shared-out/shared-out" bindtap="openPage">外发项目</view>
@@ -26,7 +26,7 @@
     </view>
 
     <view wx:if="{{isLoadFailed}}" class="form-card section state-card rise-in stagger-1">
-      <view class="form-card-title">当前无法同步云端数据</view>
+      <view class="form-card-title">项目加载失败</view>
       <view class="form-card-desc">{{loadError}}</view>
       <view class="hero-actions state-actions">
         <view class="btn-primary state-btn" bindtap="retryFetch">重新加载</view>
@@ -214,7 +214,7 @@
           </view>
         </view>
         <view class="form-card-title project-review-state-title">正在生成项目复盘</view>
-        <view class="form-card-desc project-review-state-desc">会结合关键时间线和推进动作，沉淀这条项目的结果经验。</view>
+        <view class="form-card-desc project-review-state-desc">正在根据关键记录整理这次项目的经验。</view>
       </view>
 
       <view wx:elif="{{projectReviewError && !projectReviewResult}}" class="surface-card project-review-state-card">
@@ -270,7 +270,7 @@
             <view wx:if="{{projectReviewResult.effectiveActions.length}}" class="project-review-list">
               <view class="project-review-list-item" wx:for="{{projectReviewResult.effectiveActions}}" wx:key="*this">{{item}}</view>
             </view>
-            <view wx:else class="project-review-text">当前记录不足以判断明确成功原因，可能更多来自价格合适、品牌认可或客户窗口期。</view>
+            <view wx:else class="project-review-text">当前记录不足，无法判断成功原因</view>
           </view>
 
           <view wx:if="{{selectedReviewProjectStage === '成交'}}" class="project-review-panel">
@@ -330,7 +330,7 @@
           </view>
         </view>
         <view class="form-card-title project-wake-state-title">正在生成项目唤醒</view>
-        <view class="form-card-desc project-wake-state-desc">会结合最近停在哪里、当前阶段和现有动作，给你一条轻量切入口。</view>
+        <view class="form-card-desc project-wake-state-desc">正在分析项目现状...</view>
       </view>
 
       <view wx:elif="{{projectWakeError && !projectWakeResult}}" class="surface-card project-wake-state-card">
@@ -415,8 +415,8 @@
       <view class="mode-card transfer-mode-card {{transferMode === 'transfer_original' ? 'is-active' : ''}}" data-mode="transfer_original" bindtap="setTransferMode">
         <view class="line-between">
           <view>
-            <view class="mode-title">全部转交</view>
-            <view class="mode-desc">对方接手原项目，你保留只读查看。</view>
+            <view class="mode-title">直接转交原项目</view>
+            <view class="mode-desc">对方接手后继续管理项目，你仍可查看。</view>
           </view>
           <view class="status-badge {{transferMode === 'transfer_original' ? 'is-brand' : ''}}">原项目</view>
         </view>
@@ -425,8 +425,8 @@
       <view class="mode-card transfer-mode-card {{transferMode === 'clone_seed' ? 'is-active' : ''}}" data-mode="clone_seed" bindtap="setTransferMode">
         <view class="line-between">
           <view>
-            <view class="mode-title">新建转交</view>
-            <view class="mode-desc">只带客户和联系方式，你继续管理当前项目。</view>
+            <view class="mode-title">创建副本转交</view>
+            <view class="mode-desc">仅分享客户信息，原项目仍由你管理。</view>
           </view>
           <view class="status-badge {{transferMode === 'clone_seed' ? 'is-brand' : ''}}">新项目</view>
         </view>
@@ -437,10 +437,10 @@
       <view class="field-label">新项目名称</view>
       <input class="input-sim input-native" value="{{transferProjectName}}" bindinput="onTransferProjectNameInput" placeholder="请输入给对方的新项目名称" placeholder-class="input-placeholder" />
     </view>
-    <view class="helper-text transfer-mode-note">新建转交不会同步当前项目历史，双方后续独立推进。</view>
+    <view class="helper-text transfer-mode-note">转交后双方独立管理，历史不共享。</view>
     <view class="inline-actions transfer-mode-actions">
       <view class="btn-ghost" bindtap="closeTransferSheet">取消</view>
-      <view class="btn-primary" bindtap="confirmTransferFlow">{{isTransferOpening ? '处理中...' : (transferMode === 'clone_seed' ? '新建转交' : '确认转交')}}</view>
+      <view class="btn-primary" bindtap="confirmTransferFlow">{{isTransferOpening ? '处理中...' : (transferMode === 'clone_seed' ? '创建副本转交' : '确认转交')}}</view>
     </view>
   </view>
 </view>
@@ -539,7 +539,7 @@
             bindinput="onTaskCompletionNextTaskInput"
             bindfocus="onTaskCompletionFieldFocus"
             cursor-spacing="{{taskCompletionCursorSpacing}}"
-            placeholder="可选：补一句下一步要重点确认什么。"
+            placeholder="补充下一步重点"
             placeholder-class="input-placeholder"
             maxlength="-1"
           ></textarea>

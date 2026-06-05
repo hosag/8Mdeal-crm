@@ -164,8 +164,8 @@ Page({
     summary: buildDefaultSummary(),
     tasks: [],
     resultSummaryText: '正在整理任务数据',
-    emptyTitle: '暂无推进动作',
-    emptyDesc: '项目里新增推进任务后，会自动出现在这里。',
+    emptyTitle: '暂无任务',
+    emptyDesc: '新增任务后将显示在这里。',
     emptyActionText: '查看我的项目',
     nextTaskTemplates: NEXT_TASK_TEMPLATES,
     showTaskCompleteSheet: false,
@@ -301,14 +301,14 @@ Page({
         tasks,
         filterOptions: buildFilterOptions(summary),
         resultSummaryText: buildResultSummaryText(tasks.length, this.data.filter, this.data.sort, this.data.keyword),
-        emptyTitle: this.data.keyword ? '没有找到匹配任务' : '暂无推进动作',
-        emptyDesc: this.data.keyword ? '可以换任务、项目或客户关键词再试一次。' : '项目里新增推进任务后，会自动出现在这里。',
+        emptyTitle: this.data.keyword ? '没有找到匹配任务' : '暂无任务',
+        emptyDesc: this.data.keyword ? '可以换任务、项目或客户关键词再试一次。' : '新增任务后将显示在这里。',
         emptyActionText: this.data.keyword ? '清空搜索' : '查看我的项目',
         isLoading: false,
         dataSource: result.source || 'CloudBase'
       })
     } catch (error) {
-      const message = error && error.message ? error.message : '当前无法同步云端数据，请稍后重试'
+      const message = error && error.message ? error.message : '任务加载失败，请稍后重试'
       this.setData({
         summary: buildDefaultSummary(),
         tasks: [],
@@ -319,7 +319,7 @@ Page({
         loadError: message
       })
       wx.showToast({
-        title: message.indexOf('listTasks') >= 0 ? '请部署 listTasks' : '任务同步失败',
+        title: message.indexOf('listTasks') >= 0 ? '请部署 listTasks' : '任务加载失败',
         icon: 'none'
       })
     }
@@ -445,7 +445,7 @@ Page({
   openTaskCompletionVoiceGuide() {
     wx.showModal({
       title: '语音服务未就绪',
-      content: '当前设备暂不支持原生录音，或云端语音识别服务尚未完成配置。请先确认真机环境与云函数配置。',
+      content: '当前设备暂不支持语音录入，请稍后再试。',
       showCancel: false,
       confirmText: '知道了'
     })
@@ -655,7 +655,7 @@ Page({
 
   async uploadTaskCompletionVoiceFile(filePath) {
     if (!wx.cloud || typeof wx.cloud.uploadFile !== 'function') {
-      throw new Error('当前环境未连接云存储')
+      throw new Error('录音上传失败，请检查网络后重试')
     }
 
     const extension = getVoiceFileExtension(filePath)

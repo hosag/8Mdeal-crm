@@ -145,7 +145,7 @@ Page({
         isLoading: false
       })
       wx.showToast({
-        title: '当前无法加载分享流程',
+        title: '分享流程加载失败，请重试',
         icon: 'none'
       })
     }

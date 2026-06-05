@@ -6,14 +6,14 @@
   <block wx:else>
     <view class="hero rise-in">
       <view class="eyebrow-row">
-        <view class="eyebrow">完整时间线</view>
+        <view class="eyebrow">全部跟进记录</view>
       </view>
       <view class="hero-title">{{preview.project.name || '项目时间线'}}</view>
       <view class="hero-subtitle">{{timelineSummaryText}}</view>
     </view>
 
     <view class="form-card section rise-in stagger-1 timeline-overview-card">
-      <view class="form-card-title">项目历史</view>
+      <view class="form-card-title">跟进记录</view>
       <view class="form-card-desc">包含跟进记录、任务完成和阶段变更。</view>
     </view>
 

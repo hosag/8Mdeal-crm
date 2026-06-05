@@ -5,7 +5,7 @@
 
   <block wx:else>
     <view wx:if="{{isLoadFailed}}" class="form-card section state-card rise-in">
-      <view class="form-card-title">当前无法加载联系人详情</view>
+      <view class="form-card-title">联系人加载失败，请重试</view>
       <view class="form-card-desc">{{loadError}}</view>
       <view class="hero-actions state-actions">
         <view class="btn-primary state-btn" bindtap="retryFetch">重新加载</view>
@@ -45,7 +45,7 @@
       <view class="surface-card section rise-in stagger-2">
         <view class="line-between contact-section-head">
           <view class="section-title">联系方式</view>
-          <view class="field-pill">云存储已加密</view>
+          <view class="field-pill">仅你自己可见</view>
         </view>
         <view class="contact-info-card">
           <view class="contact-info-row">
@@ -67,7 +67,7 @@
 
       <view class="section rise-in stagger-3">
         <view class="section-title detail-projects-title">关联项目</view>
-        <view class="helper-text">这里会保留该联系人的全部关联项目；如果项目已转交，点进去会自动切到“外发项目”视角。</view>
+        <view class="helper-text">这里会显示该联系人的全部关联项目。</view>
         <view class="project-card contact-project-card" wx:for="{{contact.projectCards}}" wx:key="id" data-project-id="{{item.id}}" bindtap="openProjectDetail">
           <view class="project-top">
             <view class="project-main">
