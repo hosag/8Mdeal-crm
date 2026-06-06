@@ -1,64 +1,9 @@
 .share-card-page .hero {
-  padding: 32rpx;
+  padding: 24rpx 28rpx 22rpx;
 }
 
 .share-card-page .hero.hero-sender {
-  padding: 24rpx 28rpx 26rpx;
-}
-
-.share-card-page .brand-lockup-share {
-  display: flex;
-  align-items: center;
-  gap: 18rpx;
-  margin-bottom: 16rpx;
-}
-
-.share-card-page .hero.hero-sender .brand-lockup-share {
-  gap: 14rpx;
-  margin-bottom: 12rpx;
-}
-
-.share-card-page .brand-lockup-image-share {
-  flex: 0 0 auto;
-  width: 104rpx;
-  height: 84rpx;
-  display: block;
-}
-
-.share-card-page .hero.hero-sender .brand-lockup-image-share {
-  width: 88rpx;
-  height: 72rpx;
-}
-
-.share-card-page .brand-lockup-copy-share {
-  min-width: 0;
-}
-
-.share-card-page .brand-lockup-title-share {
-  font-size: 38rpx;
-  font-weight: 700;
-  line-height: 1.08;
-  letter-spacing: 2rpx;
-  color: var(--theme-preview-text);
-  text-shadow: 0 4rpx 14rpx rgba(14, 25, 36, 0.14);
-}
-
-.share-card-page .hero.hero-sender .brand-lockup-title-share {
-  font-size: 34rpx;
-  letter-spacing: 1rpx;
-}
-
-.share-card-page .brand-lockup-subtitle-share {
-  margin-top: 8rpx;
-  font-size: 21rpx;
-  letter-spacing: 3rpx;
-  color: var(--theme-preview-muted);
-}
-
-.share-card-page .hero.hero-sender .brand-lockup-subtitle-share {
-  margin-top: 4rpx;
-  font-size: 19rpx;
-  letter-spacing: 2rpx;
+  padding: 18rpx 24rpx 18rpx;
 }
 
 .share-card-page .hero-title {
@@ -66,7 +11,7 @@
 }
 
 .share-card-page .hero.hero-sender .eyebrow-row {
-  gap: 12rpx;
+  gap: 10rpx;
 }
 
 .share-card-page .hero.hero-sender .eyebrow,
@@ -77,8 +22,8 @@
 }
 
 .share-card-page .hero.hero-sender .hero-title {
-  margin-top: 14rpx;
-  font-size: 38rpx;
+  margin-top: 6rpx;
+  font-size: 36rpx;
 }
 
 .share-card-page .hero-subtitle {
@@ -86,14 +31,14 @@
 }
 
 .share-card-page .hero.hero-sender .hero-subtitle {
-  margin-top: 8rpx;
+  margin-top: 6rpx;
   max-width: 88%;
   font-size: 22rpx;
   line-height: 1.52;
 }
 
 .share-card-page .hero.hero-sender + .section {
-  margin-top: 20rpx;
+  margin-top: 14rpx;
 }
 
 .share-card-page .state-card {

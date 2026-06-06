@@ -5,13 +5,6 @@
 
   <block wx:else>
     <view class="hero rise-in {{isSenderEntry ? 'hero-sender' : 'hero-reader'}}">
-      <view class="brand-lockup brand-lockup-share">
-        <image class="brand-lockup-image brand-lockup-image-share" src="/assets/brand/logo-core-transparent.png" mode="aspectFit" />
-        <view class="brand-lockup-copy brand-lockup-copy-share">
-          <view class="brand-lockup-title brand-lockup-title-share">八面成交</view>
-          <view class="brand-lockup-subtitle brand-lockup-subtitle-share">您的私人 CRM 引擎</view>
-        </view>
-      </view>
       <view class="eyebrow-row">
         <view class="eyebrow">{{heroEyebrow}}</view>
       </view>
