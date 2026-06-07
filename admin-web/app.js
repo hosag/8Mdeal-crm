@@ -2182,6 +2182,40 @@ function normalizeUsageReportForUi(report = {}, fallback = {}) {
   return normalized
 }
 
+function normalizeAccountPageInfo(pageInfo = {}, fallbackTotal = 0, fallbackPageSize = 50) {
+  return normalizeUsagePageInfo(pageInfo || {}, fallbackTotal, fallbackPageSize)
+}
+
+function buildAccountsFetchPayload() {
+  return {
+    keyword: toText(state.accountSearch),
+    status: toText(state.accountStatusFilter || 'all'),
+    page: state.accountPage,
+    pageSize: state.accountPageSize
+  }
+}
+
+function applyAccountListResult(result = {}, options = {}) {
+  const previousSelectedAccountId = toText(options.preferredAccountId || state.selectedAccountId)
+  state.accountListItems = Array.isArray(result.accounts) ? result.accounts : []
+  state.accountListPageInfo = normalizeAccountPageInfo(
+    result.pageInfo || {},
+    toNumber(result.total, state.accountListItems.length),
+    state.accountPageSize
+  )
+  state.accountPage = state.accountListPageInfo.page
+
+  const selectedStillVisible = state.accountListItems.some((item) => item.accountId === previousSelectedAccountId)
+  if (selectedStillVisible) {
+    state.selectedAccountId = previousSelectedAccountId
+    return
+  }
+
+  state.selectedAccountId = state.accountListItems[0]
+    ? state.accountListItems[0].accountId
+    : (state.accounts[0] ? state.accounts[0].accountId : '')
+}
+
 function getUsageEventStatsByType(report = {}, usageType = 'all') {
   if (!report || typeof report !== 'object') {
     return buildEmptyUsageEventBucket(usageType)
@@ -3034,6 +3068,7 @@ function isBillingView(view = '') {
 
 let usageViewRefreshTimer = null
 let globalUsageRefreshTimer = null
+let accountListRefreshTimer = null
 
 function createUiState() {
   return {
@@ -3045,6 +3080,8 @@ function createUiState() {
     selectedUsageAccountId: 'acct_003',
     accountSearch: '',
     accountStatusFilter: 'all',
+    accountPage: 1,
+    accountPageSize: 50,
     orderSearch: '',
     orderStatusFilter: 'all',
     orderReadinessFilter: 'all',
@@ -3098,6 +3135,16 @@ function createUiState() {
     usageViewLedger: [],
     globalUsageSummaries: [],
     globalUsageLedger: [],
+    accountListItems: [],
+    accountListPageInfo: {
+      page: 1,
+      pageSize: 50,
+      total: 0,
+      totalPages: 1,
+      hasPrev: false,
+      hasNext: false,
+      returned: 0
+    },
     overviewUsageReport: null,
     globalUsageReport: null,
     globalUsagePageInfo: {
@@ -3129,9 +3176,11 @@ function createUiState() {
       usageLoading: false,
       overviewUsageLoading: false,
       globalUsageLoading: false,
+      accountListLoading: false,
       usageRequestSeq: 0,
       overviewUsageRequestSeq: 0,
       globalUsageRequestSeq: 0,
+      accountListRequestSeq: 0,
       sourceLabel: DEFAULT_CLOUD_CONFIG.providerMode === 'cloud' ? 'Cloud Bridge' : 'Mock Data',
       lastSyncAt: '',
       noticeText: '',
@@ -4563,9 +4612,36 @@ function createMockProvider() {
     }
   }
 
+  function buildMockAccountsResult(payload = {}) {
+    const keyword = toText(payload.keyword)
+    const status = toText(payload.status || 'all')
+    const page = Math.max(1, Math.floor(toNumber(payload.page, 1)))
+    const pageSize = Math.max(1, Math.floor(toNumber(payload.pageSize || payload.limit, 50)))
+    const accounts = store.accounts
+      .map((item) => normalizeAccountForUi(item))
+      .filter((item) => accountMatches(item, keyword, status))
+    const pageInfo = normalizeAccountPageInfo({
+      page,
+      pageSize,
+      total: accounts.length,
+      totalPages: accounts.length > 0 ? Math.ceil(accounts.length / pageSize) : 1,
+      hasPrev: page > 1,
+      hasNext: page * pageSize < accounts.length,
+      returned: Math.max(0, accounts.slice((page - 1) * pageSize, page * pageSize).length)
+    }, accounts.length, pageSize)
+    return {
+      accounts: accounts.slice((pageInfo.page - 1) * pageInfo.pageSize, pageInfo.page * pageInfo.pageSize),
+      total: accounts.length,
+      pageInfo
+    }
+  }
+
   return {
     async refreshAll() {
       return snapshot()
+    },
+    async fetchAccounts(payload = {}) {
+      return buildMockAccountsResult(payload)
     },
     async listLegalDocuments(payload = {}) {
       const documents = buildLegalDocumentList(payload)
@@ -5165,7 +5241,10 @@ function createCloudProvider(config) {
   return {
     async refreshAll() {
       const [usersResult, ordersResult, usageResult, auditResult, referralResult] = await Promise.all([
-        callBridge(config.usersPath),
+        callBridge(config.usersPath, {
+          page: 1,
+          pageSize: 500
+        }),
         callBridge(config.ordersPath),
         callBridge(config.usagePath, {
           limit: 100,
@@ -5207,6 +5286,14 @@ function createCloudProvider(config) {
         plans: (usageResult.plans || []).map((item) => normalizePlanForUi(item)),
         report: usageResult.report || {},
         pageInfo: usageResult.pageInfo || {}
+      }
+    },
+    async fetchAccounts(payload = {}) {
+      const usersResult = await callBridge(config.usersPath, payload)
+      return {
+        accounts: (usersResult.users || []).map((item) => normalizeAccountForUi(item)),
+        total: toNumber(usersResult.total, 0),
+        pageInfo: usersResult.pageInfo || {}
       }
     },
     async listLegalDocuments(payload = {}) {
@@ -5481,6 +5568,9 @@ async function handleAdminLogout() {
   state.runtime.authenticated = false
   state.runtime.authUser = ''
   state.accounts = []
+  state.accountListItems = []
+  state.accountPage = 1
+  state.accountListPageInfo = normalizeAccountPageInfo({}, 0, state.accountPageSize)
   state.orders = []
   state.feedbackItems = []
   state.referralItems = []
@@ -6015,6 +6105,68 @@ function scheduleGlobalUsageRefresh(options = {}) {
   run()
 }
 
+async function refreshAccountListData(options = {}) {
+  if (!provider || typeof provider.fetchAccounts !== 'function') {
+    state.accountListItems = Array.isArray(state.accounts) ? state.accounts.slice() : []
+    state.accountListPageInfo = normalizeAccountPageInfo({}, state.accountListItems.length, state.accountPageSize)
+    if (options.renderOnFinish !== false) {
+      renderAccounts()
+    }
+    return
+  }
+
+  const renderOnFinish = options.renderOnFinish !== false
+  const preserveSelection = options.preserveSelection !== false
+  const preferredAccountId = toText(options.preferredAccountId || state.selectedAccountId)
+  const requestSeq = Number(state.runtime.accountListRequestSeq || 0) + 1
+  state.runtime.accountListRequestSeq = requestSeq
+  state.runtime.accountListLoading = true
+
+  try {
+    const result = await provider.fetchAccounts(buildAccountsFetchPayload())
+    if (state.runtime.accountListRequestSeq !== requestSeq) {
+      return
+    }
+    applyAccountListResult(result, {
+      preferredAccountId: preserveSelection ? preferredAccountId : ''
+    })
+    state.runtime.lastSyncAt = formatDateTimeText(new Date())
+  } catch (error) {
+    if (state.runtime.accountListRequestSeq === requestSeq) {
+      setNotice(error.message || '刷新账户列表失败，请稍后重试。', 'danger')
+    }
+  } finally {
+    if (state.runtime.accountListRequestSeq === requestSeq) {
+      state.runtime.accountListLoading = false
+      if (renderOnFinish) {
+        renderAccounts()
+      }
+    }
+  }
+}
+
+function scheduleAccountListRefresh(options = {}) {
+  const debounceMs = Math.max(0, Math.floor(toNumber(options.debounceMs, 0)))
+  if (accountListRefreshTimer) {
+    clearTimeout(accountListRefreshTimer)
+    accountListRefreshTimer = null
+  }
+
+  const run = () => {
+    accountListRefreshTimer = null
+    refreshAccountListData({
+      preserveSelection: options.preserveSelection !== false,
+      preferredAccountId: toText(options.preferredAccountId || state.selectedAccountId)
+    })
+  }
+
+  if (debounceMs > 0) {
+    accountListRefreshTimer = setTimeout(run, debounceMs)
+    return
+  }
+  run()
+}
+
 async function refreshData(options = {}) {
   const preserveSelection = options.preserveSelection !== false
   const previousSelectedUsageAccountId = toText(state.selectedUsageAccountId)
@@ -6140,6 +6292,11 @@ async function refreshData(options = {}) {
         renderOnFinish: false
       })
     }
+    await refreshAccountListData({
+      preserveSelection,
+      preferredAccountId: state.selectedAccountId,
+      renderOnFinish: false
+    })
   } catch (error) {
     if (error.statusCode === 401 || error.code === 'ADMIN_AUTH_REQUIRED') {
       state.runtime.authenticated = false
@@ -6155,7 +6312,9 @@ async function refreshData(options = {}) {
 }
 
 function getSelectedAccount() {
-  return state.accounts.find((item) => item.accountId === state.selectedAccountId) || null
+  return state.accounts.find((item) => item.accountId === state.selectedAccountId)
+    || state.accountListItems.find((item) => item.accountId === state.selectedAccountId)
+    || null
 }
 
 function getSelectedOrder() {
@@ -6400,7 +6559,9 @@ function getAccountById(accountId = '') {
   if (!currentAccountId) {
     return null
   }
-  return state.accounts.find((item) => item.accountId === currentAccountId) || null
+  return state.accounts.find((item) => item.accountId === currentAccountId)
+    || state.accountListItems.find((item) => item.accountId === currentAccountId)
+    || null
 }
 
 function getAccountLabelById(accountId = '') {
@@ -6779,14 +6940,21 @@ function renderOverview() {
 }
 
 function renderAccounts() {
-  const filteredAccounts = state.accounts.filter((item) => accountMatches(item, state.accountSearch, state.accountStatusFilter))
+  const filteredAccounts = provider && typeof provider.fetchAccounts === 'function'
+    ? state.accountListItems
+    : state.accounts.filter((item) => accountMatches(item, state.accountSearch, state.accountStatusFilter))
+  const accountPageInfo = provider && typeof provider.fetchAccounts === 'function'
+    ? normalizeAccountPageInfo(state.accountListPageInfo || {}, filteredAccounts.length, state.accountPageSize)
+    : normalizeAccountPageInfo({}, filteredAccounts.length, state.accountPageSize)
   const selectedAccount = getSelectedAccount()
   const bindRequiredCount = state.accounts.filter((item) => item.bindRequiredForWrite || !item.phoneVerified).length
   const blockedCount = state.accounts.filter((item) => !item.canCreateProject).length
   const paidCount = state.accounts.filter((item) => item.status === 'active_paid').length
   const topTrialButton = document.getElementById('createTrialBtn')
 
-  document.getElementById('accountCountMeta').textContent = `共 ${filteredAccounts.length} 个账户`
+  document.getElementById('accountCountMeta').textContent = state.runtime.accountListLoading
+    ? '正在刷新账户列表...'
+    : `共 ${accountPageInfo.total} 个账户`
   document.getElementById('selectedAccountMeta').textContent = selectedAccount
     ? `${getAccountPrimaryPhone(selectedAccount)} · ${getStatusLabel(selectedAccount.status)} · ${getAccessLabel(selectedAccount.currentAccessLevel)}`
     : '未选择账户'
@@ -6854,6 +7022,13 @@ function renderAccounts() {
           `).join('')}
         </tbody>
       </table>
+      ${provider && typeof provider.fetchAccounts === 'function'
+        ? renderUsagePagerMarkup(accountPageInfo, {
+          prevId: 'accountsPagerPrevBtn',
+          nextId: 'accountsPagerNextBtn'
+        })
+        : ''
+      }
     `
   }
 
@@ -6868,6 +7043,34 @@ function renderAccounts() {
       renderAccounts()
     })
   })
+
+  const accountsPagerPrevBtn = document.getElementById('accountsPagerPrevBtn')
+  if (accountsPagerPrevBtn) {
+    accountsPagerPrevBtn.addEventListener('click', () => {
+      if (state.accountPage <= 1) {
+        return
+      }
+      state.accountPage -= 1
+      refreshAccountListData({
+        preserveSelection: false,
+        renderOnFinish: true
+      })
+    })
+  }
+
+  const accountsPagerNextBtn = document.getElementById('accountsPagerNextBtn')
+  if (accountsPagerNextBtn) {
+    accountsPagerNextBtn.addEventListener('click', () => {
+      if (!accountPageInfo.hasNext) {
+        return
+      }
+      state.accountPage += 1
+      refreshAccountListData({
+        preserveSelection: false,
+        renderOnFinish: true
+      })
+    })
+  }
 
   document.getElementById('accountDetailWrap').innerHTML = selectedAccount
     ? buildAccountDetailMarkup(selectedAccount)
@@ -11200,6 +11403,9 @@ function bindGlobalEvents() {
       render()
       const result = await provider.reset()
       state.accounts = result.accounts || []
+      state.accountListItems = result.accounts || []
+      state.accountPage = 1
+      state.accountListPageInfo = normalizeAccountPageInfo({}, state.accountListItems.length, state.accountPageSize)
       state.orders = result.orders || []
       state.feedbackItems = result.feedbackItems || []
       state.referralItems = result.referralItems || []
@@ -11265,6 +11471,10 @@ function bindGlobalEvents() {
           renderOnFinish: false
         })
       }
+      await refreshAccountListData({
+        preserveSelection: false,
+        renderOnFinish: false
+      })
       setNotice('已重置为初始演示数据。', 'success')
     } catch (error) {
       setNotice(error.message || '重置失败。', 'danger')
@@ -11276,11 +11486,28 @@ function bindGlobalEvents() {
 
   document.getElementById('accountSearchInput').addEventListener('input', (event) => {
     state.accountSearch = event.target.value
+    state.accountPage = 1
+    if (provider && typeof provider.fetchAccounts === 'function') {
+      scheduleAccountListRefresh({
+        preserveSelection: false,
+        debounceMs: 180
+      })
+      renderAccounts()
+      return
+    }
     renderAccounts()
   })
 
   document.getElementById('accountStatusFilter').addEventListener('change', (event) => {
     state.accountStatusFilter = event.target.value
+    state.accountPage = 1
+    if (provider && typeof provider.fetchAccounts === 'function') {
+      refreshAccountListData({
+        preserveSelection: false,
+        renderOnFinish: true
+      })
+      return
+    }
     renderAccounts()
   })
 
