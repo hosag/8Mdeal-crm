@@ -108,5 +108,5 @@
 
 <view wx:if="{{!isLoading}}" class="footer-bar {{appearancePageClass}}">
   <view class="btn-ghost" bindtap="goBack">取消</view>
-  <view class="btn-primary" bindtap="handleSave">{{isSaving ? '保存中...' : '保存项目'}}</view>
+  <view class="btn-primary {{isSaving ? 'is-disabled' : ''}}" bindtap="handleSave">{{isSaving ? (savePhase === 'validating' ? '校验中...' : (isEdit ? '保存中...' : '创建中...')) : '保存项目'}}</view>
 </view>

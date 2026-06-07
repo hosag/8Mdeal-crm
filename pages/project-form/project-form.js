@@ -11,6 +11,7 @@ Page({
     isEdit: false,
     isLoading: true,
     isSaving: false,
+    savePhase: '',
     dataSource: 'Mock Demo',
     stages: ['线索', '洽谈', '方案', '商务', '成交', '流失'],
     silenceReminderOptions: [
@@ -90,6 +91,7 @@ Page({
 
   onUnload() {
     this.isPageActive = false
+    this.saveLock = false
     if (this.redirectTimer) {
       clearTimeout(this.redirectTimer)
       this.redirectTimer = null
@@ -161,7 +163,7 @@ Page({
   },
 
   async handleSave() {
-    if (this.data.isSaving) {
+    if (this.saveLock || this.data.isSaving) {
       return
     }
 
@@ -189,18 +191,27 @@ Page({
       return
     }
 
-    const decision = await ensureActionAllowed('save_project', {
-      refresh: true,
-      isEdit: this.data.isEdit,
-      guide: true
+    this.saveLock = true
+    this.keepSaveLockedAfterSuccess = false
+    this.safeSetData({
+      isSaving: true,
+      savePhase: 'validating'
     })
-    if (!decision.allowed) {
-      return
-    }
-
-    this.safeSetData({ isSaving: true })
 
     try {
+      const decision = await ensureActionAllowed('save_project', {
+        refresh: true,
+        isEdit: this.data.isEdit,
+        guide: true
+      })
+      if (!decision.allowed) {
+        return
+      }
+
+      this.safeSetData({
+        savePhase: 'saving'
+      })
+
       const result = await saveProjectData(payload)
       if (!result || !result.ok) {
         throw new Error(result && result.message ? result.message : '保存失败')
@@ -225,13 +236,34 @@ Page({
         icon: 'success'
       })
 
+      const shouldHoldLockAfterSuccess = result && result.mode === 'create'
+      this.keepSaveLockedAfterSuccess = shouldHoldLockAfterSuccess
+      if (shouldHoldLockAfterSuccess) {
+        this.safeSetData({
+          savePhase: 'redirecting'
+        })
+      }
+
       this.redirectTimer = setTimeout(() => {
         this.redirectTimer = null
         wx.redirectTo({
-          url: `/pages/project-detail/project-detail?projectId=${result.projectId}`
+          url: `/pages/project-detail/project-detail?projectId=${result.projectId}`,
+          fail: () => {
+            this.keepSaveLockedAfterSuccess = false
+            this.saveLock = false
+            this.safeSetData({
+              isSaving: false,
+              savePhase: ''
+            })
+            wx.showToast({
+              title: '页面跳转失败，请重试',
+              icon: 'none'
+            })
+          }
         })
       }, 320)
     } catch (error) {
+      this.keepSaveLockedAfterSuccess = false
       await reportSystemFailureData({
         type: 'save_failed',
         scene: this.data.isEdit ? 'project_update' : 'project_create',
@@ -250,7 +282,14 @@ Page({
         icon: 'none'
       })
     } finally {
-      this.safeSetData({ isSaving: false })
+      if (this.keepSaveLockedAfterSuccess) {
+        return
+      }
+      this.saveLock = false
+      this.safeSetData({
+        isSaving: false,
+        savePhase: ''
+      })
     }
   },
 
