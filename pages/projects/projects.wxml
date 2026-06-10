@@ -83,7 +83,7 @@
         <view class="project-top">
           <view class="project-main">
             <view class="project-name">{{item.name}}</view>
-            <view class="project-client">{{item.client}} · {{item.nextDisplay}}</view>
+            <view class="project-client">{{item.client}}</view>
             <view wx:if="{{item.contactSummary}}" class="project-meta">关键联系人：{{item.contactSummary}}</view>
           </view>
           <view class="status-badge project-owner-badge {{item.ownerBadgeClass}}">{{item.ownerLabel}}</view>
@@ -127,7 +127,6 @@
         </view>
 
         <view class="project-footer compact-project-footer">
-          <view wx:if="{{item.footerPrimaryText}}" class="helper-text">{{item.footerPrimaryText}}</view>
           <view class="helper-text">{{item.footerMetaText}}</view>
           <view wx:if="{{!item.isClosedProject && item.showAiWakeAction && item.canAdvanceProject}}" class="project-ai-wake-entry" data-project-id="{{item.id}}" catchtap="openDormantWakeSheet">
             <view class="helper-text project-ai-wake-meta">沉默 {{item.dormantDays}} 天 · 最近 {{item.lastActiveText}}</view>

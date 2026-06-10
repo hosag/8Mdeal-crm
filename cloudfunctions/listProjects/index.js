@@ -4,6 +4,7 @@ cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 
 const db = cloud.database()
 const _ = db.command
+const CHINA_TIMEZONE_OFFSET_MS = 8 * 60 * 60 * 1000
 
 function extractErrorMessage(error) {
   if (!error) {
@@ -239,15 +240,21 @@ function formatDateTime(value) {
     return '刚刚更新'
   }
 
-  const date = value instanceof Date ? value : new Date(value)
+  const sourceDate = value instanceof Date ? value : new Date(value)
+  if (Number.isNaN(sourceDate.getTime())) {
+    return '刚刚更新'
+  }
+
+  // Cloud functions run in UTC, so shift explicitly before formatting business-facing time.
+  const date = new Date(sourceDate.getTime() + CHINA_TIMEZONE_OFFSET_MS)
   if (Number.isNaN(date.getTime())) {
     return '刚刚更新'
   }
 
-  const month = `${date.getMonth() + 1}`.padStart(2, '0')
-  const day = `${date.getDate()}`.padStart(2, '0')
-  const hour = `${date.getHours()}`.padStart(2, '0')
-  const minute = `${date.getMinutes()}`.padStart(2, '0')
+  const month = `${date.getUTCMonth() + 1}`.padStart(2, '0')
+  const day = `${date.getUTCDate()}`.padStart(2, '0')
+  const hour = `${date.getUTCHours()}`.padStart(2, '0')
+  const minute = `${date.getUTCMinutes()}`.padStart(2, '0')
   return `${month}-${day} ${hour}:${minute}`
 }
 

@@ -5,6 +5,7 @@ cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 
 const db = cloud.database()
 const _ = db.command
+const CHINA_TIMEZONE_OFFSET_MS = 8 * 60 * 60 * 1000
 const CONTACT_CRYPTO_SECRET = String(process.env.CONTACT_CRYPTO_SECRET || '').trim()
 if (!CONTACT_CRYPTO_SECRET) {
   throw new Error('CONTACT_CRYPTO_SECRET is required')
@@ -116,14 +117,15 @@ function formatAmount(value) {
 }
 
 function formatDateLabel(value) {
-  const date = value instanceof Date ? value : new Date(value)
-  if (Number.isNaN(date.getTime())) {
+  const sourceDate = value instanceof Date ? value : new Date(value)
+  if (Number.isNaN(sourceDate.getTime())) {
     return '最近'
   }
 
-  const today = new Date()
-  const current = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime()
-  const target = new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime()
+  const date = new Date(sourceDate.getTime() + CHINA_TIMEZONE_OFFSET_MS)
+  const today = new Date(Date.now() + CHINA_TIMEZONE_OFFSET_MS)
+  const current = Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate())
+  const target = Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate())
   const diff = Math.round((current - target) / 86400000)
 
   if (diff === 0) {
@@ -134,32 +136,34 @@ function formatDateLabel(value) {
     return '昨天'
   }
 
-  const month = `${date.getMonth() + 1}`.padStart(2, '0')
-  const day = `${date.getDate()}`.padStart(2, '0')
+  const month = `${date.getUTCMonth() + 1}`.padStart(2, '0')
+  const day = `${date.getUTCDate()}`.padStart(2, '0')
   return `${month}-${day}`
 }
 
 function formatTime(value) {
-  const date = value instanceof Date ? value : new Date(value)
-  if (Number.isNaN(date.getTime())) {
+  const sourceDate = value instanceof Date ? value : new Date(value)
+  if (Number.isNaN(sourceDate.getTime())) {
     return '--:--'
   }
 
-  const hour = `${date.getHours()}`.padStart(2, '0')
-  const minute = `${date.getMinutes()}`.padStart(2, '0')
+  const date = new Date(sourceDate.getTime() + CHINA_TIMEZONE_OFFSET_MS)
+  const hour = `${date.getUTCHours()}`.padStart(2, '0')
+  const minute = `${date.getUTCMinutes()}`.padStart(2, '0')
   return `${hour}:${minute}`
 }
 
 function formatDateTime(value) {
-  const date = value instanceof Date ? value : new Date(value)
-  if (Number.isNaN(date.getTime())) {
+  const sourceDate = value instanceof Date ? value : new Date(value)
+  if (Number.isNaN(sourceDate.getTime())) {
     return '最近'
   }
 
-  const month = `${date.getMonth() + 1}`.padStart(2, '0')
-  const day = `${date.getDate()}`.padStart(2, '0')
-  const hour = `${date.getHours()}`.padStart(2, '0')
-  const minute = `${date.getMinutes()}`.padStart(2, '0')
+  const date = new Date(sourceDate.getTime() + CHINA_TIMEZONE_OFFSET_MS)
+  const month = `${date.getUTCMonth() + 1}`.padStart(2, '0')
+  const day = `${date.getUTCDate()}`.padStart(2, '0')
+  const hour = `${date.getUTCHours()}`.padStart(2, '0')
+  const minute = `${date.getUTCMinutes()}`.padStart(2, '0')
   return `${month}-${day} ${hour}:${minute}`
 }
 

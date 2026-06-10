@@ -727,17 +727,6 @@ function normalizeProject(project, index) {
   const hasCallbackTask = openTaskTypes.includes('callback') || containsKeyword(nextTaskTitle, '回访')
   const isTodayFollowUp = dueStatus === 'today'
   const isOverdueFollowUp = dueStatus === 'overdue'
-  let footerPrimaryText = ''
-
-  if (isClosed) {
-    footerPrimaryText = ''
-  } else if (nextTaskTitle) {
-    footerPrimaryText = `推进任务：${nextTaskTitle}${nextTaskDueText ? ` · 截止 ${nextTaskDueText}` : ''}`
-  } else if (overdueTaskCount > 0) {
-    footerPrimaryText = `优先处理：${overdueTaskCount} 条任务`
-  } else if (openTaskCount > 0) {
-    footerPrimaryText = `推进任务：${openTaskCount} 条`
-  }
 
   const footerMetaParts = [`最近更新：${project.latest || '最近更新'}`]
   if (tagNames.length) {
@@ -832,7 +821,6 @@ function normalizeProject(project, index) {
     taskSummaryText: nextTaskDueText
       ? `截止 ${nextTaskDueText}`
       : '暂无截止时间',
-    footerPrimaryText,
     footerMetaText: footerMetaParts.join(' · '),
     primaryTaskSortWeight: openTaskCount
       ? ((nextTaskDate ? nextTaskDate.getTime() : Number.MAX_SAFE_INTEGER) - (overdueTaskCount ? 86400000 : 0))

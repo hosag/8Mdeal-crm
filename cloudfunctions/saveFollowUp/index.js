@@ -4,6 +4,7 @@ cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 
 const db = cloud.database()
 const _ = db.command
+const CHINA_TIMEZONE_OFFSET_MS = 8 * 60 * 60 * 1000
 
 function normalizeText(value) {
   return String(value || '').trim()
@@ -190,10 +191,46 @@ function formatBizDate(value = new Date()) {
   return `${year}-${month}-${day}`
 }
 
+function parseChinaLocalDateTime(value) {
+  const text = normalizeText(value)
+  if (!text) {
+    return null
+  }
+
+  const matched = text.match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})(?::(\d{2}))?$/)
+  if (!matched) {
+    return null
+  }
+
+  const year = Number(matched[1])
+  const month = Number(matched[2])
+  const day = Number(matched[3])
+  const hour = Number(matched[4])
+  const minute = Number(matched[5])
+  const second = Number(matched[6] || 0)
+
+  const timestamp = Date.UTC(year, month - 1, day, hour, minute, second) - CHINA_TIMEZONE_OFFSET_MS
+  const date = new Date(timestamp)
+  return Number.isNaN(date.getTime()) ? null : date
+}
+
 function parseDateTime(value, fallback) {
+  if (!value) {
+    return fallback
+  }
+
+  if (value instanceof Date) {
+    return Number.isNaN(value.getTime()) ? fallback : value
+  }
+
   const text = normalizeText(value)
   if (!text) {
     return fallback
+  }
+
+  const localBusinessDate = parseChinaLocalDateTime(text)
+  if (localBusinessDate) {
+    return localBusinessDate
   }
 
   const normalized = text.replace(' ', 'T')
