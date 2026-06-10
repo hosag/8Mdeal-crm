@@ -68,8 +68,6 @@ function createDefaultDates() {
   }
 }
 
-const defaultDates = createDefaultDates()
-
 const MODEL_SOURCE_DEFAULTS = {
   sourceType: 'model',
   sourceLabel: 'AI整理',
@@ -206,7 +204,7 @@ function getTaskTypeLabel(type) {
   return currentTemplate ? currentTemplate.label : '其他动作'
 }
 
-function buildTaskDraft(partial = {}, defaultDatesValue = defaultDates) {
+function buildTaskDraft(partial = {}, defaultDatesValue = createDefaultDates()) {
   return {
     localId: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     title: partial.title || '',
@@ -439,10 +437,10 @@ Page({
     followUpClockTouched: false,
     showMethodOptions: false,
     stages: ['不变更', '线索', '洽谈', '方案', '商务', '成交', '流失'],
-    followUpDate: defaultDates.followUpDate,
-    followUpClock: defaultDates.followUpClock,
-    nextFollowUpDate: defaultDates.nextFollowUpDate,
-    nextFollowUpClock: defaultDates.nextFollowUpClock,
+    followUpDate: '',
+    followUpClock: '',
+    nextFollowUpDate: '',
+    nextFollowUpClock: '',
     content: '',
     attachments: [],
     isAiLoading: false,
@@ -480,6 +478,7 @@ Page({
   async onLoad(options) {
     syncPageAppearance(this)
     this.isPageActive = true
+    this.applyFreshDefaultDates()
     const projectId = options.projectId || ''
     const entryHintText = buildFollowUpEntryHint(options.entry, options.source, options.type)
     this.setData({
@@ -519,6 +518,7 @@ Page({
   async onShow() {
     syncPageAppearance(this)
     this.isPageActive = true
+    this.refreshEntryDateFieldsIfPristine()
     await this.refreshEntitlementPrompt()
   },
 
@@ -671,6 +671,38 @@ Page({
     this.setData({
       nextFollowUpClock: event.detail.value
     })
+  },
+
+  applyFreshDefaultDates() {
+    const dates = createDefaultDates()
+    this.setData({
+      followUpDate: dates.followUpDate,
+      followUpClock: dates.followUpClock,
+      nextFollowUpDate: dates.nextFollowUpDate,
+      nextFollowUpClock: dates.nextFollowUpClock
+    })
+  },
+
+  refreshEntryDateFieldsIfPristine() {
+    const hasContent = Boolean(String(this.data.content || '').trim())
+    const hasAttachments = Array.isArray(this.data.attachments) && this.data.attachments.length > 0
+    const hasTasks = Array.isArray(this.data.taskDrafts) && this.data.taskDrafts.length > 0
+    const hasAiState = !!(this.data.aiResult || this.data.aiNextSuggestion)
+    const hasSavedDraft = Boolean(String(this.data.draftUpdatedAt || '').trim())
+
+    if (
+      this.data.followUpDateTouched === true
+      || this.data.followUpClockTouched === true
+      || hasContent
+      || hasAttachments
+      || hasTasks
+      || hasAiState
+      || hasSavedDraft
+    ) {
+      return
+    }
+
+    this.applyFreshDefaultDates()
   },
 
   restoreDraft() {
